@@ -1,6 +1,13 @@
 import React from "react";
+import { useAuth } from "../contexts/AuthContext";
 
 const Header = ({ onToggleSidebar }) => {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 border-b border-[#E1E3E8] flex justify-between items-center shadow-sm w-full">
       <div className="flex items-center space-x-3">
@@ -29,7 +36,15 @@ const Header = ({ onToggleSidebar }) => {
         </h1>
       </div>
       <div className="flex items-center space-x-2 sm:space-x-4">
-        <button className="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 rounded bg-gray-200 hover:bg-gray-300 text-xs sm:text-sm md:text-base">
+        {user && (
+          <span className="text-xs sm:text-sm text-gray-600">
+            {user.name}
+          </span>
+        )}
+        <button
+          onClick={handleLogout}
+          className="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 rounded bg-gray-200 hover:bg-gray-300 text-xs sm:text-sm md:text-base"
+        >
           Log Out
         </button>
       </div>

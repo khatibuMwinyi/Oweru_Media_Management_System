@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
+import { AuthProvider } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
@@ -14,7 +15,8 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <Router>
+    <AuthProvider>
+      <Router>
       <div className="flex min-h-screen bg-gray-100 overflow-x-hidden">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -38,6 +40,7 @@ function App() {
         </div>
       </div>
     </Router>
+    </AuthProvider>
   );
 }
 

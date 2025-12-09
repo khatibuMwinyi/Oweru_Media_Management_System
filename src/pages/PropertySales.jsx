@@ -7,9 +7,9 @@ const PropertySales = () => {
         Property Sales - Create Social Media Posts
       </h1>
 
-      <PostForm postType="Static" />
-      <PostForm postType="Carousel" />
-      <PostForm postType="Reel" />
+      <PostForm postType="Static" category="property_sales" />
+      <PostForm postType="Carousel" category="property_sales" />
+      <PostForm postType="Reel" category="property_sales" />
     </div>
   );
 };

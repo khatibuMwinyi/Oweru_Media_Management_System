@@ -9,17 +9,17 @@ const Rentals = () => {
 
       {/* Static Post Section */}
       <section>
-        <PostForm postType="Static" />
+        <PostForm postType="Static" category="rentals" />
       </section>
 
       {/* Carousel Post Section */}
       <section>
-        <PostForm postType="Carousel" />
+        <PostForm postType="Carousel" category="rentals" />
       </section>
 
       {/* Reel Post Section */}
       <section>
-        <PostForm postType="Reel" />
+        <PostForm postType="Reel" category="rentals" />
       </section>
     </div>
   );

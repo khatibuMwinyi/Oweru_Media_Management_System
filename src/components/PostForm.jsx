@@ -1,18 +1,87 @@
 import { useState } from "react";
 import PostPreview from "./PostPreview";
+import { postService, aiService } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
-const PostForm = ({ postType }) => {
+const PostForm = ({ postType, category }) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState([]);
   const [video, setVideo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const handleImageChange = (e) => setImages([...e.target.files]);
   const handleVideoChange = (e) => setVideo(e.target.files[0]);
 
-  const handleSubmit = (e) => {
+  const handleAIGenerate = async () => {
+    if (!user) {
+      setError("Please login to use AI generation");
+      return;
+    }
+
+    setAiLoading(true);
+    setError(null);
+    try {
+      const response = await aiService.generate({
+        category: category,
+        post_type: postType,
+        property_data: {},
+      });
+      
+      if (response.data.title) {
+        setTitle(response.data.title);
+      }
+      if (response.data.description) {
+        setDescription(response.data.description);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "AI generation failed");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Post created! Preview is shown below.");
+    
+    if (!user) {
+      setError("Please login to create posts");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const postData = {
+        category: category,
+        post_type: postType,
+        title: title,
+        description: description,
+        images: images.length > 0 ? images : null,
+        video: video || null,
+      };
+
+      await postService.create(postData);
+      setSuccess(true);
+      
+      // Reset form
+      setTitle("");
+      setDescription("");
+      setImages([]);
+      setVideo(null);
+      
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to create post");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,7 +141,7 @@ const PostForm = ({ postType }) => {
 
         {postType === "Reel" && (
           <div>
-            <label className="block mb-1 ffont-light text-base">Video</label>
+            <label className="block mb-1 font-light text-base">Video</label>
             <input
               type="file"
               accept="video/*"
@@ -82,12 +151,35 @@ const PostForm = ({ postType }) => {
           </div>
         )}
 
-        <button
-          type="submit"
-          className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Create Post
-        </button>
+        {error && (
+          <div className="p-3 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="p-3 bg-green-100 text-green-700 rounded">
+            Post created successfully!
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleAIGenerate}
+            disabled={aiLoading}
+            className="px-4 py-2 cursor-pointer bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
+          >
+            {aiLoading ? "Generating..." : "🤖 Generate with AI"}
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Creating..." : "Create Post"}
+          </button>
+        </div>
       </form>
 
       {/* Live Preview */}

@@ -7,9 +7,9 @@ const ConstructionPropertyManagement = () => {
         Construction & Property Management - Create Social Media Posts
       </h1>
 
-      <PostForm postType="Static" />
-      <PostForm postType="Carousel" />
-      <PostForm postType="Reel" />
+      <PostForm postType="Static" category="construction_property_management" />
+      <PostForm postType="Carousel" category="construction_property_management" />
+      <PostForm postType="Reel" category="construction_property_management" />
     </div>
   );
 };
