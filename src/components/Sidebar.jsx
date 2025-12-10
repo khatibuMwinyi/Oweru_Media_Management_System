@@ -45,9 +45,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         <nav className="p-2 sm:p-4 space-y-1 sm:space-y-2">
           <Link
             className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-              "/"
+              "/admin/dashboard"
             )}`}
-            to="/"
+            to="/admin/dashboard"
             onClick={onClose}
           >
             Dashboard
@@ -65,27 +65,27 @@ const Sidebar = ({ isOpen, onClose }) => {
               <div className="pl-4 mt-1 space-y-1">
                 <Link
                   className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-                    "/rentals"
+                    "/admin/rentals"
                   )}`}
-                  to="/rentals"
+                  to="/admin/rentals"
                   onClick={onClose}
                 >
                   Rentals
                 </Link>
                 <Link
                   className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-                    "/property-sales"
+                    "/admin/property-sales"
                   )}`}
-                  to="/property-sales"
+                  to="/admin/property-sales"
                   onClick={onClose}
                 >
                   Property Sales
                 </Link>
                 <Link
                   className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-                    "/construction-property-management"
+                    "/admin/construction-property-management"
                   )}`}
-                  to="/construction-property-management"
+                  to="/admin/construction-property-management"
                   onClick={onClose}
                 >
                   Construction & Property Management
@@ -106,16 +106,16 @@ const Sidebar = ({ isOpen, onClose }) => {
               <div className="pl-4 mt-1 space-y-1">
                 <Link
                   className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-                    "/lands-and-plots"
+                    "/admin/lands-and-plots"
                   )}`}
-                  to="/lands-and-plots"
+                  to="/admin/lands-and-plots"
                   onClick={onClose}
                 >
                   Lands and Plots
                 </Link>
                 <Link
                   className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-                    "/property-services"
+                    "/admin/property-services"
                   )}`}
                   to="/property-services"
                   onClick={onClose}
@@ -124,7 +124,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </Link>
                 <Link
                   className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
-                    "/investment"
+                    "/admin/investment"
                   )}`}
                   to="/investment"
                   onClick={onClose}

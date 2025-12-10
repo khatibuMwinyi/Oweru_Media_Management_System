@@ -1,4 +1,4 @@
-import PostForm from "../components/PostForm";
+import PostForm from "../../components/PostForm";
 
 const ConstructionPropertyManagement = () => {
   return (
@@ -8,7 +8,10 @@ const ConstructionPropertyManagement = () => {
       </h1>
 
       <PostForm postType="Static" category="construction_property_management" />
-      <PostForm postType="Carousel" category="construction_property_management" />
+      <PostForm
+        postType="Carousel"
+        category="construction_property_management"
+      />
       <PostForm postType="Reel" category="construction_property_management" />
     </div>
   );
