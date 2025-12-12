@@ -16,12 +16,19 @@ const Login = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const result = await login(email, password);
-    setLoading(false);
-    if (result.success) {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      setError(result.error || "Login failed");
+    
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        setError(result.error || "Login failed. Please check your credentials.");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
     }
   };
   return (
@@ -44,32 +51,41 @@ const Login = () => {
         <div className="w-full">
           <p className="text-white text-lg">Email</p>
           <input
-            className="border border-zinc-300 rounded w-full p-2 mt-1 focus:outline-none"
+            className="border border-zinc-300 rounded w-full p-2 mt-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading}
+            autoComplete="email"
           />
         </div>
         <div className="w-full">
           <p className="text-white text-lg">Password</p>
           <input
-            className="border border-zinc-300 rounded w-full p-2 mt-1 focus:outline-none"
+            className="border border-zinc-300 rounded w-full p-2 mt-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading}
+            autoComplete="current-password"
           />
         </div>
+
+        {error && (
+          <div className="w-full p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+            {error}
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={loading}
-          className="text-white w-full py-2 rounded-md text-base bg-[#C89128] hover:bg-[#b37820] disabled:opacity-60"
+          className="text-white w-full py-2 rounded-md text-base bg-[#C89128] hover:bg-[#b37820] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? "Signing in..." : "Login"}
         </button>
-
-        {error && <p className="text-red-600">{error}</p>}
 
         {role === "Admin" ? (
           <p>

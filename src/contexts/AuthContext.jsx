@@ -48,9 +48,28 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return { success: true };
     } catch (error) {
+      // Handle Laravel validation errors
+      let errorMessage = "Login failed. Please check your credentials.";
+      
+      if (error.response?.data) {
+        // Laravel ValidationException format: { errors: { email: ["message"] } }
+        if (error.response.data.errors) {
+          const errors = error.response.data.errors;
+          // Get first error message from any field
+          const firstError = Object.values(errors).flat()[0];
+          errorMessage = firstError || errorMessage;
+        } 
+        // Laravel general error format: { message: "error message" }
+        else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        error: error.response?.data?.message || "Login failed",
+        error: errorMessage,
       };
     }
   };

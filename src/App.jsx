@@ -37,6 +37,9 @@ function App() {
             <Route path="property-services" element={<PropertyServices />} />
             <Route path="investment" element={<Investment />} />
           </Route>
+
+          {/* Redirect root to admin dashboard */}
+          <Route path="/" element={<Login />} />
         </Routes>
       </Router>
     </AuthProvider>

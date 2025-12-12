@@ -6,8 +6,15 @@ const RequireAuth = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    // Optionally render a spinner or loading indicator
-    return null;
+    // Show loading indicator while checking auth
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
