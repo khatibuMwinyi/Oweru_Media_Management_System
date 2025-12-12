@@ -1,20 +1,38 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Login = () => {
   const [role, setRole] = useState("Admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
+    if (result.success) {
+      navigate("/admin/dashboard", { replace: true });
+    } else {
+      setError(result.error || "Login failed");
+    }
   };
   return (
     <form
       onSubmit={onSubmitHandler}
-      className="flex items-center justify-center w-screen h-screen "
+      className="flex items-center justify-center w-screen h-screen"
     >
-      <div className="flex flex-col gap-3 items-start p-8 min-w-[340px] sm:min-w-[384px] border  border-white rounded-xl text-zinc-600 text-sm shadow-lg bg-linear-to-r from-[#F6C049] to-[#C89128]">
+      <div
+        className="flex flex-col gap-3 items-start p-8 min-w-[340px] sm:min-w-[384px] border border-white rounded-xl text-zinc-600 text-sm shadow-lg"
+        style={{ background: "linear-gradient(90deg,#F6C049,#C89128)" }}
+      >
         <h1 className="text-2xl font-semibold w-full text-center">
           {role === "Admin" ? "Admin Login" : "Moderator Login"}
         </h1>
@@ -45,19 +63,21 @@ const Login = () => {
         </div>
         <button
           type="submit"
-          className="text-white w-full py-2 rounded-md text-base bg-[#C89128] hover:bg-[#b37820]"
+          disabled={loading}
+          className="text-white w-full py-2 rounded-md text-base bg-[#C89128] hover:bg-[#b37820] disabled:opacity-60"
         >
-          Login
+          {loading ? "Signing in..." : "Login"}
         </button>
 
+        {error && <p className="text-red-600">{error}</p>}
+
         {role === "Admin" ? (
-          <p >
+          <p>
             Login as Moderator?
             <span
               onClick={(e) => setRole("Moderator")}
               className="text-primary underline cursor-pointer"
             >
-              {" "}
               Click here
             </span>
           </p>

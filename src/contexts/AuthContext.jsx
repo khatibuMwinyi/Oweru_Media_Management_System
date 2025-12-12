@@ -1,12 +1,12 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/api';
+import { createContext, useContext, useState, useEffect } from "react";
+import { authService } from "../services/api";
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
@@ -16,20 +16,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('user');
-    
+    const token = localStorage.getItem("auth_token");
+    const storedUser = localStorage.getItem("user");
+
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
       // Verify token is still valid
-      authService.getUser()
+      authService
+        .getUser()
         .then((response) => {
           setUser(response.data);
-          localStorage.setItem('user', JSON.stringify(response.data));
+          localStorage.setItem("user", JSON.stringify(response.data));
         })
         .catch(() => {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user");
           setUser(null);
         })
         .finally(() => setLoading(false));
@@ -42,14 +43,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.login({ email, password });
       const { user, token } = response.data;
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem("auth_token", token);
+      localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
       return { success: true };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Login failed',
+        error: error.response?.data?.message || "Login failed",
       };
     }
   };
@@ -63,14 +64,14 @@ export const AuthProvider = ({ children }) => {
         password_confirmation,
       });
       const { user, token } = response.data;
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem("auth_token", token);
+      localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
       return { success: true };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Registration failed',
+        error: error.response?.data?.message || "Registration failed",
       };
     }
   };
@@ -79,13 +80,30 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
       setUser(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70">
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderTop: "4px solid #C89128",
+            borderRight: "4px solid transparent",
+            borderRadius: "50%",
+          }}
+          className="animate-spin"
+        />
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout }}>
@@ -93,4 +111,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
