@@ -37,9 +37,7 @@ const Header = ({ onToggleSidebar }) => {
       </div>
       <div className="flex items-center space-x-2 sm:space-x-4">
         {user && (
-          <span className="text-xs sm:text-sm text-gray-600">
-            {user.name}
-          </span>
+          <span className="text-xs sm:text-sm text-gray-600">{user.name}</span>
         )}
         <button
           onClick={handleLogout}

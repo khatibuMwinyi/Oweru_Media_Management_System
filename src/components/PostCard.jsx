@@ -13,7 +13,9 @@ const PostCard = ({ post, onDelete }) => {
       return media.url;
     }
     // Otherwise construct from file_path
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000';
+    const baseUrl =
+      import.meta.env.VITE_API_URL?.replace("/api", "") ||
+      "http://localhost:8000";
     return `${baseUrl}/storage/${media.file_path}`;
   };
 
@@ -25,10 +27,10 @@ const PostCard = ({ post, onDelete }) => {
     setDeleting(true);
     try {
       await postService.delete(post.id);
-      
+
       // Dispatch event to refresh post list
-      window.dispatchEvent(new CustomEvent('postDeleted'));
-      
+      window.dispatchEvent(new CustomEvent("postDeleted"));
+
       if (onDelete) {
         onDelete(post.id);
       }
@@ -48,7 +50,9 @@ const PostCard = ({ post, onDelete }) => {
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">{post.title}</h3>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {post.title}
+            </h3>
             <p className="text-xs text-gray-500 mt-1">
               {post.post_type} • {post.category} •{" "}
               {new Date(post.created_at).toLocaleDateString()}
@@ -65,7 +69,9 @@ const PostCard = ({ post, onDelete }) => {
           )}
         </div>
 
-        <p className="text-gray-700 mb-4 whitespace-pre-wrap">{post.description}</p>
+        <p className="text-gray-700 mb-4 whitespace-pre-wrap">
+          {post.description}
+        </p>
 
         {/* Static Post - Single Image */}
         {post.post_type === "Static" && images.length > 0 && (
@@ -75,7 +81,8 @@ const PostCard = ({ post, onDelete }) => {
               alt={post.title}
               className="w-full h-auto rounded-lg object-cover max-h-96"
               onError={(e) => {
-                e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                e.target.src =
+                  "https://via.placeholder.com/400x300?text=Image+Not+Found";
               }}
             />
           </div>
@@ -90,21 +97,26 @@ const PostCard = ({ post, onDelete }) => {
                 alt={`${post.title} - Image ${carouselIndex + 1}`}
                 className="w-full h-auto rounded-lg object-cover max-h-96"
                 onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                  e.target.src =
+                    "https://via.placeholder.com/400x300?text=Image+Not+Found";
                 }}
               />
               {images.length > 1 && (
                 <>
                   <button
                     onClick={() =>
-                      setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
+                      setCarouselIndex(
+                        (prev) => (prev - 1 + images.length) % images.length
+                      )
                     }
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
                   >
                     ‹
                   </button>
                   <button
-                    onClick={() => setCarouselIndex((prev) => (prev + 1) % images.length)}
+                    onClick={() =>
+                      setCarouselIndex((prev) => (prev + 1) % images.length)
+                    }
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
                   >
                     ›
@@ -121,7 +133,7 @@ const PostCard = ({ post, onDelete }) => {
                   <button
                     key={idx}
                     onClick={() => setCarouselIndex(idx)}
-                    className={`flex-shrink-0 ${
+                    className={`shrink-0 ${
                       idx === carouselIndex ? "ring-2 ring-blue-500" : ""
                     }`}
                   >
@@ -130,7 +142,8 @@ const PostCard = ({ post, onDelete }) => {
                       alt={`Thumbnail ${idx + 1}`}
                       className="w-16 h-16 object-cover rounded"
                       onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/64x64?text=Image";
+                        e.target.src =
+                          "https://via.placeholder.com/64x64?text=Image";
                       }}
                     />
                   </button>
@@ -158,4 +171,3 @@ const PostCard = ({ post, onDelete }) => {
 };
 
 export default PostCard;
-

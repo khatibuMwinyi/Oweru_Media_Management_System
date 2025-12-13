@@ -10,14 +10,14 @@ import PropertyServices from "./pages/admin/PropertyServices";
 import Investment from "./pages/admin/Investment";
 import ConstructionPropertyManagement from "./pages/admin/ConstructionPropertyManagement";
 import Login from "./pages/Login";
-
+import Home from "./pages/Home";
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-
+          <Route path="/" element={<Home />} />
           <Route
             path="/admin"
             element={
