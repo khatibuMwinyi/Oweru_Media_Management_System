@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/oweru_logo.png";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, House } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -10,7 +10,7 @@ const Navbar = () => {
   const navbarRef = useRef(null);
 
   const menuItems = [
-    { name: "Home", id: "home" },
+    { name: "Home"  , id: "home" },
     {
       name: "Oweru Official",
       key: "official",
@@ -68,9 +68,9 @@ const Navbar = () => {
   return (
     <nav
       ref={navbarRef}
-      className="w-full fixed top-0 left-0 z-50 bg-[#c89128] border-b border-[#E1E3E8] text-amber-100"
+      className="w-full fixed top-0 left-0 z-50 border-b border-[#E1E3E8] bg-white bg-opacity-50 backdrop-blur-md"
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
         <img
           src={logo}
           alt="Oweru Logo"
@@ -79,7 +79,7 @@ const Navbar = () => {
         <div className="flex items-center flex-1">
           <h1
             className={`text-xl font-semibold cursor-pointer ${
-              activeSection === "home" ? "text-[#F6C049]" : "text-amber-100"
+              activeSection === "home" ? "text-[#141C36]" : "text-[#253155]"
             }`}
             onClick={() => scrollToSection("home")}
           >
@@ -93,21 +93,23 @@ const Navbar = () => {
             item.subItems ? (
               <div key={item.name} className="relative group">
                 <div
-                  className={`flex items-center cursor-pointer hover:text-[#F6C049] ${
+                  className={`flex items-center cursor-pointer text-[#141C36] ${
                     item.subItems.some((s) => s.id === activeSection)
-                      ? "text-[#F6C049]"
+                      ? "underline decoration-2"
                       : ""
                   }`}
                 >
-                  {item.name} <ChevronDown size={16} className="ml-1" />
+                  {item.name}
                 </div>
-                <div className="absolute left-0 mt-2 bg-[#c89128] border border-white/10 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transform -translate-y-2 group-hover:translate-y-0 transition-all duration-300 min-w-max">
+                <div className="absolute left-0 mt-2 bg-[#EBEDF2] border border-white/10 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transform -translate-y-2 group-hover:translate-y-0 transition-all duration-300 min-w-max">
                   <ul className="py-2 text-sm">
                     {item.subItems.map((sub) => (
                       <li
                         key={sub.id}
-                        className={`px-4 py-2 hover:bg-white/10 cursor-pointer ${
-                          activeSection === sub.id ? "text-[#F6C049]" : ""
+                        className={`px-4 py-2 hover:bg-white/10 text-[#141C36] cursor-pointer ${
+                          activeSection === sub.id
+                            ? "underline decoration-2"
+                            : ""
                         }`}
                         onClick={() => scrollToSection(sub.id)}
                       >
@@ -120,8 +122,8 @@ const Navbar = () => {
             ) : (
               <span
                 key={item.id}
-                className={`cursor-pointer hover:text-[#F6C049] transition ${
-                  activeSection === item.id ? "text-[#F6C049]" : ""
+                className={`cursor-pointer hover:text-[#141C36] transition ${
+                  activeSection === item.id ? "text-[#141C36]" : ""
                 }`}
                 onClick={() => scrollToSection(item.id)}
               >
@@ -135,7 +137,7 @@ const Navbar = () => {
         <div className="flex items-center justify-end gap-3 flex-1">
           <Link
             to="/login"
-            className="hidden sm:inline-block px-3 py-2 rounded bg-amber-100 text-[#c89128] font-semibold hover:opacity-95"
+            className="hidden sm:inline-block px-3 py-2 rounded bg-[#f0a71e] text-[#141C36] font-semibold hover:translate-x-0.5 transition-all duration-200"
           >
             Login
           </Link>
