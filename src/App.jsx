@@ -9,6 +9,7 @@ import LandsAndPlots from "./pages/admin/LandsAndPlots";
 import PropertyServices from "./pages/admin/PropertyServices";
 import Investment from "./pages/admin/Investment";
 import ConstructionPropertyManagement from "./pages/admin/ConstructionPropertyManagement";
+import PostManagement from "./pages/admin/PostManagement";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -29,6 +30,7 @@ function App() {
             }
           >
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="posts" element={<PostManagement />} />
             <Route path="rentals" element={<Rentals />} />
             <Route path="property-sales" element={<PropertySales />} />
             <Route

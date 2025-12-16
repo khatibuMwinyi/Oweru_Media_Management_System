@@ -53,6 +53,16 @@ const Sidebar = ({ isOpen, onClose }) => {
             Dashboard
           </Link>
 
+          <Link
+            className={`block px-3 py-2 rounded hover:bg-[#F6C049] ${isActive(
+              "/admin/posts"
+            )}`}
+            to="/admin/posts"
+            onClick={onClose}
+          >
+            Post Management
+          </Link>
+
           {/* Oweru Housing Dropdown */}
           <div>
             <button

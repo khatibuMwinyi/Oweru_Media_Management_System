@@ -1,22 +1,34 @@
 import { postService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
-const PostCard = ({ post, onDelete }) => {
+const PostCard = ({ post, onDelete, onEdit }) => {
   const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef(null);
 
   const getMediaUrl = (media) => {
-    // If media has url attribute, use it
+    // If media has url attribute, use it (from API)
     if (media.url) {
-      return media.url;
+      // If URL is already absolute, use it
+      if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
+        return media.url;
+      }
+      // If relative, prepend base URL
+      const baseUrl =
+        import.meta.env.VITE_API_URL?.replace("/api", "") ||
+        "http://localhost:8000";
+      return `${baseUrl}${media.url.startsWith('/') ? '' : '/'}${media.url}`;
     }
     // Otherwise construct from file_path
     const baseUrl =
       import.meta.env.VITE_API_URL?.replace("/api", "") ||
       "http://localhost:8000";
-    return `${baseUrl}/storage/${media.file_path}`;
+    const filePath = media.file_path?.startsWith('/') ? media.file_path.substring(1) : media.file_path;
+    const url = `${baseUrl}/storage/${filePath}`;
+    return url;
   };
 
   const handleDelete = async () => {
@@ -58,15 +70,25 @@ const PostCard = ({ post, onDelete }) => {
               {new Date(post.created_at).toLocaleDateString()}
             </p>
           </div>
-          {user && user.id === post.user_id && (
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-600 hover:text-red-800 text-sm px-2 py-1 disabled:opacity-50"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </button>
-          )}
+          <div className="flex gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(post)}
+                className="text-blue-600 hover:text-blue-800 text-sm px-2 py-1"
+              >
+                Edit
+              </button>
+            )}
+            {user && user.id === post.user_id && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-red-600 hover:text-red-800 text-sm px-2 py-1 disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            )}
+          </div>
         </div>
 
         <p className="text-gray-700 mb-4 whitespace-pre-wrap">
@@ -156,13 +178,113 @@ const PostCard = ({ post, onDelete }) => {
         {/* Reel Post - Video */}
         {post.post_type === "Reel" && videos.length > 0 && (
           <div className="mb-4">
-            <video
-              controls
-              className="w-full h-auto rounded-lg max-h-96"
-              src={getMediaUrl(videos[0])}
-            >
-              Your browser does not support the video tag.
-            </video>
+            <div className="bg-gray-900 rounded-lg overflow-hidden">
+              <video
+                ref={videoRef}
+                controls
+                preload="metadata"
+                playsInline
+                className="w-full"
+                style={{ 
+                  minHeight: '200px', 
+                  maxHeight: '500px',
+                  display: 'block',
+                  backgroundColor: '#000'
+                }}
+                onError={(e) => {
+                  setVideoError(true);
+                  const video = e.target;
+                  const errorDetails = {
+                    error: video.error,
+                    code: video.error?.code,
+                    message: video.error?.message,
+                    networkState: video.networkState,
+                    readyState: video.readyState,
+                    src: video.src,
+                    currentSrc: video.currentSrc,
+                    videoUrl: getMediaUrl(videos[0]),
+                    media: videos[0]
+                  };
+                  console.error("Video load error:", errorDetails);
+                  alert(`Video failed to load. Check console for details. URL: ${getMediaUrl(videos[0])}`);
+                }}
+                onLoadStart={() => {
+                  setVideoError(false);
+                  console.log("Video load started. URL:", getMediaUrl(videos[0]));
+                }}
+                onLoadedMetadata={() => {
+                  console.log("Video metadata loaded. Duration:", videoRef.current?.duration, "URL:", getMediaUrl(videos[0]));
+                }}
+                onLoadedData={() => {
+                  console.log("Video data loaded successfully. URL:", getMediaUrl(videos[0]));
+                }}
+                onCanPlay={() => {
+                  console.log("Video can play. URL:", getMediaUrl(videos[0]));
+                }}
+              >
+                <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            
+            {videoError && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm">
+                <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
+                <p className="text-red-600 text-xs mb-2 break-all">
+                  URL: {getMediaUrl(videos[0])}
+                </p>
+                <a
+                  href={getMediaUrl(videos[0])}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline text-xs"
+                >
+                  Try opening video URL directly
+                </a>
+              </div>
+            )}
+            
+            <div className="mt-2 flex gap-2 flex-wrap">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (videoRef.current) {
+                    videoRef.current.muted = false;
+                    videoRef.current.volume = 1;
+                    videoRef.current.play().catch(err => {
+                      console.error("Play with sound failed:", err);
+                      alert("Browser blocked autoplay with sound. Please click the play button on the video.");
+                    });
+                  }
+                }}
+                className="text-xs px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                🔊 Play with Sound
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (videoRef.current) {
+                    videoRef.current.muted = true;
+                    videoRef.current.play().catch(err => console.error("Muted play failed:", err));
+                  }
+                }}
+                className="text-xs px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+              >
+                🔇 Play Muted
+              </button>
+              <a
+                href={getMediaUrl(videos[0])}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors inline-block"
+              >
+                🔗 Open Video URL
+              </a>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 break-all">
+              Video URL: {getMediaUrl(videos[0])}
+            </p>
           </div>
         )}
       </div>
