@@ -81,7 +81,7 @@ const Navbar = () => {
   return (
     <nav
       ref={navbarRef}
-      className="w-full fixed top-0 left-0 z-50 border-b border-[#E1E3E8] bg-white bg-opacity-50 backdrop-blur-md"
+      className="w-full fixed top-0 left-0 z-50 border-b bg-white bg-opacity-50 backdrop-blur-md"
     >
       <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
         {/* Logo + Brand Name */}
@@ -102,7 +102,7 @@ const Navbar = () => {
         </div>
 
         {/* Center Menu */}
-        <div className="hidden md:flex items-center justify-center flex-2 gap-12 text-[#141C36]">
+        <div className="hidden md:flex items-center justify-center flex-2 gap-12 text-gray-800">
           {menuItems.map((item) =>
             item.subItems ? (
               <div key={item.name} className="relative group">
@@ -162,7 +162,7 @@ const Navbar = () => {
         <div className="flex items-center justify-end flex-1 gap-3">
           <Link
             to="/login"
-            className="hidden sm:inline-block px-3 py-2 rounded bg-[#f0a71e] text-[#141C36] font-semibold hover:brightness-105 transition"
+            className="hidden sm:inline-block px-3 py-2 rounded bg-slate-800 text-gray-100 hover:bg-slate-700 font-semibold hover:brightness-105 transition"
           >
             Login
           </Link>

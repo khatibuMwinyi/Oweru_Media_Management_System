@@ -63,15 +63,15 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-slate-900 rounded-lg sm:rounded-2xl mb-4 sm:mb-8 mx-2 sm:mx-4 md:mx-6">
+      <div className="relative overflow-hidden bg-white-100 rounded-lg sm:rounded-2xl mb-4 sm:mb-8 mx-2 sm:mx-4 md:mx-6">
         <div className="relative px-4 sm:px-6 md:px-8 py-8 sm:py-10 md:py-12 lg:py-16">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
               <div className="text-white mb-4 md:mb-0 text-center md:text-left w-full md:w-auto">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3">
-                  Welcome back, {user?.name || "Admin"}! 👋
+                <h1 className="text-2xl text-gray-800 sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3">
+                  Welcome back moderator
                 </h1>
-                <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90">
+                <p className="text-base text-gray-600 sm:text-lg md:text-xl lg:text-2xl ">
                   Manage your media and property content with ease
                 </p>
               </div>
@@ -141,11 +141,11 @@ const Dashboard = () => {
               <button
                 key={index}
                 onClick={() => navigate(action.route)}
-                className="bg-[#1e3a8a] hover:bg-[#1e40af] active:bg-[#1e3a8a] text-white rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 transform hover:scale-105 active:scale-95 transition duration-300 text-left w-full"
+                className="bg-white/90 active:bg-white/80 text-blue-600 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 transform hover:scale-105 active:scale-95 transition duration-300 text-left w-full"
               >
                 <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">{action.icon}</div>
                 <h3 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{action.title}</h3>
-                <p className="text-white/90 text-xs sm:text-sm leading-relaxed">{action.description}</p>
+                <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">{action.description}</p>
               </button>
             ))}
           </div>
@@ -217,13 +217,13 @@ const Dashboard = () => {
         </div>
 
         {/* Welcome Message */}
-        <div className="bg-[#1e3a8a] rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 md:p-8 text-white mb-4 sm:mb-0">
+          <div className="bg-white/90 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 md:p-8 text-gray-600 mb-4 sm:mb-0">
           <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4 sm:gap-6">
             <div className="text-center sm:text-left mb-2 sm:mb-0 flex-1">
               <h3 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">
                 Ready to get started?
               </h3>
-              <p className="text-sm sm:text-base text-white/90">
+              <p className="text-sm sm:text-base text-gray-600">
                 Start creating engaging content for your properties today!
               </p>
             </div>

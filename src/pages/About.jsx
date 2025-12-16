@@ -10,7 +10,7 @@ const About = () => {
     <div>
       <div>
         {/* Navbar */}
-        <nav className="w-full fixed top-0 left-0 z-50 border-b border-[#E1E3E8] bg-white bg-opacity-50 backdrop-blur-md">
+        <nav className="w-full fixed top-0 left-0 z-50 border-b border-black/5 bg-white bg-opacity-50 backdrop-blur-md">
           <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
             {/* Logo + Brand Name */}
             <div className="flex items-center gap-3 flex-[1.2]">
@@ -19,7 +19,7 @@ const About = () => {
                 alt="Oweru Logo"
                 className="h-8 w-auto rounded-full"
               />
-              <h1 className="text-xl font-semibold cursor-pointer text-[#141C36]">
+              <h1 className="text-xl font-semibold cursor-pointer text-gray-800">
                 <Link to="/">Oweru Media Hub</Link>
               </h1>
             </div>
@@ -28,7 +28,7 @@ const About = () => {
             <div className="flex items-center justify-end flex-1 gap-3">
               <Link
                 to="/login"
-                className="hidden sm:inline-block px-3 py-2 rounded bg-[#f0a71e] text-[#141C36] font-semibold hover:brightness-105 transition"
+                className="hidden sm:inline-block px-3 py-2 rounded bg-slate-800 text-gray-100 font-semibold hover:brightness-105 transition"
               >
                 Login
               </Link>

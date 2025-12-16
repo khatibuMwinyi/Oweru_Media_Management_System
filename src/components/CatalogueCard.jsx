@@ -11,15 +11,15 @@ const CatalogueCard = ({ title, description, Icon }) => {
         shadow-sm
         hover:shadow-lg
         transition-all duration-300
-        focus-within:ring-2 focus-within:ring-[#f0a71e]
+        focus-within:ring-2 focus-within:ring-[#1e3a8a]
       "
     >
       {/* Icon Container */}
       <div
         className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl mb-4 sm:mb-5"
-        style={{ backgroundColor: "#f0a71e" }}
-      >
-        <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+        style={{ backgroundColor: "#1e3a8a" }}
+        >
+        <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-gray-100" />
       </div>
 
       {/* Title */}

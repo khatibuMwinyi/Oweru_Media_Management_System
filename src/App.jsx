@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import RequireAuth from "./components/RequireAuth";
+import RequireRole from "./components/RequireRole";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Rentals from "./pages/admin/Rentals";
@@ -10,6 +11,7 @@ import PropertyServices from "./pages/admin/PropertyServices";
 import Investment from "./pages/admin/Investment";
 import ConstructionPropertyManagement from "./pages/admin/ConstructionPropertyManagement";
 import PostManagement from "./pages/admin/PostManagement";
+import ModeratorDashboard from "./pages/admin/ModeratorDashboard";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -29,17 +31,81 @@ function App() {
               </RequireAuth>
             }
           >
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="posts" element={<PostManagement />} />
-            <Route path="rentals" element={<Rentals />} />
-            <Route path="property-sales" element={<PropertySales />} />
+            {/* Admin-only area */}
+            <Route
+              path="dashboard"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <Dashboard />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="posts"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <PostManagement />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="rentals"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <Rentals />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="property-sales"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <PropertySales />
+                </RequireRole>
+              }
+            />
             <Route
               path="construction-property-management"
-              element={<ConstructionPropertyManagement />}
+              element={
+                <RequireRole roles={["admin"]}>
+                  <ConstructionPropertyManagement />
+                </RequireRole>
+              }
             />
-            <Route path="lands-and-plots" element={<LandsAndPlots />} />
-            <Route path="property-services" element={<PropertyServices />} />
-            <Route path="investment" element={<Investment />} />
+            <Route
+              path="lands-and-plots"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <LandsAndPlots />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="property-services"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <PropertyServices />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="investment"
+              element={
+                <RequireRole roles={["admin"]}>
+                  <Investment />
+                </RequireRole>
+              }
+            />
+
+            {/* Moderator-only area */}
+            <Route
+              path="moderation"
+              element={
+                <RequireRole roles={["moderator"]}>
+                  <ModeratorDashboard />
+                </RequireRole>
+              }
+            />
           </Route>
 
           {/* Redirect root to admin dashboard */}

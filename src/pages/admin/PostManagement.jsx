@@ -10,6 +10,7 @@ const PostManagement = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [pagination, setPagination] = useState(null);
 
   const categories = [
@@ -26,9 +27,10 @@ const PostManagement = () => {
     setLoading(true);
     setError(null);
     try {
+      const params = { status: filterStatus, page };
       const response = filterCategory === "all"
-        ? await postService.getAll()
-        : await postService.getByCategory(filterCategory);
+        ? await postService.getAll(params)
+        : await postService.getByCategory(filterCategory, params);
 
       if (response.data.data) {
         setPosts(response.data.data);
@@ -53,7 +55,7 @@ const PostManagement = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [filterCategory]);
+  }, [filterCategory, filterStatus]);
 
   useEffect(() => {
     const handlePostChange = () => {
@@ -100,21 +102,38 @@ const PostManagement = () => {
         </div>
 
         {/* Filter */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Category
-          </label>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C89128]"
-          >
-            {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
+        <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by Category
+            </label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C89128]"
+            >
+              {categories.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by Status
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C89128]"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
         </div>
 
         {error && (
@@ -138,6 +157,19 @@ const PostManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {posts.map((post) => (
                 <div key={post.id} className="relative">
+                  <div className="absolute top-2 left-2 z-10">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-semibold ${
+                        post.status === "approved"
+                          ? "bg-green-100 text-green-700"
+                          : post.status === "rejected"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {post.status || "pending"}
+                    </span>
+                  </div>
                   <PostCard post={post} onDelete={handleDelete} onEdit={handleEdit} />
                 </div>
               ))}

@@ -45,9 +45,10 @@ export const authService = {
 };
 
 export const postService = {
-  getAll: () => api.get("/posts"),
+  getAll: (params = {}) => api.get("/posts", { params }),
   getById: (id) => api.get(`/posts/${id}`),
-  getByCategory: (category) => api.get(`/posts/category/${category}`),
+  getByCategory: (category, params = {}) =>
+    api.get(`/posts/category/${category}`, { params }),
   create: (data) => {
     const formData = new FormData();
     formData.append("category", data.category);
@@ -77,6 +78,10 @@ export const postService = {
   },
   update: (id, data) => api.put(`/posts/${id}`, data),
   delete: (id) => api.delete(`/posts/${id}`),
+  approve: (id, moderation_note) =>
+    api.post(`/posts/${id}/approve`, { moderation_note }),
+  reject: (id, moderation_note) =>
+    api.post(`/posts/${id}/reject`, { moderation_note }),
 };
 
 export const aiService = {

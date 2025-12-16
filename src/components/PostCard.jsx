@@ -91,6 +91,26 @@ const PostCard = ({ post, onDelete, onEdit }) => {
           </div>
         </div>
 
+        {/* Admin-only view of moderation result when a post is rejected */}
+        {user?.role === "admin" && post.status === "rejected" && (
+          <div className="mb-3 p-3 rounded border border-red-300 bg-red-50">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                Status: Rejected
+              </span>
+              {post.moderator?.name && (
+                <span className="text-[11px] text-gray-600">
+                  Reviewed by {post.moderator.name}
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-gray-800 leading-relaxed">
+              <span className="font-semibold">Feedback from moderator:</span>{" "}
+              {post.moderation_note || "This post was rejected. Please review and update the content before submitting again."}
+            </p>
+          </div>
+        )}
+
         <p className="text-gray-700 mb-4 whitespace-pre-wrap">
           {post.description}
         </p>
