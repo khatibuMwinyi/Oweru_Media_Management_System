@@ -102,7 +102,7 @@ const Navbar = () => {
         </div>
 
         {/* Center Menu */}
-        <div className="hidden md:flex items-center justify-center flex-[2] gap-12 text-[#141C36]">
+        <div className="hidden md:flex items-center justify-center flex-2 gap-12 text-[#141C36]">
           {menuItems.map((item) =>
             item.subItems ? (
               <div key={item.name} className="relative group">

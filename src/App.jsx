@@ -11,13 +11,15 @@ import Investment from "./pages/admin/Investment";
 import ConstructionPropertyManagement from "./pages/admin/ConstructionPropertyManagement";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
+import About from "./pages/About";
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
           <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/about" element={<About />} />
           <Route
             path="/admin"
             element={
