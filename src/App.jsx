@@ -107,9 +107,6 @@ function App() {
               }
             />
           </Route>
-
-          {/* Redirect root to admin dashboard */}
-          <Route path="/" element={<Login />} />
         </Routes>
       </Router>
     </AuthProvider>

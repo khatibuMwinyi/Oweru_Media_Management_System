@@ -1,6 +1,7 @@
 import { postService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useRef } from "react";
+import canvaTemplate from "../assets/templates/Oweru.png";
 
 const PostCard = ({ post, onDelete, onEdit }) => {
   const { user } = useAuth();
@@ -10,7 +11,6 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   const videoRef = useRef(null);
 
   const getMediaUrl = (media) => {
-    // If media has url attribute, use it (from API)
     if (media.url) {
       // If URL is already absolute, use it
       if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
@@ -58,8 +58,21 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   const videos = post.media?.filter((m) => m.file_type === "video") || [];
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-      <div className="p-4">
+    <div 
+      className="rounded-lg shadow-md overflow-hidden border border-gray-200 relative"
+      style={{
+        backgroundImage: `url("${canvaTemplate}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '400px',
+      }}
+    >
+      {/* Overlay to ensure content is readable - reduced opacity to show template */}
+      <div className="absolute inset-0 bg-white bg-opacity-40"></div>
+      
+      {/* Content Container */}
+      <div className="p-4 relative z-10">
         <div className="flex justify-between items-start mb-2">
           <div>
             <h3 className="text-lg font-semibold text-gray-800">
@@ -79,7 +92,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                 Edit
               </button>
             )}
-            {user && user.id === post.user_id && (
+            {onDelete && user && user.id === post.user_id && (
               <button
                 onClick={handleDelete}
                 disabled={deleting}

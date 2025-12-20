@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { postService } from "../../services/api";
 import PostCard from "../../components/PostCard";
 import EditPostModal from "../../components/EditPostModal";
+import { Edit, Trash2 } from "lucide-react";
 
 const PostManagement = () => {
   const [posts, setPosts] = useState([]);
@@ -69,7 +70,7 @@ const PostManagement = () => {
       window.removeEventListener("postCreated", handlePostChange);
       window.removeEventListener("postDeleted", handlePostChange);
       window.removeEventListener("postUpdated", handlePostChange);
-    };
+    }; 
   }, [filterCategory]);
 
   const handleEdit = (post) => {
@@ -77,8 +78,15 @@ const PostManagement = () => {
     setShowEditModal(true);
   };
 
-  const handleDelete = (postId) => {
-    setPosts((prev) => prev.filter((post) => post.id !== postId));
+  const handleDelete = async (postId) => {
+    try {
+      await postService.delete(postId);
+      setPosts((prev) => prev.filter((post) => post.id !== postId));
+      window.dispatchEvent(new CustomEvent("postDeleted"));
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      alert("Failed to delete post. Please try again.");
+    }
   };
 
   const handlePageChange = (page) => {
@@ -156,21 +164,53 @@ const PostManagement = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {posts.map((post) => (
-                <div key={post.id} className="relative">
-                  <div className="absolute top-2 left-2 z-10">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold ${
-                        post.status === "approved"
-                          ? "bg-green-100 text-green-700"
-                          : post.status === "rejected"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {post.status || "pending"}
-                    </span>
+                <div key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 flex flex-col h-full">
+                  {/* Post Content - Clean display without action buttons */}
+                  <div className="flex-1 overflow-hidden">
+                    <PostCard post={post} onDelete={null} onEdit={null} />
                   </div>
-                  <PostCard post={post} onDelete={handleDelete} onEdit={handleEdit} />
+                  
+                  {/* Bottom Action Bar - Status, Edit, Delete */}
+                  <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-auto">
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Status Badge */}
+                      <span
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${
+                          post.status === "approved"
+                            ? "bg-green-100 text-green-700 border border-green-200"
+                            : post.status === "rejected"
+                            ? "bg-red-100 text-red-700 border border-red-200"
+                            : "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                        }`}
+                      >
+                        {post.status || "pending"}
+                      </span>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleEdit(post)}
+                          className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors shadow-sm"
+                          title="Edit post"
+                          aria-label="Edit post"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to delete this post?")) {
+                              handleDelete(post.id);
+                            }
+                          }}
+                          className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors shadow-sm"
+                          title="Delete post"
+                          aria-label="Delete post"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

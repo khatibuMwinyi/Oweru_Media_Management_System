@@ -96,75 +96,94 @@ const ModeratorDashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {posts.map((post) => (
-              <div key={post.id} className="relative">
-                <div className="absolute top-2 left-2 z-10">
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-700">
-                    Pending
-                  </span>
+              <div key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 flex flex-col h-full">
+                {/* Post Content - Clean display without action buttons */}
+                <div className="flex-1 overflow-hidden">
+                  <PostCard post={post} onDelete={null} onEdit={null} />
                 </div>
-                <PostCard post={post} />
-                <div className="mt-3 space-y-3">
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleApprove(post.id)}
-                      className="flex-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() =>
-                        setActiveRejectId((current) =>
-                          current === post.id ? null : post.id
-                        )
-                      }
-                      className="flex-1 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                    >
-                      Reject
-                    </button>
-                  </div>
-
-                  {activeRejectId === post.id && (
-                    <div className="border border-red-200 bg-red-50 rounded p-3">
-                      <label className="block text-xs font-semibold text-red-800 mb-1">
-                        Reason for rejection
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={rejectNotes[post.id] || ""}
-                        onChange={(e) =>
-                          setRejectNotes((prev) => ({
-                            ...prev,
-                            [post.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="Explain briefly why this post is rejected and how it can be improved."
-                        className="w-full px-3 py-2 border border-red-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
-                      />
-                      <div className="mt-2 flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveRejectId(null);
-                            setRejectNotes((prev) => {
-                              const next = { ...prev };
-                              delete next[post.id];
-                              return next;
-                            });
-                          }}
-                          className="px-3 py-1.5 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleReject(post.id)}
-                          className="px-4 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700"
-                        >
-                          Send rejection
-                        </button>
-                      </div>
+                
+                {/* Bottom Action Bar - Status, Approve, Reject */}
+                <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-auto">
+                  <div className="space-y-3">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${
+                          post.status === "approved"
+                            ? "bg-green-100 text-green-700 border border-green-200"
+                            : post.status === "rejected"
+                            ? "bg-red-100 text-red-700 border border-red-200"
+                            : "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                        }`}
+                      >
+                        {post.status || "pending"}
+                      </span>
                     </div>
-                  )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleApprove(post.id)}
+                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() =>
+                          setActiveRejectId((current) =>
+                            current === post.id ? null : post.id
+                          )
+                        }
+                        className="flex-1 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
+                      >
+                        Reject
+                      </button>
+                    </div>
+
+                    {/* Rejection Notes Section */}
+                    {activeRejectId === post.id && (
+                      <div className="border border-red-200 bg-red-50 rounded p-3">
+                        <label className="block text-xs font-semibold text-red-800 mb-1">
+                          Reason for rejection
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={rejectNotes[post.id] || ""}
+                          onChange={(e) =>
+                            setRejectNotes((prev) => ({
+                              ...prev,
+                              [post.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Explain briefly why this post is rejected and how it can be improved."
+                          className="w-full px-3 py-2 border border-red-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+                        />
+                        <div className="mt-2 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveRejectId(null);
+                              setRejectNotes((prev) => {
+                                const next = { ...prev };
+                                delete next[post.id];
+                                return next;
+                              });
+                            }}
+                            className="px-3 py-1.5 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReject(post.id)}
+                            className="px-4 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                          >
+                            Send rejection
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -45,6 +45,17 @@ const Sidebar = ({ isOpen, onClose }) => {
           </h2>
         </div>
         <nav className="p-2 sm:p-4 space-y-1 sm:space-y-2">
+          {/* Home link - accessible to both admin and moderator */}
+          {(user?.role === "admin" || user?.role === "moderator") && (
+            <Link
+              className={`block px-3 py-2 rounded ${isActive("/")}`}
+              to="/"
+              onClick={onClose}
+            >
+              Home
+            </Link>
+          )}
+
           {/* Admin navigation */}
           {user?.role === "admin" && (
             <>

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/oweru_logo.png";
 import { Menu, X, ChevronDown } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -9,6 +10,8 @@ const Navbar = () => {
   const [activeSection, setActiveSection] = useState("home");
   const navbarRef = useRef(null);
   const location = useLocation();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const menuItems = [
     { name: "Home", id: "home" },
@@ -160,12 +163,36 @@ const Navbar = () => {
 
         {/* Right */}
         <div className="flex items-center justify-end flex-1 gap-3">
-          <Link
-            to="/login"
-            className="hidden sm:inline-block px-3 py-2 rounded bg-slate-800 text-gray-100 hover:bg-slate-700 font-semibold hover:brightness-105 transition"
-          >
-            Login
-          </Link>
+          {user ? (
+            <>
+              <Link
+                to={
+                  user.role === "admin"
+                    ? "/admin/dashboard"
+                    : "/admin/moderation"
+                }
+                className="hidden sm:inline-block px-3 py-2 rounded bg-slate-800 text-gray-100 hover:bg-slate-700 font-semibold hover:brightness-105 transition"
+              >
+                {user.role === "admin" ? "Dashboard" : "Moderator"}
+              </Link>
+              <button
+                onClick={async () => {
+                  await logout();
+                  navigate("/login");
+                }}
+                className="hidden sm:inline-block px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold hover:brightness-105 transition"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden sm:inline-block px-3 py-2 rounded bg-slate-800 text-gray-100 hover:bg-slate-700 font-semibold hover:brightness-105 transition"
+            >
+              Login
+            </Link>
+          )}
 
           <button
             className="md:hidden text-[#141C36]"
@@ -178,11 +205,11 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden bg-[#c89128] overflow-hidden transition-[max-height] duration-300 ${
+        className={`md:hidden bg-white overflow-hidden transition-[max-height] duration-300 border-t border-gray-200 ${
           open ? "max-h-[1000px]" : "max-h-0"
         }`}
       >
-        <ul className="flex flex-col px-6 py-4 text-white">
+        <ul className="flex flex-col px-6 py-4 text-gray-800">
           {menuItems.map((item) =>
             item.subItems ? (
               <li key={item.key} className="py-2">
@@ -212,7 +239,7 @@ const Navbar = () => {
                   {item.subItems.map((sub) => (
                     <li
                       key={sub.id}
-                      className="py-1 cursor-pointer hover:text-[#141C36]"
+                      className="py-1 cursor-pointer hover:text-[#C89128]"
                       onClick={() => scrollToSection(sub.id)}
                     >
                       {sub.name}
@@ -238,6 +265,40 @@ const Navbar = () => {
                 {item.name}
               </li>
             )
+          )}
+          {/* Auth links for mobile */}
+          {user ? (
+            <>
+              <Link
+                to={
+                  user.role === "admin"
+                    ? "/admin/dashboard"
+                    : "/admin/moderation"
+                }
+                className="py-2 block border-t border-gray-200 mt-2 pt-4"
+                onClick={() => setOpen(false)}
+              >
+                {user.role === "admin" ? "Dashboard" : "Moderator Dashboard"}
+              </Link>
+              <button
+                onClick={async () => {
+                  await logout();
+                  navigate("/login");
+                  setOpen(false);
+                }}
+                className="py-2 block text-left w-full border-t border-gray-200 mt-2 pt-4"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="py-2 block border-t border-gray-200 mt-2 pt-4"
+              onClick={() => setOpen(false)}
+            >
+              Login
+            </Link>
           )}
         </ul>
       </div>

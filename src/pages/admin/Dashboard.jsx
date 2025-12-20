@@ -69,7 +69,7 @@ const Dashboard = () => {
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
               <div className="text-white mb-4 md:mb-0 text-center md:text-left w-full md:w-auto">
                 <h1 className="text-2xl text-gray-800 sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3">
-                  Welcome back moderator
+                  Welcome back admin
                 </h1>
                 <p className="text-base text-gray-600 sm:text-lg md:text-xl lg:text-2xl ">
                   Manage your media and property content with ease
