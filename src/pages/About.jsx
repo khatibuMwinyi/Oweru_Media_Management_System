@@ -4,6 +4,7 @@ import logo from "../assets/oweru_logo.png";
 import CatalogueCard from "../components/CatalogueCard";
 import { catalogueServices } from "../data/catalogueServices";
 import { contactInfo } from "../data/catalogueServices";
+import GetInTouch from "../components/GetInTouch";
 
 const About = () => {
   return (
@@ -98,36 +99,7 @@ const About = () => {
         </section>
 
         {/* Contact Info Section */}
-        <section className="py-6 bg-gray-50 w-full">
-          <div className="w-full px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8 text-center">
-              Contact Us
-            </h2>
-
-            <ul className="space-y-4 text-gray-700">
-              {contactInfo.map((item, idx) => {
-                const Icon = item.icon;
-                return (
-                  <li key={idx} className="flex items-center gap-3">
-                    <Icon size={24} className="text-[#f0a71e] shrink-0" />
-                    {item.link ? (
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {item.info}
-                      </a>
-                    ) : (
-                      <span>{item.info}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </section>
+        <GetInTouch />
       </div>
     </div>
   );
