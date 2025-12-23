@@ -2,25 +2,23 @@ import PostForm from "../../components/PostForm";
 
 const Rentals = () => {
   return (
-    <div className="p-6 bg-gray-100 min-h-screen space-y-10">
-      <h1 className="max-w-2xl mx-auto text-left text-2xl font-bold mb-6">
-        Rentals - Create Social Media Posts
-      </h1>
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+        <header className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Rentals
+          </h1>
+          <p className="text-sm text-gray-600">
+            Design social media posts for rental properties in static, carousel, and reel formats.
+          </p>
+        </header>
 
-      {/* Static Post Section */}
-      <section>
-        <PostForm postType="Static" category="rentals" />
-      </section>
-
-      {/* Carousel Post Section */}
-      <section>
-        <PostForm postType="Carousel" category="rentals" />
-      </section>
-
-      {/* Reel Post Section */}
-      <section>
-        <PostForm postType="Reel" category="rentals" />
-      </section>
+        <section className="grid gap-6 md:grid-cols-3">
+          <PostForm postType="Static" category="rentals" />
+          <PostForm postType="Carousel" category="rentals" />
+          <PostForm postType="Reel" category="rentals" />
+        </section>
+      </div>
     </div>
   );
 };

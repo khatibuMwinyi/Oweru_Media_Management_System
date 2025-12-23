@@ -164,8 +164,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                       to="/admin/property-services"
                       onClick={onClose}
                     >
-                      Property Services
-                    </Link>
+                      Land & Property Administration Services                
+      </Link>
                     <Link
                       className={`block px-3 py-2 rounded ${isActive(
                         "/admin/investment"

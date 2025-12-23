@@ -82,8 +82,8 @@ const Home = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
-        <section className="mb-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 pt-24 pb-8">
+        <section className="mb-6 max-w-7xl mx-auto">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Latest Posts
           </h1>
@@ -99,7 +99,7 @@ const Home = () => {
         )}
 
         {error && !loading && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <div className="max-w-7xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             <p className="font-semibold mb-2">Error loading posts</p>
             <p className="text-sm">{error}</p>
             <p className="text-xs mt-2 text-red-600">
@@ -114,13 +114,13 @@ const Home = () => {
         )}
 
         {!loading && !error && posts.length === 0 && (
-          <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow">
+          <div className="max-w-7xl mx-auto text-center py-12 text-gray-500 bg-white rounded-lg shadow">
             <p>No approved posts available yet.</p>
           </div>
         )}
 
         {!loading && !error && posts.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {posts.map((post) => (
               <HomePostCard key={post.id} post={post} />
             ))}

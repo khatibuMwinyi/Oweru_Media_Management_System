@@ -1,7 +1,7 @@
 import { postService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useRef } from "react";
-import canvaTemplate from "../assets/templates/Oweru.png";
+import oweruLogo from "../assets/oweru_logo.png";
 
 const PostCard = ({ post, onDelete, onEdit }) => {
   const { user } = useAuth();
@@ -12,23 +12,19 @@ const PostCard = ({ post, onDelete, onEdit }) => {
 
   const getMediaUrl = (media) => {
     if (media.url) {
-      // If URL is already absolute, use it
       if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
         return media.url;
       }
-      // If relative, prepend base URL
       const baseUrl =
         import.meta.env.VITE_API_URL?.replace("/api", "") ||
         "http://localhost:8000";
       return `${baseUrl}${media.url.startsWith('/') ? '' : '/'}${media.url}`;
     }
-    // Otherwise construct from file_path
     const baseUrl =
       import.meta.env.VITE_API_URL?.replace("/api", "") ||
       "http://localhost:8000";
     const filePath = media.file_path?.startsWith('/') ? media.file_path.substring(1) : media.file_path;
-    const url = `${baseUrl}/storage/${filePath}`;
-    return url;
+    return `${baseUrl}/storage/${filePath}`;
   };
 
   const handleDelete = async () => {
@@ -39,10 +35,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
     setDeleting(true);
     try {
       await postService.delete(post.id);
-
-      // Dispatch event to refresh post list
       window.dispatchEvent(new CustomEvent("postDeleted"));
-
       if (onDelete) {
         onDelete(post.id);
       }
@@ -58,86 +51,18 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   const videos = post.media?.filter((m) => m.file_type === "video") || [];
 
   return (
-    <div 
-      className="rounded-lg shadow-md overflow-hidden border border-gray-200 relative"
-      style={{
-        backgroundImage: `url("${canvaTemplate}")`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        minHeight: '400px',
-      }}
-    >
-      {/* Overlay to ensure content is readable - reduced opacity to show template */}
-      <div className="absolute inset-0 bg-white bg-opacity-40"></div>
-      
-      {/* Content Container */}
-      <div className="p-4 relative z-10">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800">
-              {post.title}
-            </h3>
-            <p className="text-xs text-gray-500 mt-1">
-              {post.post_type} • {post.category} •{" "}
-              {new Date(post.created_at).toLocaleDateString()}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {onEdit && (
-              <button
-                onClick={() => onEdit(post)}
-                className="text-blue-600 hover:text-blue-800 text-sm px-2 py-1"
-              >
-                Edit
-              </button>
-            )}
-            {onDelete && user && user.id === post.user_id && (
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="text-red-600 hover:text-red-800 text-sm px-2 py-1 disabled:opacity-50"
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Admin-only view of moderation result when a post is rejected */}
-        {user?.role === "admin" && post.status === "rejected" && (
-          <div className="mb-3 p-3 rounded border border-red-300 bg-red-50">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-red-700">
-                Status: Rejected
-              </span>
-              {post.moderator?.name && (
-                <span className="text-[11px] text-gray-600">
-                  Reviewed by {post.moderator.name}
-                </span>
-              )}
-            </div>
-            <p className="mt-2 text-xs text-gray-800 leading-relaxed">
-              <span className="font-semibold">Feedback from moderator:</span>{" "}
-              {post.moderation_note || "This post was rejected. Please review and update the content before submitting again."}
-            </p>
-          </div>
-        )}
-
-        <p className="text-gray-700 mb-4 whitespace-pre-wrap">
-          {post.description}
-        </p>
-
+    <div className="shadow-lg overflow-hidden border border-gray-200 bg-white flex flex-col relative h-[700px]">
+      {/* Media Section - Fixed height for all post types */}
+      <div className="w-full h-64 flex-shrink-0">
         {/* Static Post - Single Image */}
         {post.post_type === "Static" && images.length > 0 && (
-          <div className="mb-4">
+          <div className="w-full h-full flex items-center justify-center bg-black">
             <img
               src={getMediaUrl(images[0])}
               alt={post.title}
-              className="w-full h-auto rounded-lg object-cover max-h-96"
+              className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src =
-                  "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
               }}
             />
           </div>
@@ -145,24 +70,21 @@ const PostCard = ({ post, onDelete, onEdit }) => {
 
         {/* Carousel Post - Multiple Images */}
         {post.post_type === "Carousel" && images.length > 0 && (
-          <div className="mb-4">
-            <div className="relative">
+          <div className="w-full h-full flex flex-col">
+            <div className="relative w-full h-full">
               <img
                 src={getMediaUrl(images[carouselIndex])}
                 alt={`${post.title} - Image ${carouselIndex + 1}`}
-                className="w-full h-auto rounded-lg object-cover max-h-96"
+                className="w-full h-full object-cover bg-black"
                 onError={(e) => {
-                  e.target.src =
-                    "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                  e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
                 }}
               />
               {images.length > 1 && (
                 <>
                   <button
                     onClick={() =>
-                      setCarouselIndex(
-                        (prev) => (prev - 1 + images.length) % images.length
-                      )
+                      setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
                     }
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
                   >
@@ -183,22 +105,19 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               )}
             </div>
             {images.length > 1 && (
-              <div className="flex gap-2 mt-2 overflow-x-auto">
+              <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-2 overflow-x-auto bg-black bg-opacity-50">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCarouselIndex(idx)}
-                    className={`shrink-0 ${
-                      idx === carouselIndex ? "ring-2 ring-blue-500" : ""
-                    }`}
+                    className={`shrink-0 ${idx === carouselIndex ? "ring-2 ring-white" : ""}`}
                   >
                     <img
                       src={getMediaUrl(img)}
                       alt={`Thumbnail ${idx + 1}`}
-                      className="w-16 h-16 object-cover rounded"
+                      className="w-10 h-10 object-cover rounded"
                       onError={(e) => {
-                        e.target.src =
-                          "https://via.placeholder.com/64x64?text=Image";
+                        e.target.src = "https://via.placeholder.com/64x64?text=Image";
                       }}
                     />
                   </button>
@@ -210,58 +129,29 @@ const PostCard = ({ post, onDelete, onEdit }) => {
 
         {/* Reel Post - Video */}
         {post.post_type === "Reel" && videos.length > 0 && (
-          <div className="mb-4">
-            <div className="bg-gray-900 rounded-lg overflow-hidden">
-              <video
-                ref={videoRef}
-                controls
-                preload="metadata"
-                playsInline
-                className="w-full"
-                style={{ 
-                  minHeight: '200px', 
-                  maxHeight: '500px',
-                  display: 'block',
-                  backgroundColor: '#000'
-                }}
-                onError={(e) => {
-                  setVideoError(true);
-                  const video = e.target;
-                  const errorDetails = {
-                    error: video.error,
-                    code: video.error?.code,
-                    message: video.error?.message,
-                    networkState: video.networkState,
-                    readyState: video.readyState,
-                    src: video.src,
-                    currentSrc: video.currentSrc,
-                    videoUrl: getMediaUrl(videos[0]),
-                    media: videos[0]
-                  };
-                  console.error("Video load error:", errorDetails);
-                  alert(`Video failed to load. Check console for details. URL: ${getMediaUrl(videos[0])}`);
-                }}
-                onLoadStart={() => {
-                  setVideoError(false);
-                  console.log("Video load started. URL:", getMediaUrl(videos[0]));
-                }}
-                onLoadedMetadata={() => {
-                  console.log("Video metadata loaded. Duration:", videoRef.current?.duration, "URL:", getMediaUrl(videos[0]));
-                }}
-                onLoadedData={() => {
-                  console.log("Video data loaded successfully. URL:", getMediaUrl(videos[0]));
-                }}
-                onCanPlay={() => {
-                  console.log("Video can play. URL:", getMediaUrl(videos[0]));
-                }}
-              >
-                <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-            
+          <div className="w-full h-full bg-black">
+            <video
+              ref={videoRef}
+              controls
+              preload="metadata"
+              playsInline
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                setVideoError(true);
+                console.error("Video load error:", {
+                  videoUrl: getMediaUrl(videos[0]),
+                  media: videos[0]
+                });
+                alert(`Video failed to load. URL: ${getMediaUrl(videos[0])}`);
+              }}
+              onLoadStart={() => setVideoError(false)}
+            >
+              <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
+              Your browser does not support the video tag.
+            </video>
+
             {videoError && (
-              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm">
+              <div className="p-3 bg-red-50 border border-red-200 text-sm">
                 <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
                 <p className="text-red-600 text-xs mb-2 break-all">
                   URL: {getMediaUrl(videos[0])}
@@ -272,57 +162,117 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                   rel="noopener noreferrer"
                   className="text-blue-600 underline text-xs"
                 >
-                  Try opening video URL directly
+                  Open video directly
                 </a>
               </div>
             )}
-            
-            <div className="mt-2 flex gap-2 flex-wrap">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (videoRef.current) {
-                    videoRef.current.muted = false;
-                    videoRef.current.volume = 1;
-                    videoRef.current.play().catch(err => {
-                      console.error("Play with sound failed:", err);
-                      alert("Browser blocked autoplay with sound. Please click the play button on the video.");
-                    });
-                  }
-                }}
-                className="text-xs px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              >
-                🔊 Play with Sound
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (videoRef.current) {
-                    videoRef.current.muted = true;
-                    videoRef.current.play().catch(err => console.error("Muted play failed:", err));
-                  }
-                }}
-                className="text-xs px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-              >
-                🔇 Play Muted
-              </button>
-              <a
-                href={getMediaUrl(videos[0])}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors inline-block"
-              >
-                🔗 Open Video URL
-              </a>
-            </div>
-            <p className="text-xs text-gray-500 mt-1 break-all">
-              Video URL: {getMediaUrl(videos[0])}
-            </p>
           </div>
         )}
       </div>
+
+      {/* Content Section - Title and Description */}
+      <div className="flex flex-col bg-slate-900 rounded-b-lg">
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">
+                {post.title}
+              </h3>
+              <p className="text-xs text-gray-100 mt-2 text-left">
+                {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(post)}
+                  className="text-blue-400 hover:text-blue-300 text-sm px-2 py-1"
+                >
+                  Edit
+                </button>
+              )}
+              {onDelete && user && user.id === post.user_id && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-red-400 hover:text-red-300 text-sm px-2 py-1 disabled:opacity-50"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Admin rejection note */}
+        {user?.role === "admin" && post.status === "rejected" && (
+          <div className="px-4 pb-3 bg-white">
+            <div className="p-3 rounded border border-red-300 bg-red-50">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                  Status: Rejected
+                </span>
+                {post.moderator?.name && (
+                  <span className="text-[11px] text-gray-600">
+                    Reviewed by {post.moderator.name}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-gray-800 leading-relaxed">
+                <span className="font-semibold">Feedback:</span>{" "}
+                {post.moderation_note || "Please review and update before resubmitting."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
+          <p className="text-white text-left whitespace-pre-wrap text-sm leading-relaxed">
+            {post.description}
+          </p>
+        </div>
+
+        {/* Oweru Logo - Below description, always visible */}
+        <div className="px-4 pb-3 flex justify-end items-center">
+          <img
+            src={oweruLogo}
+            alt="Oweru logo"
+            className="h-12 w-auto shadow-lg"
+          />
+        </div>
+      </div>
+
+      {/* Contact Information Footer - Always at bottom */}
+      <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
+        <div className="text-center text-gray-800">
+          <div className="text-sm whitespace-nowrap ">
+            <span className="inline-block">
+              <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
+                info@oweru.com
+              </a>
+            </span> &nbsp;
+            <span className="inline-block">
+              <a href="tel:+255711890764" className="text-gray-950 hover:underline">
+                +255 711 890 764
+              </a>
+            </span> &nbsp;
+            <span className="inline-block">
+              <a
+                href="https://www.oweru.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-950 hover:underline"
+              >
+                www.oweru.com
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty div with slate-950 background */}
+      <div className="bg-slate-900 h-10 rounded-b-lg"></div>
     </div>
   );
 };
-
 export default PostCard;

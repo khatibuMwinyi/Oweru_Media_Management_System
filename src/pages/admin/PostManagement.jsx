@@ -164,14 +164,12 @@ const PostManagement = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {posts.map((post) => (
-                <div key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 flex flex-col h-full">
-                  {/* Post Content - Clean display without action buttons */}
-                  <div className="flex-1 overflow-hidden">
-                    <PostCard post={post} onDelete={null} onEdit={null} />
-                  </div>
+                <div key={post.id} className="flex flex-col">
+                  {/* Post Card - Now displays with its footer */}
+                  <PostCard post={post} onDelete={null} onEdit={null} />
                   
                   {/* Bottom Action Bar - Status, Edit, Delete */}
-                  <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-auto">
+                  <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-2 rounded-b-lg">
                     <div className="flex items-center justify-between gap-3">
                       {/* Status Badge */}
                       <span
