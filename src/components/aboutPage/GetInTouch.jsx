@@ -1,15 +1,15 @@
-import { MapPin, Phone, Mail } from "lucide-react";
+import { MapPin, Phone, Mail, Globe } from "lucide-react";
 
 export default function GetInTouch() {
   return (
-    <section className="bg-[#020617] py-24 px-6">
+    <section className="bg-[#020617] py-15 px-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-white">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold  text-white">
             Get In Touch
           </h2>
-          <p className="mt-3 text-sm uppercase tracking-widest text-slate-300">
+          <p className="mt-3 text-sm tracking-widest text-slate-300">
             We’d love to hear from you
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function GetInTouch() {
                 />
               </div>
 
-              <button className="w-full bg-blue-700 hover:bg-blue-600 transition text-white font-semibold py-3 rounded-md uppercase tracking-widest">
+              <button className="w-full bg-blue-700 hover:bg-blue-600 transition text-white py-3 rounded-md tracking-widest">
                 Send Message
               </button>
             </form>
@@ -48,19 +48,25 @@ export default function GetInTouch() {
             <Info
               icon={<MapPin />}
               title="Visit Our Office"
-              lines={["123 Business Avenue", "Dar es Salaam, Tanzania"]}
+              lines={["Tancot House Posta", "Dar es Salaam, Tanzania"]}
             />
 
             <Info
               icon={<Phone />}
               title="Call Us"
-              lines={["+255 700 000 000", "Mon–Fri, 9AM–6PM"]}
+              lines={["+255 714 859 934", "Mon–Fri, 8AM–5PM"]}
             />
 
             <Info
               icon={<Mail />}
               title="Email Us"
-              lines={["info@oweru.com", "support@oweru.com"]}
+              lines={["info@oweru.com", "director@oweru.com"]}
+              highlight
+            />
+            <Info
+              icon={<Globe />}
+              title="Visit Our Websites"
+              lines={["www.mjengochallenge.com", "www.oweru.com"]}
               highlight
             />
           </div>

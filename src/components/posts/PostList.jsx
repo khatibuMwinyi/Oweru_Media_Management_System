@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { postService } from "../services/api";
+import { postService } from "../../services/api";
 import PostCard from "./PostCard";
 
 const PostList = ({ category = null, showTitle = true }) => {
@@ -8,36 +8,39 @@ const PostList = ({ category = null, showTitle = true }) => {
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState(null);
 
-  const fetchPosts = useCallback(async (page = 1) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = category
-        ? await postService.getByCategory(category)
-        : await postService.getAll();
+  const fetchPosts = useCallback(
+    async (page = 1) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = category
+          ? await postService.getByCategory(category)
+          : await postService.getAll();
 
-      // Handle paginated response
-      if (response.data.data) {
-        setPosts(response.data.data);
-        setPagination({
-          current_page: response.data.current_page,
-          last_page: response.data.last_page,
-          per_page: response.data.per_page,
-          total: response.data.total,
-        });
-      } else {
-        // Handle non-paginated response
-        setPosts(Array.isArray(response.data) ? response.data : []);
-        setPagination(null);
+        // Handle paginated response
+        if (response.data.data) {
+          setPosts(response.data.data);
+          setPagination({
+            current_page: response.data.current_page,
+            last_page: response.data.last_page,
+            per_page: response.data.per_page,
+            total: response.data.total,
+          });
+        } else {
+          // Handle non-paginated response
+          setPosts(Array.isArray(response.data) ? response.data : []);
+          setPagination(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch posts:", err);
+        setError(err.response?.data?.message || "Failed to load posts");
+        setPosts([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch posts:", err);
-      setError(err.response?.data?.message || "Failed to load posts");
-      setPosts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [category]);
+    },
+    [category]
+  );
 
   useEffect(() => {
     fetchPosts();
@@ -49,12 +52,12 @@ const PostList = ({ category = null, showTitle = true }) => {
       fetchPosts();
     };
 
-    window.addEventListener('postCreated', handlePostChange);
-    window.addEventListener('postDeleted', handlePostChange);
+    window.addEventListener("postCreated", handlePostChange);
+    window.addEventListener("postDeleted", handlePostChange);
 
     return () => {
-      window.removeEventListener('postCreated', handlePostChange);
-      window.removeEventListener('postDeleted', handlePostChange);
+      window.removeEventListener("postCreated", handlePostChange);
+      window.removeEventListener("postDeleted", handlePostChange);
     };
   }, [fetchPosts]);
 
@@ -93,7 +96,11 @@ const PostList = ({ category = null, showTitle = true }) => {
     return (
       <div className="text-center py-12 text-gray-500">
         <p>No posts found.</p>
-        {category && <p className="text-sm mt-2">Create your first {category} post above!</p>}
+        {category && (
+          <p className="text-sm mt-2">
+            Create your first {category} post above!
+          </p>
+        )}
       </div>
     );
   }
@@ -102,7 +109,9 @@ const PostList = ({ category = null, showTitle = true }) => {
     <div className="space-y-6">
       {showTitle && (
         <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          {category ? `${category.charAt(0).toUpperCase() + category.slice(1)} Posts` : "All Posts"}
+          {category
+            ? `${category.charAt(0).toUpperCase() + category.slice(1)} Posts`
+            : "All Posts"}
         </h2>
       )}
 
@@ -138,4 +147,3 @@ const PostList = ({ category = null, showTitle = true }) => {
 };
 
 export default PostList;
-

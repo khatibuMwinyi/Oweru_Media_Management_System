@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { postService, mediaService } from "../services/api";
-import { useAuth } from "../contexts/AuthContext";
+import { postService, mediaService } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 const EditPostModal = ({ post, onClose }) => {
   const { user } = useAuth();

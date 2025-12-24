@@ -1,5 +1,5 @@
-import { postService } from "../services/api";
-import { useAuth } from "../contexts/AuthContext";
+import { postService } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 import { useState, useRef } from "react";
 import oweruLogo from "../assets/oweru_logo.png";
 
@@ -12,18 +12,20 @@ const PostCard = ({ post, onDelete, onEdit }) => {
 
   const getMediaUrl = (media) => {
     if (media.url) {
-      if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
+      if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
         return media.url;
       }
       const baseUrl =
         import.meta.env.VITE_API_URL?.replace("/api", "") ||
         "http://localhost:8000";
-      return `${baseUrl}${media.url.startsWith('/') ? '' : '/'}${media.url}`;
+      return `${baseUrl}${media.url.startsWith("/") ? "" : "/"}${media.url}`;
     }
     const baseUrl =
       import.meta.env.VITE_API_URL?.replace("/api", "") ||
       "http://localhost:8000";
-    const filePath = media.file_path?.startsWith('/') ? media.file_path.substring(1) : media.file_path;
+    const filePath = media.file_path?.startsWith("/")
+      ? media.file_path.substring(1)
+      : media.file_path;
     return `${baseUrl}/storage/${filePath}`;
   };
 
@@ -62,7 +64,8 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               alt={post.title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                e.target.src =
+                  "https://via.placeholder.com/400x300?text=Image+Not+Found";
               }}
             />
           </div>
@@ -77,14 +80,17 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                 alt={`${post.title} - Image ${carouselIndex + 1}`}
                 className="w-full h-full object-cover bg-black"
                 onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                  e.target.src =
+                    "https://via.placeholder.com/400x300?text=Image+Not+Found";
                 }}
               />
               {images.length > 1 && (
                 <>
                   <button
                     onClick={() =>
-                      setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
+                      setCarouselIndex(
+                        (prev) => (prev - 1 + images.length) % images.length
+                      )
                     }
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
                   >
@@ -110,14 +116,17 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                   <button
                     key={idx}
                     onClick={() => setCarouselIndex(idx)}
-                    className={`shrink-0 ${idx === carouselIndex ? "ring-2 ring-white" : ""}`}
+                    className={`shrink-0 ${
+                      idx === carouselIndex ? "ring-2 ring-white" : ""
+                    }`}
                   >
                     <img
                       src={getMediaUrl(img)}
                       alt={`Thumbnail ${idx + 1}`}
                       className="w-10 h-10 object-cover rounded"
                       onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/64x64?text=Image";
+                        e.target.src =
+                          "https://via.placeholder.com/64x64?text=Image";
                       }}
                     />
                   </button>
@@ -140,19 +149,24 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                 setVideoError(true);
                 console.error("Video load error:", {
                   videoUrl: getMediaUrl(videos[0]),
-                  media: videos[0]
+                  media: videos[0],
                 });
                 alert(`Video failed to load. URL: ${getMediaUrl(videos[0])}`);
               }}
               onLoadStart={() => setVideoError(false)}
             >
-              <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
+              <source
+                src={getMediaUrl(videos[0])}
+                type={videos[0].mime_type || "video/mp4"}
+              />
               Your browser does not support the video tag.
             </video>
 
             {videoError && (
               <div className="p-3 bg-red-50 border border-red-200 text-sm">
-                <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
+                <p className="text-red-700 font-semibold mb-1">
+                  Video failed to load
+                </p>
                 <p className="text-red-600 text-xs mb-2 break-all">
                   URL: {getMediaUrl(videos[0])}
                 </p>
@@ -179,7 +193,8 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                 {post.title}
               </h3>
               <p className="text-xs text-gray-100 mt-2 text-left">
-                {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
+                {post.post_type} • {post.category} •{" "}
+                {new Date(post.created_at).toLocaleDateString()}
               </p>
             </div>
             <div className="flex gap-2">
@@ -220,7 +235,8 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               </div>
               <p className="mt-2 text-xs text-gray-800 leading-relaxed">
                 <span className="font-semibold">Feedback:</span>{" "}
-                {post.moderation_note || "Please review and update before resubmitting."}
+                {post.moderation_note ||
+                  "Please review and update before resubmitting."}
               </p>
             </div>
           </div>
@@ -247,15 +263,23 @@ const PostCard = ({ post, onDelete, onEdit }) => {
         <div className="text-center text-gray-800">
           <div className="text-sm whitespace-nowrap ">
             <span className="inline-block">
-              <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
+              <a
+                href="mailto:info@oweru.com"
+                className="text-gray-950 text-sm hover:underline"
+              >
                 info@oweru.com
               </a>
-            </span> &nbsp;
+            </span>{" "}
+            &nbsp;
             <span className="inline-block">
-              <a href="tel:+255711890764" className="text-gray-950 hover:underline">
+              <a
+                href="tel:+255711890764"
+                className="text-gray-950 hover:underline"
+              >
                 +255 711 890 764
               </a>
-            </span> &nbsp;
+            </span>{" "}
+            &nbsp;
             <span className="inline-block">
               <a
                 href="https://www.oweru.com"

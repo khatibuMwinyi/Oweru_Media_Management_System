@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { postService, aiService } from "../services/api";
-import { useAuth } from "../contexts/AuthContext";
+import { postService, aiService } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 const PostForm = ({ postType, category }) => {
   const { user } = useAuth();
@@ -30,7 +30,7 @@ const PostForm = ({ postType, category }) => {
         post_type: postType,
         property_data: {},
       });
-      
+
       if (response.data.title) {
         setTitle(response.data.title);
       }
@@ -46,7 +46,7 @@ const PostForm = ({ postType, category }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!user) {
       setError("Please login to create posts");
       return;
@@ -68,13 +68,13 @@ const PostForm = ({ postType, category }) => {
 
       await postService.create(postData);
       setSuccess(true);
-      
+
       // Reset form
       setTitle("");
       setDescription("");
       setImages([]);
       setVideo(null);
-      
+
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create post");

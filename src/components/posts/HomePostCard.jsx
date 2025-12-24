@@ -33,7 +33,7 @@ const HomePostCard = ({ post }) => {
   return (
     <div className="shadow-lg overflow-hidden border border-gray-200 bg-white flex flex-col relative h-[700px]">
       {/* Media Section - Fixed height for all post types */}
-      <div className="w-full h-64 flex-shrink-0">
+      <div className="w-full h-64 shrink-0">
         {/* Static Post - Single Image */}
         {post.post_type === "Static" && images.length > 0 && (
           <div className="w-full h-full flex items-center justify-center bg-black">
@@ -144,7 +144,7 @@ const HomePostCard = ({ post }) => {
           </div>
         </div>
 
-        <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
+        <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 shrink-0">
           <p className="text-white text-left whitespace-pre-wrap text-sm leading-relaxed">
             {post.description}
           </p>

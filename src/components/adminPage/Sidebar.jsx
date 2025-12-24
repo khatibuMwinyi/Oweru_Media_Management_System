@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/oweru_logo.png";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation(); // Get current URL path
@@ -9,7 +9,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
 
   const toggleDropdown = (dropdownName) => {
-    setOpenDropdown((current) => (current === dropdownName ? null : dropdownName));
+    setOpenDropdown((current) =>
+      current === dropdownName ? null : dropdownName
+    );
   };
 
   // Helper to apply active styling (monochrome: black & white)
@@ -164,8 +166,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                       to="/admin/property-services"
                       onClick={onClose}
                     >
-                      Land & Property Administration Services                
-      </Link>
+                      Land & Property Administration Services
+                    </Link>
                     <Link
                       className={`block px-3 py-2 rounded ${isActive(
                         "/admin/investment"
