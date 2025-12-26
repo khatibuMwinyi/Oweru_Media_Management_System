@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import RequireAuth from "./components/RequireAuth";
-import RequireRole from "./components/RequireRole";
-import AdminLayout from "./components/AdminLayout";
+import RequireAuth from "./components/adminPage/RequireAuth";
+import RequireRole from "./components/adminPage/RequireRole";
+import AdminLayout from "./components/adminPage/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Rentals from "./pages/admin/Rentals";
 import PropertySales from "./pages/admin/PropertySales";

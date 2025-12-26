@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { postService } from "../../services/api";
-import PostCard from "../../components/PostCard";
-import EditPostModal from "../../components/EditPostModal";
+import PostCard from "../../components/posts/PostCard";
+import EditPostModal from "../../components/posts/EditPostModal";
 import { Edit, Trash2 } from "lucide-react";
-
 const PostManagement = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +12,6 @@ const PostManagement = () => {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [pagination, setPagination] = useState(null);
-
   const categories = [
     { value: "all", label: "All Categories" },
     { value: "rentals", label: "Rentals" },
@@ -23,7 +21,6 @@ const PostManagement = () => {
     { value: "investment", label: "Investment" },
     { value: "construction_property_management", label: "Construction & Property Management" },
   ];
-
   const fetchPosts = async (page = 1) => {
     setLoading(true);
     setError(null);
@@ -32,7 +29,6 @@ const PostManagement = () => {
       const response = filterCategory === "all"
         ? await postService.getAll(params)
         : await postService.getByCategory(filterCategory, params);
-
       if (response.data.data) {
         setPosts(response.data.data);
         setPagination({
@@ -53,11 +49,9 @@ const PostManagement = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchPosts();
   }, [filterCategory, filterStatus]);
-
   useEffect(() => {
     const handlePostChange = () => {
       fetchPosts();
@@ -65,19 +59,16 @@ const PostManagement = () => {
     window.addEventListener("postCreated", handlePostChange);
     window.addEventListener("postDeleted", handlePostChange);
     window.addEventListener("postUpdated", handlePostChange);
-
     return () => {
       window.removeEventListener("postCreated", handlePostChange);
       window.removeEventListener("postDeleted", handlePostChange);
       window.removeEventListener("postUpdated", handlePostChange);
     }; 
   }, [filterCategory]);
-
   const handleEdit = (post) => {
     setSelectedPost(post);
     setShowEditModal(true);
   };
-
   const handleDelete = async (postId) => {
     try {
       await postService.delete(postId);
@@ -88,12 +79,10 @@ const PostManagement = () => {
       alert("Failed to delete post. Please try again.");
     }
   };
-
   const handlePageChange = (page) => {
     fetchPosts(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -101,14 +90,12 @@ const PostManagement = () => {
       </div>
     );
   }
-
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Post Management</h1>
         </div>
-
         {/* Filter */}
         <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -143,7 +130,6 @@ const PostManagement = () => {
             </select>
           </div>
         </div>
-
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             <p>Error: {error}</p>
@@ -155,7 +141,6 @@ const PostManagement = () => {
             </button>
           </div>
         )}
-
         {posts.length === 0 ? (
           <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow">
             <p>No posts found.</p>
@@ -183,7 +168,6 @@ const PostManagement = () => {
                       >
                         {post.status || "pending"}
                       </span>
-                      
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-shrink-0">
                         <button
@@ -212,7 +196,6 @@ const PostManagement = () => {
                 </div>
               ))}
             </div>
-
             {pagination && pagination.last_page > 1 && (
               <div className="flex justify-center items-center gap-2 mt-8">
                 <button
@@ -236,7 +219,6 @@ const PostManagement = () => {
             )}
           </>
         )}
-
         {showEditModal && selectedPost && (
           <EditPostModal
             post={selectedPost}
@@ -250,6 +232,5 @@ const PostManagement = () => {
     </div>
   );
 };
-
 export default PostManagement;
 

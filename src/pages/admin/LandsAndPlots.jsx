@@ -1,4 +1,4 @@
-import PostForm from "../../components/PostForm";
+import PostForm from "../../components/posts/PostForm";
 
 const LandsAndPlots = () => {
   return (

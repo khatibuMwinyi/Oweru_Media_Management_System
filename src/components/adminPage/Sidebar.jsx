@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import logo from "../assets/oweru_logo.png";
+import logo from "../../assets/oweru_logo.png";
 import { useAuth } from "../../contexts/AuthContext";
 
 const Sidebar = ({ isOpen, onClose }) => {
