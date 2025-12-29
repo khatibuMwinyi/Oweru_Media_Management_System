@@ -4,7 +4,7 @@ import logo from "../assets/oweru_logo.png";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-const Navbar = () => {
+const Navbar = ({ onCategoryClick, selectedCategory }) => {
   const [open, setOpen] = useState(false);
   const [dropdowns, setDropdowns] = useState({});
   const [activeSection, setActiveSection] = useState("home");
@@ -13,26 +13,42 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Map navbar IDs to actual category values for comparison
+  const categoryIdMap = {
+    "rentals": "rentals",
+    "property-sales": "property_sales",
+    "construction-management": "construction_property_management",
+    "lands-plots": "lands_and_plots",
+    "property-services": "property_services",
+    "investment": "investment",
+  };
+
+  // Reverse map: category value to navbar ID
+  const categoryToIdMap = Object.fromEntries(
+    Object.entries(categoryIdMap).map(([id, category]) => [category, id])
+  );
+
   const menuItems = [
     { name: "Home", id: "home" },
     {
       name: "Oweru Official",
       key: "official",
       subItems: [
-        { name: "Lands & Plots", id: "lands-plots" },
-        { name: "Property Services", id: "property-services" },
-        { name: "Investment", id: "investment" },
+        { name: "Lands & Plots", id: "lands-plots", category: "lands_and_plots" },
+        { name: "Property Services", id: "property-services", category: "property_services" },
+        { name: "Investment", id: "investment", category: "investment" },
       ],
     },
     {
       name: "Oweru Housing",
       key: "housing",
       subItems: [
-        { name: "Rentals", id: "rentals" },
-        { name: "Property Sales", id: "property-sales" },
+        { name: "Rentals", id: "rentals", category: "rentals" },
+        { name: "Property Sales", id: "property-sales", category: "property_sales" },
         {
           name: "Construction & Property Management",
           id: "construction-management",
+          category: "construction_property_management",
         },
       ],
     },
@@ -40,6 +56,32 @@ const Navbar = () => {
   ];
 
   const scrollToSection = (id) => {
+    // If it's a category ID and we have the callback, use it to filter
+    const categoryIds = ["rentals", "property-sales", "construction-management", "lands-plots", "property-services", "investment"];
+    
+    if (categoryIds.includes(id) && onCategoryClick) {
+      // If we're not on the home page, navigate there first
+      if (location.pathname !== "/") {
+        navigate("/");
+        // Wait for navigation, then apply filter
+        setTimeout(() => {
+          onCategoryClick(id);
+        }, 100);
+      } else {
+        onCategoryClick(id);
+      }
+      setOpen(false);
+      return;
+    }
+
+    // If we're not on home page and clicking home, navigate first
+    if (id === "home" && location.pathname !== "/") {
+      navigate("/");
+      setOpen(false);
+      return;
+    }
+
+    // Otherwise, just scroll to the section
     const section = document.getElementById(id);
     if (section && navbarRef.current) {
       const offset = navbarRef.current.offsetHeight;
@@ -121,19 +163,25 @@ const Navbar = () => {
 
                 <div className="absolute left-0 mt-3 bg-[#EBEDF2] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 min-w-max">
                   <ul className="py-2 text-sm">
-                    {item.subItems.map((sub) => (
-                      <li
-                        key={sub.id}
-                        className={`px-4 py-2 cursor-pointer hover:bg-white/40 ${
-                          activeSection === sub.id
-                            ? "font-semibold text-[#141C36]"
-                            : ""
-                        }`}
-                        onClick={() => scrollToSection(sub.id)}
-                      >
-                        {sub.name}
-                      </li>
-                    ))}
+                    {item.subItems.map((sub) => {
+                      const isSelected = selectedCategory === sub.category;
+                      return (
+                        <li
+                          key={sub.id}
+                          className={`px-4 py-2 cursor-pointer hover:bg-white/40 transition-colors ${
+                            activeSection === sub.id || isSelected
+                              ? "font-semibold text-[#141C36] bg-white/60"
+                              : ""
+                          }`}
+                          onClick={() => scrollToSection(sub.id)}
+                        >
+                          {sub.name}
+                          {isSelected && (
+                            <span className="ml-2 text-[#C89128]">●</span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               </div>
@@ -236,15 +284,25 @@ const Navbar = () => {
                     maxHeight: dropdowns[item.key] ? "500px" : "0",
                   }}
                 >
-                  {item.subItems.map((sub) => (
-                    <li
-                      key={sub.id}
-                      className="py-1 cursor-pointer hover:text-[#C89128]"
-                      onClick={() => scrollToSection(sub.id)}
-                    >
-                      {sub.name}
-                    </li>
-                  ))}
+                  {item.subItems.map((sub) => {
+                    const isSelected = selectedCategory === sub.category;
+                    return (
+                      <li
+                        key={sub.id}
+                        className={`py-1 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "text-[#C89128] font-semibold"
+                            : "hover:text-[#C89128]"
+                        }`}
+                        onClick={() => scrollToSection(sub.id)}
+                      >
+                        {sub.name}
+                        {isSelected && (
+                          <span className="ml-2 text-[#C89128]">●</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </li>
             ) : item.isRoute ? (

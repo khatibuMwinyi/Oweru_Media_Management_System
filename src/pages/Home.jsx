@@ -159,9 +159,41 @@ const Home = () => {
     investment: { name: "Investment", icon: "💼", color: "from-slate-600 to-slate-700" },
     construction_property_management: { name: "Construction & Management", icon: "🏗️", color: "from-slate-700 to-slate-800" },
   };
+  // Function to handle category filter from navbar
+  const handleCategoryFilter = (categoryId) => {
+    // Map navbar IDs to actual category values
+    const categoryMap = {
+      "rentals": "rentals",
+      "property-sales": "property_sales",
+      "construction-management": "construction_property_management",
+      "lands-plots": "lands_and_plots",
+      "property-services": "property_services",
+      "investment": "investment",
+    };
+
+    const category = categoryMap[categoryId];
+    if (category) {
+      setSelectedCategory(category);
+      // Scroll to posts section after a brief delay to ensure state is updated
+      setTimeout(() => {
+        const postsSection = document.getElementById("posts");
+        if (postsSection) {
+          const offset = 100; // Account for navbar height
+          window.scrollTo({
+            top: postsSection.offsetTop - offset,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
+      <Navbar 
+        onCategoryClick={handleCategoryFilter} 
+        selectedCategory={selectedCategory}
+      />
       {/* Hero Section */}       
       <section id="home" className="relative pt-24 pb-16 overflow-hidden bg-slate-900">
         <div 
@@ -200,7 +232,7 @@ Streamline your real estate content with professional post management, multi-for
       </section>
 
       {/* Statistics Section */}
-      <section className="py-12 bg-white border-b border-slate-200">
+      {/* <section className="py-12 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div className="text-center p-6 bg-slate-900 rounded-xl shadow-sm">
@@ -230,10 +262,10 @@ Streamline your real estate content with professional post management, multi-for
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Features Section */}
-      <section className="py-16 bg-slate-50">
+      {/* <section className="py-16 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
@@ -304,9 +336,9 @@ Streamline your real estate content with professional post management, multi-for
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
       {/* Category Highlights */}
-      {categories.length > 0 && (
+      {/* {categories.length > 0 && (
         <section className="py-16 bg-white border-y border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -341,7 +373,7 @@ Streamline your real estate content with professional post management, multi-for
             </div>
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Posts Section */}
       <section id="posts" className="py-16 bg-slate-50">
@@ -359,7 +391,7 @@ Streamline your real estate content with professional post management, multi-for
                 <div className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-slate-200">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Search */}
-              <div className="flex-1 relative">
+              {/* <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <input
                   type="text"
@@ -368,10 +400,9 @@ Streamline your real estate content with professional post management, multi-for
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 text-slate-900 focus:border-transparent bg-white"
                 />
-              </div>
-
+              </div> */}
               {/* Category Filter */}
-              <div className="relative">
+              {/* <div className="relative">
                 <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <select
                   value={selectedCategory}
@@ -385,7 +416,7 @@ Streamline your real estate content with professional post management, multi-for
                     </option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               {/* Post Type Filter */}
               <div className="relative">

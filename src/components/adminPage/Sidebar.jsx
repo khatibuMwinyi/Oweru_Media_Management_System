@@ -83,6 +83,19 @@ const Sidebar = ({ isOpen, onClose }) => {
             </>
           )}
 
+          {/* Contacts - Available to both Admin and Moderator */}
+          {(user?.role === "admin" || user?.role === "moderator") && (
+            <Link
+              className={`block px-3 py-2 rounded ${isActive(
+                "/admin/contacts"
+              )}`}
+              to="/admin/contacts"
+              onClick={onClose}
+            >
+              Contact Messages
+            </Link>
+          )}
+
           {/* Moderator navigation */}
           {user?.role === "moderator" && (
             <Link

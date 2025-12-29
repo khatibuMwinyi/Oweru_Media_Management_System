@@ -106,4 +106,10 @@ export const mediaService = {
   delete: (id) => api.delete(`/media/${id}`),
 };
 
+export const contactService = {
+  submit: (data) => api.post("/contact", data),
+  getAll: (params = {}) => api.get("/contacts", { params }),
+  getById: (id) => api.get(`/contacts/${id}`),
+};
+
 export default api;

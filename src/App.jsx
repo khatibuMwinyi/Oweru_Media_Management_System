@@ -12,6 +12,7 @@ import Investment from "./pages/admin/Investment";
 import ConstructionPropertyManagement from "./pages/admin/ConstructionPropertyManagement";
 import PostManagement from "./pages/admin/PostManagement";
 import ModeratorDashboard from "./pages/admin/ModeratorDashboard";
+import Contacts from "./pages/admin/Contacts";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -93,6 +94,16 @@ function App() {
               element={
                 <RequireRole roles={["admin"]}>
                   <Investment />
+                </RequireRole>
+              }
+            />
+
+            {/* Contacts - Admin and Moderator */}
+            <Route
+              path="contacts"
+              element={
+                <RequireRole roles={["admin", "moderator"]}>
+                  <Contacts />
                 </RequireRole>
               }
             />
