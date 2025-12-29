@@ -264,9 +264,8 @@ Streamline your real estate content with professional post management, multi-for
                 Robust approval workflow with admin and moderator roles ensuring quality content before publication.
               </p>
             </div>
-
             <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-200">
-              <div className="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-14 h-14 bg-slate-800 rounded-lg flex items-center justify-center mb-4">
                 <Grid3x3 className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Smart Categorization</h3>
@@ -274,9 +273,8 @@ Streamline your real estate content with professional post management, multi-for
                 Organize content across 6 categories: Rentals, Property Sales, Lands & Plots, Services, Investment, and Construction.
               </p>
             </div>
-
             <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-200">
-              <div className="w-14 h-14 bg-slate-600 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-14 h-14 bg-slate-800 rounded-lg flex items-center justify-center mb-4">
                 <Zap className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Fast & Responsive</h3>
@@ -286,7 +284,7 @@ Streamline your real estate content with professional post management, multi-for
             </div>
 
                 <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-200">
-              <div className="w-14 h-14 bg-slate-500 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-14 h-14 bg-slate-800 rounded-lg flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Quality Assurance</h3>
@@ -296,7 +294,7 @@ Streamline your real estate content with professional post management, multi-for
             </div>
 
             <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-200">
-              <div className="w-14 h-14 bg-slate-400 rounded-lg flex items-center justify-center mb-4">
+              <div className="w-14 h-14 bg-slate-800 rounded-lg flex items-center justify-center mb-4">
                 <Globe className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Public & Secure</h3>

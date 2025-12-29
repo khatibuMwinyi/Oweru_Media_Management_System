@@ -26,19 +26,17 @@ const HomePostCard = ({ post }) => {
     const url = `${baseUrl}/storage/${filePath}`;
     return url;
   };
-
   const images = post.media?.filter((m) => m.file_type === "image") || [];
   const videos = post.media?.filter((m) => m.file_type === "video") || [];
-
   // Get background color based on category
   const getCategoryBackground = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "bg-amber-400"; // Gold background
+        return "bg-[#C89128]"; // Gold background
       case "property_sales":
       case "property_services":
-        return "bg-white/92"; // Gray background
+        return "bg-gray-300"; // Gray background
       case "construction_property_management":
       case "investment":
         return "bg-slate-900"; // Keep original
@@ -51,7 +49,7 @@ const HomePostCard = ({ post }) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "text-red-900"; // Dark text on gold background
+        return "text-white/90"; // Dark text on gold background
       case "property_sales":
       case "property_services":
         return "text-gray-900"; // White text on gray background
@@ -170,14 +168,34 @@ const HomePostCard = ({ post }) => {
 
             {/* Content overlay in the middle */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
-              <div className="bg-transparent bg-opacity-60 rounded-lg p-4 max-w-md w-full pointer-events-auto">
-                <h3 className="text-lg font-semibold text-white mb-2 text-center">
+              <div className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm" style={{
+                textShadow: '2px 2px 4px rgba(146, 131, 131, 0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
+              }}>
+                <h3 
+                  className="text-lg font-bold text-white mb-2 text-center"
+                  style={{
+                    textShadow: '3px 3px 6px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,1)',
+                    WebkitTextStroke: '0.5px rgba(0,0,0,0.5)'
+                  }}
+                >
                   {post.title}
                 </h3>
-                <p className="text-xs text-gray-200 mb-3 text-center">
+                <p 
+                  className="text-xs font-medium text-white mb-3 text-center"
+                  style={{
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
+                    WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
+                  }}
+                >
                   {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
                 </p>
-                <p className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed">
+                <p 
+                  className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
+                  style={{
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8), 1px 1px 3px rgba(0,0,0,1)',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.5)'
+                  }}
+                >
                   {post.description}
                 </p>
               </div>

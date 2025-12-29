@@ -57,10 +57,10 @@ const PostCard = ({ post, onDelete, onEdit }) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "bg-amber-400"; // Gold background
+        return "bg-[#C89128]"; // Gold background
       case "property_sales":
       case "property_services":
-        return "bg-gray-30"; // Gray background
+        return "bg-gray-300"; // Gray background
       case "construction_property_management":
       case "investment":
         return "bg-slate-900"; // Keep original
@@ -74,7 +74,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "text-gray-900"; // Dark text on gold background
+        return "text-gray-100"; // Dark text on gold background
       case "property_sales":
       case "property_services":
         return "text-gray-800"; // White text on gray background
@@ -87,7 +87,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   };
 
   return (
-    <div className="shadow-lg overflow-hidden border border-gray-200 bg-amber-400 rounded-lg flex flex-col relative h-[700px]">
+    <div className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}>
       {/* Media Section - Full height for Reel, fixed for others */}
       <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 flex-shrink-0"}`}>
         {/* Static Post - Single Image */}
