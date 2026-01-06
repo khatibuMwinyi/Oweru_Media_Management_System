@@ -99,12 +99,7 @@ const Contacts = () => {
               <div className="text-sm text-gray-600 mb-1">Total Messages</div>
               <div className="text-2xl font-bold text-gray-800">{pagination.total}</div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-600 mb-1">Page</div>
-              <div className="text-2xl font-bold text-gray-800">
-                {pagination.current_page} / {pagination.last_page}
-              </div>
-            </div>
+            
             <div className="bg-white rounded-lg shadow p-4">
               <div className="text-sm text-gray-600 mb-1">Showing</div>
               <div className="text-2xl font-bold text-gray-800">
@@ -163,8 +158,8 @@ const Contacts = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="h-5 w-5 text-blue-600" />
+                          <div className="flex-shrink-0 h-10 w-10 bg-slate-800 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-slate-600" />
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
@@ -189,7 +184,7 @@ const Contacts = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => handleViewContact(contact.id)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                          className="text-slate-600 hover:text-slate-900 flex items-center gap-1"
                         >
                           <MessageSquare className="h-4 w-4" />
                           View
@@ -238,13 +233,13 @@ const Contacts = () => {
 
       {/* Contact Detail Modal */}
       {showModal && selectedContact && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white/95 z-50 bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+            <div className="bg-slate-900 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold">Contact Message Details</h2>
-                <p className="text-blue-100 text-sm mt-1">
+                <p className="text-gray-100 text-sm mt-1">
                   Received on {formatDate(selectedContact.created_at)}
                 </p>
               </div>
@@ -277,7 +272,7 @@ const Contacts = () => {
                   </div>
                   <a
                     href={`mailto:${selectedContact.email}`}
-                    className="text-blue-600 hover:text-blue-800 font-semibold break-all"
+                    className="text-slate-900 hover:text-slate-800 font-semibold break-all"
                   >
                     {selectedContact.email}
                   </a>
@@ -310,7 +305,7 @@ const Contacts = () => {
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <a
                   href={`mailto:${selectedContact.email}?subject=Re: ${encodeURIComponent(selectedContact.subject)}`}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-center font-medium transition-colors"
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-md text-center font-medium transition-colors"
                 >
                   Reply via Email
                 </a>

@@ -104,7 +104,6 @@ const PostCard = ({ post, onDelete, onEdit }) => {
             />
           </div>
         )}
-
         {/* Carousel Post - Multiple Images */}
         {post.post_type === "Carousel" && images.length > 0 && (
           <div className="w-full h-full flex flex-col">

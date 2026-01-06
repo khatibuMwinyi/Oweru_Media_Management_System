@@ -1,9 +1,12 @@
 import { useState, useRef } from "react";
+import { Send, MessageCircle, Copy, Check, Share2 } from "lucide-react";
 import oweruLogo from "../../assets/oweru_logo.png";
 
 const HomePostCard = ({ post }) => {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const videoRef = useRef(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const getMediaUrl = (media) => {
     // If media has url attribute, use it (from API)
@@ -48,7 +51,7 @@ const HomePostCard = ({ post }) => {
   const getCategoryTextColor = (category) => {
     switch (category) {
       case "rentals":
-      case "lands_and_plots":
+      case "lands_and_plots":    
         return "text-white/90"; // Dark text on gold background
       case "property_sales":
       case "property_services":
@@ -58,6 +61,127 @@ const HomePostCard = ({ post }) => {
         return "text-white"; // Keep original white text
       default:
         return "text-white"; // Default to white text
+    }
+  };
+
+  // Generate shareable URL and text
+  const getShareUrl = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/post/${post.id}`;
+  };
+
+  const getShareText = () => {
+    return `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
+  };
+
+  // Share functions
+  const handleShare = async (platform) => {
+    const url = getShareUrl();
+    const text = getShareText();
+    const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(url);
+
+    switch (platform) {
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`, '_blank');
+        break;
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
+        break;
+      case 'instagram':
+        // Try Web Share API first (works on mobile and can share to Instagram)
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: post.title,
+              text: text,
+              url: url,
+            });
+            setShowShareMenu(false);
+            return;
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.error('Error sharing:', err);
+            }
+          }
+        }     
+        // For desktop or if Web Share API fails, try Instagram URL scheme (mobile only)
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          // Try Instagram app URL scheme
+          const instagramUrl = `instagram://share?text=${encodedText}`;
+          window.location.href = instagramUrl;
+          // Fallback after a delay
+          setTimeout(() => {
+            handleCopyLink();
+          }, 1000);
+        } else {
+          // Desktop: copy link
+          handleCopyLink();
+        }
+        return;
+      case 'copy':
+        handleCopyLink();
+        return;
+      case 'native':
+        // Use Web Share API if available (mobile devices)
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: post.title,
+              text: text,
+              url: url,
+            });
+            setShowShareMenu(false);
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.error('Error sharing:', err);
+            }
+          }
+        } else {
+          // Fallback to copy link
+          handleCopyLink();
+        }
+        return;
+      default:
+        break;
+    }
+    setShowShareMenu(false);
+  };
+
+  const handleCopyLink = async () => {
+    const url = getShareUrl();
+    const text = getShareText();
+    const fullText = `${text}\n\n${url}`;
+    
+    try {
+      await navigator.clipboard.writeText(fullText);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setShowShareMenu(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = fullText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => {
+          setCopied(false);
+          setShowShareMenu(false);
+        }, 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -187,7 +311,7 @@ const HomePostCard = ({ post }) => {
                     WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
                   }}
                 >
-                  {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
+                  {post.post_type} • {post.category}
                 </p>
                 <p 
                   className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
@@ -270,6 +394,105 @@ const HomePostCard = ({ post }) => {
       {post.post_type !== "Reel" && (
         <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`}></div>
       )}
+
+      {/* Share Button - Bottom Right */}
+      <div className="absolute bottom-3 right-3 z-20">
+        <div className="relative">
+          <button
+            onClick={() => setShowShareMenu(!showShareMenu)}
+            className="bg-white hover:bg-gray-50 text-slate-900 p-2 rounded-full shadow-xl hover:shadow-xl transition-all duration-200 flex items-center justify-center border-2 border-gray-300 hover:border-gray-400 backdrop-blur-sm"
+            aria-label="Share post"
+            style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' }}
+          >
+            <Send className="w-5 h-5" />
+          </button>
+
+          {/* Share Menu Dropdown */}
+          {showShareMenu && (
+            <>
+              {/* Backdrop to close menu */}
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowShareMenu(false)}
+              />
+              
+              {/* Menu - Opens upward from bottom */}
+              <div className="absolute right-0 bottom-12 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-[200px] z-20">
+                {/* Native Share (Mobile) */}
+                {navigator.share && (
+                  <button
+                    onClick={() => handleShare('native')}
+                    className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
+                  >
+                    <Share2 className="w-5 h-5" />
+                    <span>Share...</span>
+                  </button>
+                )}
+                
+                {/* WhatsApp */}
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
+                >
+                  <MessageCircle className="w-5 h-5 text-green-600" />
+                  <span>WhatsApp</span>
+                </button>
+
+                {/* Facebook */}
+                <button
+                  onClick={() => handleShare('facebook')}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>Facebook</span>
+                </button>
+
+                {/* Twitter */}
+                <button
+                  onClick={() => handleShare('twitter')}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <span>Twitter</span>
+                </button>
+
+                {/* Instagram */}
+                <button
+                  onClick={() => handleShare('instagram')}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-pink-600" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                  <span>Instagram</span>
+                </button>
+
+                {/* Copy Link */}
+                <button
+                  onClick={() => handleShare('copy')}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors border-t border-gray-200 mt-1 pt-2"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-5 h-5 text-green-600" />
+                      <span className="text-green-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-5 h-5" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

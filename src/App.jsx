@@ -16,6 +16,7 @@ import Contacts from "./pages/admin/Contacts";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import About from "./pages/About";
+import PostDetail from "./pages/PostDetail";
 function App() {
   return (
     <AuthProvider>
@@ -24,6 +25,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
+          <Route path="/post/:id" element={<PostDetail />} />
           <Route
             path="/admin"
             element={

@@ -63,25 +63,19 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-white-100 rounded-lg sm:rounded-2xl mb-4 sm:mb-8 mx-2 sm:mx-4 md:mx-6">
+      <div className="relative overflow-hidden mt-2 bg-white-100 rounded-lg sm:rounded-2xl mb-4 h-60 sm:mb-8 mx-2 sm:mx-4 md:mx-6">
         <div className="relative px-4 sm:px-6 md:px-8 py-8 sm:py-10 md:py-12 lg:py-16">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
-              <div className="text-white mb-4 md:mb-0 text-center md:text-left w-full md:w-auto">
-                <h1 className="text-2xl text-gray-800 sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3">
+              <div className="text-white mb-4 md:mb-0 mt-0 md:text-left w-full md:w-auto">
+                <h1 className="text-gray-800 sm:text-xl p-2 mt-2 md:text-xl lg:text-5xl font-bold mb-2 sm:mb-3">
                   Welcome back admin
                 </h1>
                 <p className="text-base text-gray-600 sm:text-lg md:text-xl lg:text-2xl ">
                   Manage your media and property content with ease
                 </p>
               </div>
-              <div className="flex-shrink-0 w-full md:w-auto flex justify-center md:justify-end">
-                <img
-                  src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop&q=80"
-                  alt="Property Management"
-                  className="rounded-lg shadow-xl w-full max-w-xs sm:w-56 md:w-64 h-40 sm:h-44 md:h-48 object-cover border-2 sm:border-4 border-white/30"
-                />
-              </div>
+             
             </div>
           </div>
         </div>
