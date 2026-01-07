@@ -29,8 +29,10 @@ const HomePostCard = ({ post }) => {
     const url = `${baseUrl}/storage/${filePath}`;
     return url;
   };
+
   const images = post.media?.filter((m) => m.file_type === "image") || [];
   const videos = post.media?.filter((m) => m.file_type === "video") || [];
+
   // Get background color based on category
   const getCategoryBackground = (category) => {
     switch (category) {
@@ -47,17 +49,18 @@ const HomePostCard = ({ post }) => {
         return "bg-slate-900"; // Default to original
     }
   };
+
   // Get text color based on category for readability
   const getCategoryTextColor = (category) => {
     switch (category) {
       case "rentals":
-      case "lands_and_plots":    
+      case "lands_and_plots":
         return "text-white/90"; // Dark text on gold background
       case "property_sales":
       case "property_services":
         return "text-gray-900"; // White text on gray background
       case "construction_property_management":
-      case "investment":              
+      case "investment":
         return "text-white"; // Keep original white text
       default:
         return "text-white"; // Default to white text
@@ -92,14 +95,17 @@ const HomePostCard = ({ post }) => {
         window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
         break;
       case 'instagram':
-        // Try Web Share API first (works on mobile and can share to Instagram)
+        // Instagram doesn't support direct web URL sharing
+        // Web Share API is the best option for mobile
         if (navigator.share) {
           try {
-            await navigator.share({
+            const shareData = {
               title: post.title,
               text: text,
               url: url,
-            });
+            };
+            
+            await navigator.share(shareData);
             setShowShareMenu(false);
             return;
           } catch (err) {
@@ -107,27 +113,14 @@ const HomePostCard = ({ post }) => {
               console.error('Error sharing:', err);
             }
           }
-        }     
-        // For desktop or if Web Share API fails, try Instagram URL scheme (mobile only)
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          // Try Instagram app URL scheme
-          const instagramUrl = `instagram://share?text=${encodedText}`;
-          window.location.href = instagramUrl;
-          // Fallback after a delay
-          setTimeout(() => {
-            handleCopyLink();
-          }, 1000);
-        } else {
-          // Desktop: copy link
-          handleCopyLink();
         }
+        // Fallback: Just copy the link
+        handleCopyLink();
         return;
       case 'copy':
         handleCopyLink();
         return;
       case 'native':
-        // Use Web Share API if available (mobile devices)
         if (navigator.share) {
           try {
             await navigator.share({
@@ -142,7 +135,6 @@ const HomePostCard = ({ post }) => {
             }
           }
         } else {
-          // Fallback to copy link
           handleCopyLink();
         }
         return;
@@ -156,7 +148,7 @@ const HomePostCard = ({ post }) => {
     const url = getShareUrl();
     const text = getShareText();
     const fullText = `${text}\n\n${url}`;
-    
+
     try {
       await navigator.clipboard.writeText(fullText);
       setCopied(true);
@@ -181,7 +173,7 @@ const HomePostCard = ({ post }) => {
       } catch (fallbackErr) {
         console.error('Fallback copy failed:', fallbackErr);
       }
-      document.body.removeChild(textArea);
+      document.body.appendChild(textArea);
     }
   };
 
@@ -261,6 +253,7 @@ const HomePostCard = ({ post }) => {
             )}
           </div>
         )}
+
         {/* Reel Post - Video with Overlays */}
         {post.post_type === "Reel" && videos.length > 0 && (
           <div className="relative w-full h-full bg-black">
@@ -269,18 +262,26 @@ const HomePostCard = ({ post }) => {
               controls
               preload="metadata"
               playsInline
-              className="w-full h-full object-cover"
+              webkit-playsinline="true"
+              controlsList="nodownload"
+              disablePictureInPicture={false}
+              poster={images.length > 0 ? getMediaUrl(images[0]) : undefined}
+              className="w-full h-full object-contain"
               onError={(e) => {
                 console.error("Video load error:", {
                   videoUrl: getMediaUrl(videos[0]),
-                  media: videos[0]
+                  media: videos[0],
+                  error: e.target.error
                 });
+              }}
+              onLoadedMetadata={() => {
+                console.log("Video loaded successfully");
               }}
             >
               <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
               Your browser does not support the video tag.
             </video>
-            
+
             {/* Logo at top left */}
             <div className="absolute top-2 left-2 z-10">
               <img
@@ -295,7 +296,7 @@ const HomePostCard = ({ post }) => {
               <div className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm" style={{
                 textShadow: '2px 2px 4px rgba(146, 131, 131, 0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
               }}>
-                <h3 
+                <h3
                   className="text-lg font-bold text-white mb-2 text-center"
                   style={{
                     textShadow: '3px 3px 6px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,1)',
@@ -304,7 +305,7 @@ const HomePostCard = ({ post }) => {
                 >
                   {post.title}
                 </h3>
-                <p 
+                <p
                   className="text-xs font-medium text-white mb-3 text-center"
                   style={{
                     textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
@@ -313,7 +314,7 @@ const HomePostCard = ({ post }) => {
                 >
                   {post.post_type} • {post.category}
                 </p>
-                <p 
+                <p
                   className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
                   style={{
                     textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8), 1px 1px 3px rgba(0,0,0,1)',
@@ -327,6 +328,7 @@ const HomePostCard = ({ post }) => {
           </div>
         )}
       </div>
+
       {/* Content Section - Title and Description Below Media (hidden for Reel posts) */}
       {post.post_type !== "Reel" && (
         <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
@@ -350,7 +352,7 @@ const HomePostCard = ({ post }) => {
           </div>
 
           {/* Oweru Logo - Below description, always visible */}
-          <div className="px-4 pb-3  flex justify-end items-center">
+          <div className="px-4 pb-3 flex justify-end items-center">
             <img
               src={oweruLogo}
               alt="Oweru logo"
@@ -362,32 +364,32 @@ const HomePostCard = ({ post }) => {
 
       {/* Contact Information Footer - Always at bottom (hidden for Reel posts) */}
       {post.post_type !== "Reel" && (
-      <div className="bg-white px-2 py-1 mt-2 rounded-b-lg">
-        <div className="text-left text-gray-800">
-          <div className="text-sm whitespace-nowrap">
-            <span className="inline-block">
-              <a href="mailto:info@oweru.com" className="text-gray-950 hover:underline">
-                info@oweru.com
-              </a>
-            </span> &nbsp;
-            <span className="inline-block">
-              <a href="tel:+255711890764" className="text-gray-950 hover:underline">
-                +255 711 890 764
-              </a>
-            </span> &nbsp;
-            <span className="inline-block">
-              <a
-                href="https://www.oweru.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-950 hover:underline"
-              >
-                www.oweru.com
-              </a>
-            </span>
+        <div className="bg-white px-2 py-1 mt-2 rounded-b-lg">
+          <div className="text-left text-gray-800">
+            <div className="text-sm whitespace-nowrap">
+              <span className="inline-block">
+                <a href="mailto:info@oweru.com" className="text-gray-950 hover:underline">
+                  info@oweru.com
+                </a>
+              </span> &nbsp;
+              <span className="inline-block">
+                <a href="tel:+255711890764" className="text-gray-950 hover:underline">
+                  +255 711 890 764
+                </a>
+              </span> &nbsp;
+              <span className="inline-block">
+                <a
+                  href="https://www.oweru.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-950 hover:underline"
+                >
+                  www.oweru.com
+                </a>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Empty div with category-based background (hidden for Reel posts) */}
@@ -415,7 +417,7 @@ const HomePostCard = ({ post }) => {
                 className="fixed inset-0 z-10"
                 onClick={() => setShowShareMenu(false)}
               />
-              
+
               {/* Menu - Opens upward from bottom */}
               <div className="absolute right-0 bottom-12 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-[200px] z-20">
                 {/* Native Share (Mobile) */}
@@ -428,7 +430,7 @@ const HomePostCard = ({ post }) => {
                     <span>Share...</span>
                   </button>
                 )}
-                
+
                 {/* WhatsApp */}
                 <button
                   onClick={() => handleShare('whatsapp')}
@@ -498,4 +500,3 @@ const HomePostCard = ({ post }) => {
 };
 
 export default HomePostCard;
-
