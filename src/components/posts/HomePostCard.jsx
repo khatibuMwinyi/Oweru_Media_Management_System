@@ -9,7 +9,7 @@ const HomePostCard = ({ post }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Hardcoded base URL for your live server
+  // HARDCODED BASE URL FOR YOUR SERVER
   const BASE_URL = "http://31.97.176.48:8081";
 
   const getMediaUrl = (media) => {
@@ -74,7 +74,7 @@ const HomePostCard = ({ post }) => {
     const url = getShareUrl();
     const text = getShareText();
 
-    // Use Web Share API when available (best for mobile, including chance for Instagram)
+    // Use native Web Share API when available (best for mobile)
     if (platform === 'native' || platform === 'instagram') {
       if (navigator.share) {
         try {
@@ -107,7 +107,7 @@ const HomePostCard = ({ post }) => {
         window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
         break;
       case 'instagram':
-        // Fallback: copy link (Instagram doesn't support direct web sharing)
+        // Instagram doesn't support direct web sharing — fallback to copy
         handleCopyLink();
         break;
       case 'copy':
@@ -127,29 +127,19 @@ const HomePostCard = ({ post }) => {
     try {
       await navigator.clipboard.writeText(fullText);
       setCopied(true);
-      setTimeout(() => {
-        setCopied(false);
-        setShowShareMenu(false);
-      }, 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
       // Fallback
       const textArea = document.createElement('textarea');
       textArea.value = fullText;
       document.body.appendChild(textArea);
       textArea.select();
-      try {
-        document.execCommand('copy');
-        setCopied(true);
-        setTimeout(() => {
-          setCopied(false);
-          setShowShareMenu(false);
-        }, 2000);
-      } catch (fallbackErr) {
-        console.error('Fallback copy failed:', fallbackErr);
-      }
+      document.execCommand('copy');
       document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
+    setShowShareMenu(false);
   };
 
   return (
@@ -238,18 +228,18 @@ const HomePostCard = ({ post }) => {
               Your browser does not support the video tag.
             </video>
 
-            {/* Custom Play Button - visible when paused (essential for mobile) */}
+            {/* BIG CUSTOM PLAY BUTTON - VISIBLE WHEN PAUSED (MOBILE FIX) */}
             {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
+              <div className="absolute inset-0 flex items-center justify-center z-50">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     videoRef.current?.play();
                   }}
-                  className="bg-white bg-opacity-90 rounded-full p-6 shadow-2xl hover:scale-110 transition-transform"
+                  className="bg-white bg-opacity-90 rounded-full p-8 shadow-2xl hover:scale-110 transition-all"
                   aria-label="Play video"
                 >
-                  <svg className="w-20 h-20 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-24 h-24 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
                 </button>
@@ -265,7 +255,7 @@ const HomePostCard = ({ post }) => {
               />
             </div>
 
-            {/* Text overlay */}
+            {/* Text Overlay */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
               <div className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm" style={{
                 textShadow: '2px 2px 4px rgba(146, 131, 131, 0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
