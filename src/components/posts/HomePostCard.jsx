@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Send, MessageCircle, Copy, Check, Share2 } from "lucide-react";
 import oweruLogo from "../../assets/oweru_logo.png";
 
@@ -9,12 +9,10 @@ const HomePostCard = ({ post }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Use hardcoded URL or environment variable
-  const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://31.97.176.48:8081";
+  // HARDCODED BASE URL
+  const BASE_URL = "http://31.97.176.48:8081";
 
   const getMediaUrl = (media) => {
-    if (!media) return "";
-    
     if (media.url) {
       if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
         return media.url;
@@ -65,7 +63,7 @@ const HomePostCard = ({ post }) => {
   };
 
   const getShareUrl = () => {
-    return `${window.location.origin}/post/${post.id}`;
+    return `${BASE_URL}/post/${post.id}`;
   };
 
   const getShareText = () => {
@@ -75,9 +73,7 @@ const HomePostCard = ({ post }) => {
   const handleShare = async (platform) => {
     const url = getShareUrl();
     const text = getShareText();
-    const fullMessage = `${text}\n\n${url}`;
 
-    // Use Web Share API for native and Instagram
     if (platform === 'native' || platform === 'instagram') {
       if (navigator.share) {
         try {
@@ -94,27 +90,23 @@ const HomePostCard = ({ post }) => {
           }
         }
       }
-      
-      // Fallback for Instagram if Web Share fails
-      if (platform === 'instagram') {
-        handleCopyLink();
-        return;
-      }
     }
 
     const encodedText = encodeURIComponent(text);
     const encodedUrl = encodeURIComponent(url);
-    const encodedFullMessage = encodeURIComponent(fullMessage);
 
     switch (platform) {
       case 'whatsapp':
-        window.open(`https://wa.me/?text=${encodedFullMessage}`, '_blank');
+        window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
         break;
       case 'facebook':
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`, '_blank');
         break;
       case 'twitter':
         window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
+        break;
+      case 'instagram':
+        handleCopyLink();
         break;
       case 'copy':
         handleCopyLink();
@@ -133,86 +125,25 @@ const HomePostCard = ({ post }) => {
     try {
       await navigator.clipboard.writeText(fullText);
       setCopied(true);
-      setTimeout(() => {
-        setCopied(false);
-        setShowShareMenu(false);
-      }, 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
-      // Fallback
       const textArea = document.createElement('textarea');
       textArea.value = fullText;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
       document.body.appendChild(textArea);
       textArea.select();
-      try {
-        document.execCommand('copy');
-        setCopied(true);
-        setTimeout(() => {
-          setCopied(false);
-          setShowShareMenu(false);
-        }, 2000);
-      } catch (fallbackErr) {
-        console.error('Fallback copy failed:', fallbackErr);
-      }
+      document.execCommand('copy');
       document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
+    setShowShareMenu(false);
   };
-
-  const handleVideoClick = () => {
-    if (videoRef.current) {
-      if (videoRef.current.paused) {
-        videoRef.current.play()
-          .then(() => setIsPlaying(true))
-          .catch(err => console.error("Play failed:", err));
-      } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
-      }
-    }
-  };
-
-  // Auto-play video when it comes into view (for mobile)
-  useEffect(() => {
-    if (post.post_type === "Reel" && videoRef.current) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              // Video is in view, try to play
-              videoRef.current?.play()
-                .then(() => setIsPlaying(true))
-                .catch(() => {
-                  // Auto-play blocked, user needs to click
-                  setIsPlaying(false);
-                });
-            } else {
-              // Video is out of view, pause it
-              videoRef.current?.pause();
-              setIsPlaying(false);
-            }
-          });
-        },
-        { threshold: 0.5 }
-      );
-
-      observer.observe(videoRef.current);
-
-      return () => {
-        if (videoRef.current) {
-          observer.unobserve(videoRef.current);
-        }
-      };
-    }
-  }, [post.post_type]);
 
   return (
     <div className="shadow-lg overflow-hidden border border-gray-200 bg-white flex flex-col relative h-[700px]">
       {/* Media Section */}
       <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 shrink-0"}`}>
-        
-        {/* Static Post - Single Image */}
+        {/* Static Post */}
         {post.post_type === "Static" && images.length > 0 && (
           <div className="w-full h-full flex items-center justify-center bg-black">
             <img
@@ -226,7 +157,7 @@ const HomePostCard = ({ post }) => {
           </div>
         )}
 
-        {/* Carousel Post - Multiple Images */}
+        {/* Carousel Post */}
         {post.post_type === "Carousel" && images.length > 0 && (
           <div className="w-full h-full flex flex-col">
             <div className="relative w-full h-full">
@@ -244,7 +175,7 @@ const HomePostCard = ({ post }) => {
                     onClick={() =>
                       setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
                     }
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70 z-10"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
                   >
                     ‹
                   </button>
@@ -252,11 +183,11 @@ const HomePostCard = ({ post }) => {
                     onClick={() =>
                       setCarouselIndex((prev) => (prev + 1) % images.length)
                     }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70 z-10"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
                   >
                     ›
                   </button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs z-10">
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                     {carouselIndex + 1} / {images.length}
                   </div>
                 </>
@@ -265,54 +196,54 @@ const HomePostCard = ({ post }) => {
           </div>
         )}
 
-        {/* Reel Post - Video (Mobile Optimized) */}
+        {/* Reel Post - Video */}
         {post.post_type === "Reel" && videos.length > 0 && (
           <div className="relative w-full h-full bg-black">
             <video
               ref={videoRef}
-              playsInline
-              webkit-playsinline="true"
-              muted
-              loop
-              preload="auto"
               controls={isPlaying}
-              className="w-full h-full object-cover cursor-pointer"
-              onClick={handleVideoClick}
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-cover"
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
+              onClick={() => {
+                if (videoRef.current?.paused) {
+                  videoRef.current?.play();
+                } else {
+                  videoRef.current?.pause();
+                }
+              }}
               onError={(e) => {
                 console.error("Video load error:", {
                   videoUrl: getMediaUrl(videos[0]),
-                  error: e.target.error,
-                  errorCode: e.target.error?.code
+                  media: videos[0]
                 });
               }}
             >
               <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
-              <source src={getMediaUrl(videos[0])} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
 
-            {/* Custom Play Button - visible when paused */}
+            {/* Custom Play Button - Bottom Left Corner (never hidden by text) */}
             {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="bg-white bg-opacity-90 rounded-full p-6 shadow-2xl pointer-events-auto">
-                  <svg 
-                    className="w-16 h-16 text-gray-900" 
-                    fill="currentColor" 
-                    viewBox="0 0 24 24"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleVideoClick();
-                    }}
-                  >
+              <div className="absolute bottom-4 left-4 z-50">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    videoRef.current?.play();
+                  }}
+                  className="bg-white bg-opacity-90 rounded-full p-4 shadow-2xl hover:scale-110 transition-all"
+                  aria-label="Play video"
+                >
+                  <svg className="w-12 h-12 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
-                </div>
+                </button>
               </div>
             )}
 
-            {/* Logo at top left */}
+            {/* Logo */}
             <div className="absolute top-2 left-2 z-10">
               <img
                 src={oweruLogo}
@@ -321,9 +252,9 @@ const HomePostCard = ({ post }) => {
               />
             </div>
 
-            {/* Content overlay in the middle */}
+            {/* Text Overlay - Center */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
-              <div className="rounded-lg p-4 max-w-md w-full backdrop-blur-sm" style={{
+              <div className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm" style={{
                 textShadow: '2px 2px 4px rgba(146, 131, 131, 0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
               }}>
                 <h3 
@@ -359,14 +290,14 @@ const HomePostCard = ({ post }) => {
         )}
       </div>
 
-      {/* Content Section - Title and Description Below Media (hidden for Reel posts) */}
+      {/* Content below media (not for Reel) */}
       {post.post_type !== "Reel" && (
         <>
           <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
             <div className="px-4 pt-4 pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="text-lg bg-gray-100 font-semibold text-gray-900 p-2 rounded-lg text-left">
+                  <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">
                     {post.title}
                   </h3>
                   <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
@@ -382,7 +313,6 @@ const HomePostCard = ({ post }) => {
               </p>
             </div>
 
-            {/* Oweru Logo - Below description, always visible */}
             <div className="px-4 pb-3 flex justify-end items-center">
               <img
                 src={oweruLogo}
@@ -392,7 +322,6 @@ const HomePostCard = ({ post }) => {
             </div>
           </div>
 
-          {/* Contact Information Footer - Always at bottom */}
           <div className="bg-white px-2 py-1 mt-2 rounded-b-lg">
             <div className="text-left text-gray-800">
               <div className="text-sm whitespace-nowrap">
@@ -420,35 +349,26 @@ const HomePostCard = ({ post }) => {
             </div>
           </div>
 
-          {/* Empty div with category-based background */}
           <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`}></div>
         </>
       )}
 
       {/* Share Button - Bottom Right */}
-      <div className="absolute bottom-3 right-3 z-30">
+      <div className="absolute bottom-3 right-3 z-20">
         <div className="relative">
           <button
             onClick={() => setShowShareMenu(!showShareMenu)}
-            className="bg-white hover:bg-gray-50 text-slate-900 p-2 rounded-full shadow-xl transition-all duration-200 flex items-center justify-center border-2 border-gray-300 hover:border-gray-400 backdrop-blur-sm"
+            className="bg-white hover:bg-gray-50 text-slate-900 p-2 rounded-full shadow-xl hover:shadow-xl transition-all duration-200 flex items-center justify-center border-2 border-gray-300 hover:border-gray-400 backdrop-blur-sm"
             aria-label="Share post"
             style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' }}
           >
             <Send className="w-5 h-5" />
           </button>
 
-          {/* Share Menu Dropdown */}
           {showShareMenu && (
             <>
-              {/* Backdrop to close menu */}
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowShareMenu(false)}
-              />
-
-              {/* Menu - Opens upward from bottom */}
+              <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
               <div className="absolute right-0 bottom-12 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-[200px] z-20">
-                {/* Native Share (Mobile) */}
                 {navigator.share && (
                   <button
                     onClick={() => handleShare('native')}
@@ -459,7 +379,6 @@ const HomePostCard = ({ post }) => {
                   </button>
                 )}
 
-                {/* WhatsApp */}
                 <button
                   onClick={() => handleShare('whatsapp')}
                   className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
@@ -468,7 +387,6 @@ const HomePostCard = ({ post }) => {
                   <span>WhatsApp</span>
                 </button>
 
-                {/* Facebook */}
                 <button
                   onClick={() => handleShare('facebook')}
                   className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
@@ -479,7 +397,6 @@ const HomePostCard = ({ post }) => {
                   <span>Facebook</span>
                 </button>
 
-                {/* Twitter */}
                 <button
                   onClick={() => handleShare('twitter')}
                   className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
@@ -490,7 +407,6 @@ const HomePostCard = ({ post }) => {
                   <span>Twitter</span>
                 </button>
 
-                {/* Instagram */}
                 <button
                   onClick={() => handleShare('instagram')}
                   className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors"
@@ -501,7 +417,6 @@ const HomePostCard = ({ post }) => {
                   <span>Instagram</span>
                 </button>
 
-                {/* Copy Link */}
                 <button
                   onClick={() => handleShare('copy')}
                   className="w-full px-4 py-2.5 text-left hover:bg-gray-100 flex items-center gap-3 text-slate-900 transition-colors border-t border-gray-200 mt-1 pt-2"
