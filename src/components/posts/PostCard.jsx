@@ -17,12 +17,12 @@ const PostCard = ({ post, onDelete, onEdit }) => {
       }
       const baseUrl =
         import.meta.env.VITE_API_URL?.replace("/api", "") ||
-        "http://localhost:8000";
+        "http://31.97.176.48:8081";
       return `${baseUrl}${media.url.startsWith("/") ? "" : "/"}${media.url}`;
     }
     const baseUrl =
       import.meta.env.VITE_API_URL?.replace("/api", "") ||
-      "http://localhost:8000";
+      "http://31.97.176.48:8081";
     const filePath = media.file_path?.startsWith("/")
       ? media.file_path.substring(1)
       : media.file_path;
