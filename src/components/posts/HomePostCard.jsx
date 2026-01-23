@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Send, MessageCircle, Copy, Check, Share2, Mail, Phone, Globe, Download, Camera } from "lucide-react";
+import { Send, MessageCircle, Copy, Check, Share2, Mail, Phone, Globe, Download, Camera, Instagram } from "lucide-react";
 import oweruLogo from "../../assets/oweru_logo.png";
 import html2canvas from "html2canvas";
 
@@ -11,6 +11,8 @@ const HomePostCard = ({ post }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [postingToInstagram, setPostingToInstagram] = useState(false);
+  const [instagramStatus, setInstagramStatus] = useState(null);
 
   const BASE_URL = "http://31.97.176.48:8081";
 
@@ -35,7 +37,7 @@ const HomePostCard = ({ post }) => {
   const getCategoryStyles = (category) => {
     switch (category) {
       case "rentals":
-        return { bg: "bg-[#C89128]", text: "text-white" }; // Gold background
+        return { bg: "bg-[#C89128]", text: "text-white" };
       case "property_sales":
         return { bg: "bg-gray-300", text: "text-slate-700" };
       case "lands_and_plots":
@@ -54,13 +56,85 @@ const HomePostCard = ({ post }) => {
   const categoryStyles = getCategoryStyles(post.category);
 
   const getShareUrl = () => {
-    // Use the current window location as base, then add the post route
-    const baseUrl = window.location.origin; // Gets https://yourdomain.com
+    const baseUrl = window.location.origin;
     return `${baseUrl}/post/${post.id}`;
   };
 
   const getShareText = () => {
     return `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
+  };
+
+  // NEW: Post to Instagram function
+  const handlePostToInstagram = async () => {
+    setPostingToInstagram(true);
+    setInstagramStatus(null);
+    setShowShareMenu(false);
+
+    try {
+      const formData = new FormData();
+
+      // Determine post type
+      let instagramPostType = 'feed';
+      if (post.post_type === "Carousel") {
+        instagramPostType = 'carousel';
+      } else if (post.post_type === "Reel" && videos.length > 0) {
+        instagramPostType = 'reel';
+      }
+
+      // Add media files
+      const mediaToPost = instagramPostType === 'reel' ? videos : images;
+      
+      // Fetch and add media files to FormData
+      for (let i = 0; i < mediaToPost.length; i++) {
+        const media = mediaToPost[i];
+        const mediaUrl = getMediaUrl(media);
+        
+        try {
+          const response = await fetch(mediaUrl);
+          const blob = await response.blob();
+          const fileName = `media_${i}.${media.file_type === 'video' ? 'mp4' : 'jpg'}`;
+          formData.append(`media[${i}]`, blob, fileName);
+        } catch (error) {
+          console.error(`Failed to fetch media ${i}:`, error);
+        }
+      }
+
+      // Add caption
+      const caption = `${post.title}\n\n${post.description}\n\n📍 ${post.category}\n\n#OweruMedia #RealEstate #Property #Tanzania`;
+      formData.append('caption', caption);
+      formData.append('post_type', instagramPostType);
+      formData.append('post_id', post.id);
+
+      // Post to your Laravel backend
+      const response = await fetch(`${BASE_URL}/api/instagram/post`, {
+        method: 'POST',
+        headers: {
+          // Add authorization if needed
+          // 'Authorization': `Bearer ${yourAuthToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setInstagramStatus({
+          type: 'success',
+          message: 'Successfully posted to Instagram!',
+          permalink: data.permalink
+        });
+      } else {
+        throw new Error(data.message || 'Failed to post to Instagram');
+      }
+    } catch (error) {
+      console.error('Instagram posting error:', error);
+      setInstagramStatus({
+        type: 'error',
+        message: error.message || 'Failed to post to Instagram. Please try again.'
+      });
+    } finally {
+      setPostingToInstagram(false);
+    }
   };
 
   const handleShare = async (platform) => {
@@ -139,11 +213,9 @@ const HomePostCard = ({ post }) => {
     setShowShareMenu(false);
     
     try {
-      // Hide the share button temporarily
       const shareButton = cardRef.current.querySelector('.share-button-container');
       if (shareButton) shareButton.style.display = 'none';
       
-      // For video posts, pause the video
       if (videoRef.current && !videoRef.current.paused) {
         videoRef.current.pause();
       }
@@ -152,15 +224,13 @@ const HomePostCard = ({ post }) => {
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        scale: 2, // Higher quality
+        scale: 2,
         logging: false,
         imageTimeout: 0,
       });
       
-      // Show share button again
       if (shareButton) shareButton.style.display = 'block';
       
-      // Convert to blob and download
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -177,7 +247,6 @@ const HomePostCard = ({ post }) => {
       alert('Failed to download image. Please try again.');
       setDownloading(false);
       
-      // Make sure share button is visible again
       const shareButton = cardRef.current.querySelector('.share-button-container');
       if (shareButton) shareButton.style.display = 'block';
     }
@@ -211,6 +280,40 @@ const HomePostCard = ({ post }) => {
       `}</style>
 
       <div className="shadow-lg rounded-xl overflow-hidden border border-gray-200 bg-white flex flex-col relative h-[700px] font-inter hover:shadow-xl transition-shadow duration-300" ref={cardRef}>
+        {/* Instagram Status Notification */}
+        {instagramStatus && (
+          <div className={`absolute top-4 left-4 right-4 z-50 p-4 rounded-lg shadow-xl ${
+            instagramStatus.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white`}>
+            <div className="flex items-start gap-3">
+              {instagramStatus.type === 'success' ? (
+                <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              ) : (
+                <X className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <p className="font-semibold">{instagramStatus.message}</p>
+                {instagramStatus.permalink && (
+                  <a
+                    href={instagramStatus.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm underline mt-1 inline-block"
+                  >
+                    View on Instagram →
+                  </a>
+                )}
+              </div>
+              <button
+                onClick={() => setInstagramStatus(null)}
+                className="text-white hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Media Section */}
         <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 shrink-0"}`}>
           {/* Static Post */}
@@ -295,7 +398,6 @@ const HomePostCard = ({ post }) => {
                 Your browser does not support the video tag.
               </video>
               
-              {/* Custom Play Button */}
               {!isPlaying && (
                 <div className="absolute bottom-6 left-6 z-50">
                   <button
@@ -313,7 +415,6 @@ const HomePostCard = ({ post }) => {
                 </div>
               )}
               
-              {/* Logo */}
               <div className="absolute top-4 left-4 z-10">
                 <img
                   src={oweruLogo}
@@ -322,7 +423,6 @@ const HomePostCard = ({ post }) => {
                 />
               </div>
               
-              {/* Text Overlay */}
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
                 <div className="rounded-xl p-6 max-w-md w-full pointer-events-auto backdrop-blur-sm bg-black/20" style={{
                   textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
@@ -392,7 +492,6 @@ const HomePostCard = ({ post }) => {
               </div>
             </div>
 
-            {/* Contact Info */}
             <div className="bg-white px-4 py-3 border-t border-gray-200">
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-700">
                 <a href="mailto:info@oweru.com" className="flex items-center gap-1.5 hover:text-[#C89128] transition-colors font-medium">
@@ -439,6 +538,27 @@ const HomePostCard = ({ post }) => {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
                 <div className="absolute right-0 bottom-14 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 min-w-[200px] z-20">
+                  {/* NEW: Post to Instagram Button */}
+                  <button
+                    onClick={handlePostToInstagram}
+                    disabled={postingToInstagram}
+                    className="w-full px-4 py-3 text-left hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 flex items-center gap-3 text-gray-900 transition-colors font-medium border-b border-gray-200"
+                  >
+                    {postingToInstagram ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-pink-300 border-t-pink-600 rounded-full animate-spin" />
+                        <span className="text-gray-500">Posting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Instagram className="w-5 h-5 text-pink-600" />
+                        <span className="font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                          Post to Instagram
+                        </span>
+                      </>
+                    )}
+                  </button>
+
                   {navigator.share && (
                     <button
                       onClick={() => handleShare('native')}
@@ -472,15 +592,6 @@ const HomePostCard = ({ post }) => {
                       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                     </svg>
                     <span>Twitter</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare('instagram')}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-100 flex items-center gap-3 text-gray-900 transition-colors font-medium"
-                  >
-                    <svg className="w-5 h-5 text-pink-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                    </svg>
-                    <span>Instagram</span>
                   </button>
                   <button
                     onClick={() => handleShare('copy')}
