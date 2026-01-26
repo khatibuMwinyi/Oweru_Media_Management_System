@@ -444,7 +444,7 @@ const HomePage = () => {
         </section>
 
         {/* Call to Action Section */}
-        <section className="py-20 bg-g-to-r from-[#C89128] to-[#B08020]">
+        <section className="py-20 bg-#C89128 bg-linear-to-r from-[#C89128] to-[#B08020]">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <Award className="w-16 h-16 mx-auto mb-6 text-white" />
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
