@@ -368,7 +368,6 @@ const HomePostCard = ({ post }) => {
               </div>
             </div>
           )}
-
           {/* Reel Post - Video */}
           {post.post_type === "Reel" && videos.length > 0 && (
             <div className="relative w-full h-full bg-black rounded-xl overflow-hidden">
@@ -396,8 +395,7 @@ const HomePostCard = ({ post }) => {
               >
                 <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
                 Your browser does not support the video tag.
-              </video>
-              
+              </video>         
               {!isPlaying && (
                 <div className="absolute bottom-6 left-6 z-50">
                   <button
@@ -413,16 +411,14 @@ const HomePostCard = ({ post }) => {
                     </svg>
                   </button>
                 </div>
-              )}
-              
+              )}   
               <div className="absolute top-4 left-4 z-10">
                 <img
                   src={oweruLogo}
                   alt="Oweru logo"
                   className="h-12 w-auto shadow-lg bg-white/90 rounded-lg p-2"
                 />
-              </div>
-              
+              </div>           
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
                 <div className="rounded-xl p-6 max-w-md w-full pointer-events-auto backdrop-blur-sm bg-black/20" style={{
                   textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
@@ -459,7 +455,6 @@ const HomePostCard = ({ post }) => {
             </div>
           )}
         </div>
-
         {/* Content below media (not for Reel) */}
         {post.post_type !== "Reel" && (
           <>
@@ -476,13 +471,11 @@ const HomePostCard = ({ post }) => {
                   </div>
                 </div>
               </div>
-              
               <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin shrink-0">
                 <p className={`${categoryStyles.text} whitespace-pre-wrap text-sm leading-relaxed font-medium`}>
                   {post.description}
                 </p>
-              </div>
-              
+              </div>  
               <div className="px-4 pb-3 flex justify-end items-center">
                 <img
                   src={oweruLogo}
@@ -491,7 +484,6 @@ const HomePostCard = ({ post }) => {
                 />
               </div>
             </div>
-
             <div className="bg-white px-4 py-3 border-t border-gray-200">
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-700">
                 <a href="mailto:info@oweru.com" className="flex items-center gap-1.5 hover:text-[#C89128] transition-colors font-medium">
@@ -512,12 +504,10 @@ const HomePostCard = ({ post }) => {
                   <span>oweru.com</span>
                 </a>
               </div>
-            </div>
-            
+            </div>  
             <div className={`${categoryStyles.bg} h-3 rounded-b-xl`}></div>
           </>
         )}
-
         {/* Share Button */}
         <div className="absolute bottom-3 right-3 z-20 share-button-container">
           <div className="relative">
@@ -533,7 +523,6 @@ const HomePostCard = ({ post }) => {
                 <Send className="w-5 h-5" />
               )}
             </button>
-            
             {showShareMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
@@ -558,7 +547,6 @@ const HomePostCard = ({ post }) => {
                       </>
                     )}
                   </button>
-
                   {navigator.share && (
                     <button
                       onClick={() => handleShare('native')}
@@ -609,7 +597,6 @@ const HomePostCard = ({ post }) => {
                       </>
                     )}
                   </button>
-                  
                   <button
                     onClick={handleDownloadAsImage}
                     disabled={downloading}
