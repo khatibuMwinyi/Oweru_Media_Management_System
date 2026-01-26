@@ -15,16 +15,16 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
   const navigate = useNavigate();
 
   const categoryIdMap = {
-    "rentals": "rentals",
+    rentals: "rentals",
     "property-sales": "property_sales",
     "construction-management": "construction_property_management",
     "lands-plots": "lands_and_plots",
     "property-services": "property_services",
-    "investment": "investment",
+    investment: "investment",
   };
 
   const categoryToIdMap = Object.fromEntries(
-    Object.entries(categoryIdMap).map(([id, category]) => [category, id])
+    Object.entries(categoryIdMap).map(([id, category]) => [category, id]),
   );
 
   const menuItems = [
@@ -33,8 +33,16 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       name: "Oweru Official",
       key: "official",
       subItems: [
-        { name: "Lands & Plots", id: "lands-plots", category: "lands_and_plots" },
-        { name: "Property Services", id: "property-services", category: "property_services" },
+        {
+          name: "Lands & Plots",
+          id: "lands-plots",
+          category: "lands_and_plots",
+        },
+        {
+          name: "Property Services",
+          id: "property-services",
+          category: "property_services",
+        },
         { name: "Investment", id: "investment", category: "investment" },
       ],
     },
@@ -43,7 +51,11 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       key: "housing",
       subItems: [
         { name: "Rentals", id: "rentals", category: "rentals" },
-        { name: "Property Sales", id: "property-sales", category: "property_sales" },
+        {
+          name: "Property Sales",
+          id: "property-sales",
+          category: "property_sales",
+        },
         {
           name: "Construction & Property Management",
           id: "construction-management",
@@ -55,8 +67,15 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
   ];
 
   const scrollToSection = (id) => {
-    const categoryIds = ["rentals", "property-sales", "construction-management", "lands-plots", "property-services", "investment"];
-    
+    const categoryIds = [
+      "rentals",
+      "property-sales",
+      "construction-management",
+      "lands-plots",
+      "property-services",
+      "investment",
+    ];
+
     if (categoryIds.includes(id) && onCategoryClick) {
       if (location.pathname !== "/") {
         navigate("/");
@@ -90,13 +109,15 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
-      
+
       if (!navbarRef.current) return;
       const offset = navbarRef.current.offsetHeight + 5;
       let current = "home";
-      
+
       menuItems
-        .flatMap((item) => item.subItems ? item.subItems.map((s) => s.id) : item.id)
+        .flatMap((item) =>
+          item.subItems ? item.subItems.map((s) => s.id) : item.id,
+        )
         .forEach((id) => {
           const section = document.getElementById(id);
           if (section && window.scrollY + offset >= section.offsetTop) {
@@ -130,7 +151,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
               alt="Oweru Logo"
               className="h-12 w-12 object-contain transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
               Oweru Media Hub
             </span>
           </div>
@@ -150,7 +171,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                     {item.name}
                     <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180 duration-200" />
                   </button>
-                  
+
                   <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 -translate-y-2">
                     <div className="py-2">
                       {item.subItems.map((sub) => {
@@ -160,7 +181,9 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                             key={sub.id}
                             onClick={() => scrollToSection(sub.id)}
                             className={`w-full text-left px-4 py-3 text-sm transition-colors duration-150 hover:bg-amber-50 flex items-center justify-between ${
-                              isSelected ? "text-[#C89128] bg-amber-50 font-medium" : "text-gray-700"
+                              isSelected
+                                ? "text-[#C89128] bg-amber-50 font-medium"
+                                : "text-gray-700"
                             }`}
                           >
                             {sub.name}
@@ -186,12 +209,14 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
                   className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 ${
-                    activeSection === item.id ? "text-[#C89128] bg-amber-50" : "text-gray-700"
+                    activeSection === item.id
+                      ? "text-[#C89128] bg-amber-50"
+                      : "text-gray-700"
                   }`}
                 >
                   {item.name}
                 </button>
-              )
+              ),
             )}
           </div>
 
@@ -210,7 +235,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                     await logout();
                     navigate("/login");
                   }}
-                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold shadow-md hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all duration-200"
+                  className="px-5 py-2 rounded-lg bg-linear-to-r from-red-600 to-red-500 text-white font-semibold shadow-md hover:shadow-lg hover:from-red-700 hover:to-red-600 transition-all duration-200"
                 >
                   Logout
                 </button>
@@ -218,7 +243,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
             ) : (
               <Link
                 to="/login"
-                className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#C89128] to-[#B08020] text-white font-semibold shadow-md hover:shadow-lg hover:from-[#B08020] hover:to-[#9A7018] transition-all duration-200"
+                className="px-5 py-2 rounded-lg bg-linear-to-r from-[#C89128] to-[#B08020] text-white font-semibold shadow-md hover:shadow-lg hover:from-[#B08020] hover:to-[#9A7018] transition-all duration-200"
               >
                 Login
               </Link>
@@ -261,7 +286,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                     }`}
                   />
                 </button>
-                
+
                 <div
                   className={`ml-4 space-y-1 overflow-hidden transition-all duration-200 ${
                     dropdowns[item.key] ? "max-h-96" : "max-h-0"
@@ -309,7 +334,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
               >
                 {item.name}
               </button>
-            )
+            ),
           )}
 
           {/* Mobile Auth */}
@@ -329,7 +354,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                     navigate("/login");
                     setOpen(false);
                   }}
-                  className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                  className="w-full px-4 py-3 rounded-lg bg-linear-to-r from-red-600 to-red-500 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Logout
                 </button>
@@ -338,7 +363,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
               <Link
                 to="/login"
                 onClick={() => setOpen(false)}
-                className="block px-4 py-3 rounded-lg bg-gradient-to-r from-[#C89128] to-[#B08020] text-white font-semibold text-center shadow-md hover:shadow-lg transition-all duration-200"
+                className="block px-4 py-3 rounded-lg bg-linear-to-r from-[#C89128] to-[#B08020] text-white font-semibold text-center shadow-md hover:shadow-lg transition-all duration-200"
               >
                 Login
               </Link>

@@ -1,9 +1,8 @@
 import React from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 import logo from "../assets/oweru_logo.png";
 import CatalogueCard from "../components/posts/CatalogueCard";
 import { catalogueServices } from "../data/catalogueServices";
-import { contactInfo } from "../data/catalogueServices";
 import GetInTouch from "../components/aboutPage/GetInTouch";
 import Footer from "../components/aboutPage/Footer";
 

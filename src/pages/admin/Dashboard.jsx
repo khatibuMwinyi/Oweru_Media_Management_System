@@ -2,19 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { postService } from "../../services/api";
-import { 
-  FileText, 
-  Home, 
-  DollarSign, 
-  TrendingUp, 
-  BarChart3, 
-  Folder, 
+import {
+  FileText,
+  Home,
+  DollarSign,
+  TrendingUp,
+  BarChart3,
+  Folder,
   Sparkles,
   Building2,
   Hammer,
   Briefcase,
   ArrowRight,
-  Image
+  Image,
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -84,14 +84,10 @@ const Dashboard = () => {
         <div className="flex-1">
           <p className="text-gray-600 text-sm font-medium mb-2">{label}</p>
           <p className="text-3xl font-bold text-gray-900">
-            {loading ? (
-              <span className="text-gray-400">...</span>
-            ) : (
-              value
-            )}
+            {loading ? <span className="text-gray-400">...</span> : value}
           </p>
         </div>
-        <div className={`bg-gradient-to-br ${gradient} rounded-xl p-4`}>
+        <div className={`bg-linear-to-br ${gradient} rounded-xl p-4`}>
           <Icon className="w-7 h-7 text-white" />
         </div>
       </div>
@@ -152,7 +148,9 @@ const Dashboard = () => {
 
           {/* Quick Actions */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Quick Actions
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {quickActions.map((action, index) => {
                 const Icon = action.icon;
@@ -162,11 +160,17 @@ const Dashboard = () => {
                     onClick={() => navigate(action.route)}
                     className="bg-white rounded-xl shadow-md hover:shadow-lg p-6 transform hover:scale-105 active:scale-95 transition-all duration-300 text-left border border-gray-100 group"
                   >
-                    <div className={`bg-gradient-to-br ${action.gradient} rounded-lg p-3 w-fit mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                    <div
+                      className={`bg-gr-to-br ${action.gradient} rounded-lg p-3 w-fit mb-4 group-hover:scale-110 transition-transform duration-300`}
+                    >
                       <Icon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{action.title}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">{action.description}</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      {action.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {action.description}
+                    </p>
                   </button>
                 );
               })}
@@ -183,7 +187,7 @@ const Dashboard = () => {
               />
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-2">
+                  <div className="bg-gr-to-br from-blue-500 to-blue-600 rounded-lg p-2">
                     <Building2 className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900">
@@ -191,8 +195,8 @@ const Dashboard = () => {
                   </h3>
                 </div>
                 <p className="text-gray-600 leading-relaxed">
-                  Efficiently manage all your property listings, rentals, and sales
-                  in one centralized platform.
+                  Efficiently manage all your property listings, rentals, and
+                  sales in one centralized platform.
                 </p>
               </div>
             </div>
@@ -205,7 +209,7 @@ const Dashboard = () => {
               />
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-2">
+                  <div className="bg-gr-to-br from-purple-500 to-purple-600 rounded-lg p-2">
                     <Image className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900">
@@ -213,8 +217,8 @@ const Dashboard = () => {
                   </h3>
                 </div>
                 <p className="text-gray-600 leading-relaxed">
-                  Upload, organize, and manage images and videos for your property
-                  listings with ease.
+                  Upload, organize, and manage images and videos for your
+                  property listings with ease.
                 </p>
               </div>
             </div>
@@ -222,31 +226,39 @@ const Dashboard = () => {
 
           {/* System Overview */}
           <div className="bg-white rounded-xl shadow-md p-8 mb-8 border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">System Overview</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              System Overview
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="text-center p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 w-fit mx-auto mb-4">
+              <div className="text-center p-6 bg-gr-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
+                <div className="bg-gr-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 w-fit mx-auto mb-4">
                   <Home className="w-8 h-8 text-white" />
                 </div>
-                <h4 className="font-bold text-gray-900 mb-2 text-lg">Rentals</h4>
+                <h4 className="font-bold text-gray-900 mb-2 text-lg">
+                  Rentals
+                </h4>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   Manage rental properties and listings
                 </p>
               </div>
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 w-fit mx-auto mb-4">
+              <div className="text-center p-6 bg-gr-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <div className="bg-gr-to-br from-blue-500 to-blue-600 rounded-xl p-3 w-fit mx-auto mb-4">
                   <Hammer className="w-8 h-8 text-white" />
                 </div>
-                <h4 className="font-bold text-gray-900 mb-2 text-lg">Construction</h4>
+                <h4 className="font-bold text-gray-900 mb-2 text-lg">
+                  Construction
+                </h4>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   Track construction and property management
                 </p>
               </div>
-              <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200 sm:col-span-2 lg:col-span-1">
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-3 w-fit mx-auto mb-4">
+              <div className="text-center p-6 bg-gr-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200 sm:col-span-2 lg:col-span-1">
+                <div className="bg-gr-to-br from-purple-500 to-purple-600 rounded-xl p-3 w-fit mx-auto mb-4">
                   <Briefcase className="w-8 h-8 text-white" />
                 </div>
-                <h4 className="font-bold text-gray-900 mb-2 text-lg">Investment</h4>
+                <h4 className="font-bold text-gray-900 mb-2 text-lg">
+                  Investment
+                </h4>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   Explore investment opportunities
                 </p>
@@ -255,7 +267,7 @@ const Dashboard = () => {
           </div>
 
           {/* CTA Section */}
-          <div className="bg-gradient-to-r from-[#C89128] to-[#B08020] rounded-xl shadow-lg p-8">
+          <div className="bg-gr-to-r from-[#C89128] to-[#B08020] rounded-xl shadow-lg p-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="text-center sm:text-left flex-1">
                 <h3 className="text-2xl font-bold text-white mb-2">

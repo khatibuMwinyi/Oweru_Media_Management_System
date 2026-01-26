@@ -16,25 +16,26 @@ const PostDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://31.97.176.48:8081';
+        const API_BASE_URL =
+          import.meta.env.VITE_API_URL || "http://31.97.176.48:8081";
         const response = await fetch(`${API_BASE_URL}/posts/approved/${id}`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            "Content-Type": "application/json",
+            Accept: "application/json",
           },
         });
 
         if (!response.ok) {
           if (response.status === 404) {
-            throw new Error('Post not found');
+            throw new Error("Post not found");
           }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
         setPost(data);
-        
+
         // Update page title and meta tags for better sharing
         if (data.title) {
           document.title = `${data.title} | Oweru Media`;
@@ -65,13 +66,13 @@ const PostDetail = () => {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        if (err.name !== 'AbortError') {
+        if (err.name !== "AbortError") {
           // Fallback: copy link
           try {
             await navigator.clipboard.writeText(window.location.href);
-            alert('Link copied to clipboard!');
+            alert("Link copied to clipboard!");
           } catch (clipErr) {
-            console.error('Share and copy failed:', clipErr);
+            console.error("Share and copy failed:", clipErr);
           }
         }
       }
@@ -79,9 +80,9 @@ const PostDetail = () => {
       // Fallback: copy link
       try {
         await navigator.clipboard.writeText(window.location.href);
-        alert('Link copied to clipboard! Share it anywhere.');
+        alert("Link copied to clipboard! Share it anywhere.");
       } catch (err) {
-        console.error('Copy failed:', err);
+        console.error("Copy failed:", err);
       }
     }
   };
@@ -100,7 +101,7 @@ const PostDetail = () => {
 
       <div className="min-h-screen bg-gray-50 font-inter">
         <Navbar />
-        
+
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header with Back and Share Buttons */}
           <div className="mb-6 flex items-center justify-between">
@@ -115,7 +116,7 @@ const PostDetail = () => {
             {post && (
               <button
                 onClick={handleShare}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#C89128] to-[#B08020] text-white rounded-lg font-semibold hover:from-[#B08020] hover:to-[#9A7018] transition-all duration-300 shadow-md hover:shadow-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-linear-to-r from-[#C89128] to-[#B08020] text-white rounded-lg font-semibold hover:from-[#B08020] hover:to-[#9A7018] transition-all duration-300 shadow-md hover:shadow-lg"
               >
                 <Share2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Share Post</span>
@@ -127,17 +128,21 @@ const PostDetail = () => {
           {loading && (
             <div className="flex justify-center items-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-[#C89128]" />
-              <span className="ml-3 text-gray-700 font-medium">Loading post...</span>
+              <span className="ml-3 text-gray-700 font-medium">
+                Loading post...
+              </span>
             </div>
           )}
 
           {error && !loading && (
             <div className="bg-white rounded-xl shadow-lg p-8 text-center border border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Post Not Found</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Post Not Found
+              </h2>
               <p className="text-gray-600 mb-6">{error}</p>
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#C89128] to-[#B08020] text-white rounded-lg font-semibold hover:from-[#B08020] hover:to-[#9A7018] transition-all duration-300 shadow-md"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-[#C89128] to-[#B08020] text-white rounded-lg font-semibold hover:from-[#B08020] hover:to-[#9A7018] transition-all duration-300 shadow-md"
               >
                 <ArrowLeft className="w-5 h-5" />
                 Go to Home
@@ -156,25 +161,29 @@ const PostDetail = () => {
 
               {/* Additional Post Info Section (Optional) */}
               <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">About This Post</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  About This Post
+                </h2>
                 <div className="space-y-3 text-sm text-gray-600">
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="font-medium text-gray-700">Category:</span>
                     <span className="font-semibold text-[#C89128]">
-                      {post.category?.replace(/_/g, ' ')}
+                      {post.category?.replace(/_/g, " ")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="font-medium text-gray-700">Type:</span>
-                    <span className="font-semibold text-gray-900">{post.post_type}</span>
+                    <span className="font-semibold text-gray-900">
+                      {post.post_type}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-2">
                     <span className="font-medium text-gray-700">Posted:</span>
                     <span className="text-gray-900">
-                      {new Date(post.created_at).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
+                      {new Date(post.created_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
                       })}
                     </span>
                   </div>
@@ -182,8 +191,10 @@ const PostDetail = () => {
               </div>
 
               {/* Share Section (Mobile Friendly) */}
-              <div className="mt-6 bg-gradient-to-r from-[#C89128] to-[#B08020] rounded-xl shadow-lg p-6 text-center">
-                <h3 className="text-xl font-bold text-white mb-3">Love this post?</h3>
+              <div className="mt-6 bg-linear-to-r from-[#C89128] to-[#B08020] rounded-xl shadow-lg p-6 text-center">
+                <h3 className="text-xl font-bold text-white mb-3">
+                  Love this post?
+                </h3>
                 <p className="text-white/90 mb-4 font-medium">
                   Share it with your friends and family!
                 </p>
