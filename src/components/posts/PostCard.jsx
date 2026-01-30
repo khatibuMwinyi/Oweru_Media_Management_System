@@ -12,39 +12,39 @@ const PostCard = ({ post, onDelete, onEdit }) => {
 
   const getMediaUrl = (media) => {
     if (!media) {
-      console.warn("No media object");
+      console.warn("No media object provided");
       return "https://placehold.co/400x300?text=No+Media";
     }
 
-    // === MOST IMPORTANT FIX: Prefer the full URL sent by backend ===
+    // Priority 1: Use the full URL provided by backend (this is what fixes your issue)
     if (media.url) {
-      // If it's already a full URL, use it directly
       if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
-        console.log("Using backend-provided full URL:", media.url);
+        console.log("Using backend full URL:", media.url);
         return media.url;
       }
-
-      // If it's a relative path, prepend base URL
+      // Relative path from backend? Prepend base
       const base = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "http://31.97.176.48:8081";
       const path = media.url.startsWith("/") ? media.url : `/${media.url}`;
       const full = `${base}${path}`;
-      console.log("Using relative url + base:", full);
+      console.log("Using relative backend URL + base:", full);
       return full;
     }
 
-    // Fallback: only use file_path if url is missing
+    // Priority 2: Fallback reconstruction (only if url is missing)
+    console.warn("media.url missing → falling back to file_path", media);
+
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "http://31.97.176.48:8081";
 
     if (!media.file_path || media.file_path.trim() === "" || media.file_path === "0" || media.file_path.length < 5) {
-      console.warn("Invalid file_path (using placeholder):", media);
-      return "https://placehold.co/400x300?text=Invalid+Media+Path";
+      console.warn("Invalid file_path - using placeholder", media);
+      return "https://placehold.co/400x300?text=Invalid+Media";
     }
 
     let cleaned = media.file_path.replace(/^\/?storage\//, "").replace(/^\//, "");
     const path = `/storage/${cleaned}`;
     const fullUrl = `${baseUrl}${path}`;
 
-    console.log("Fallback reconstruction:", fullUrl, media);
+    console.log("Fallback URL generated:", fullUrl, media);
 
     return fullUrl;
   };
@@ -119,7 +119,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.target.src = "https://placehold.co/400x300?text=Image+Not+Found";
-                console.warn("Static image load failed:", getMediaUrl(images[0]));
+                console.warn("Static image failed:", getMediaUrl(images[0]));
               }}
             />
           </div>
@@ -204,7 +204,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               className="absolute top-4 left-4 h-12 w-auto bg-white/80 rounded-lg p-2 shadow-lg z-10"
             />
 
-            {/* Edit/Delete */}
+            {/* Edit/Delete buttons */}
             {(onEdit || (onDelete && user?.id === post.user_id)) && (
               <div className="absolute top-4 right-4 flex gap-3 z-10">
                 {onEdit && (
@@ -227,7 +227,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               </div>
             )}
 
-            {/* Overlay */}
+            {/* Content overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
               <div className="bg-black/50 backdrop-blur-md rounded-2xl p-6 max-w-lg w-full pointer-events-auto text-center border border-white/10">
                 <h3 className="text-2xl font-bold text-white mb-3 drop-shadow-lg">
@@ -243,7 +243,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               </div>
             </div>
 
-            {/* Rejection note */}
+            {/* Admin rejection note */}
             {user?.role === "admin" && post.status === "rejected" && (
               <div className="absolute top-20 left-6 right-6 z-20">
                 <div className="p-4 rounded-xl border border-red-400 bg-red-50/90 backdrop-blur-sm">
