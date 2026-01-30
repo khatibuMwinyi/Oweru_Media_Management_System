@@ -12,35 +12,39 @@ const PostCard = ({ post, onDelete, onEdit }) => {
 
   const getMediaUrl = (media) => {
     if (!media) {
-      console.warn("No media object provided");
+      console.warn("No media object");
       return "https://placehold.co/400x300?text=No+Media";
     }
 
-    // 1. Prefer backend-provided full URL (this is the key fix)
-    if (media.url && (media.url.startsWith("http://") || media.url.startsWith("https://"))) {
-      return media.url;
-    }
+    // === MOST IMPORTANT FIX: Prefer the full URL sent by backend ===
+    if (media.url) {
+      // If it's already a full URL, use it directly
+      if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
+        console.log("Using backend-provided full URL:", media.url);
+        return media.url;
+      }
 
-    // 2. If url exists but is relative, prepend base
-    if (media.url && typeof media.url === "string") {
+      // If it's a relative path, prepend base URL
       const base = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "http://31.97.176.48:8081";
       const path = media.url.startsWith("/") ? media.url : `/${media.url}`;
-      return `${base}${path}`;
+      const full = `${base}${path}`;
+      console.log("Using relative url + base:", full);
+      return full;
     }
 
-    // 3. Fallback: reconstruct from file_path
+    // Fallback: only use file_path if url is missing
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "http://31.97.176.48:8081";
 
     if (!media.file_path || media.file_path.trim() === "" || media.file_path === "0" || media.file_path.length < 5) {
-      console.warn("Invalid or missing file_path:", media);
-      return "https://placehold.co/400x300?text=Invalid+Path";
+      console.warn("Invalid file_path (using placeholder):", media);
+      return "https://placehold.co/400x300?text=Invalid+Media+Path";
     }
 
     let cleaned = media.file_path.replace(/^\/?storage\//, "").replace(/^\//, "");
     const path = `/storage/${cleaned}`;
     const fullUrl = `${baseUrl}${path}`;
 
-    console.log("Fallback media URL:", fullUrl, media); // debug help
+    console.log("Fallback reconstruction:", fullUrl, media);
 
     return fullUrl;
   };
@@ -115,7 +119,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.target.src = "https://placehold.co/400x300?text=Image+Not+Found";
-                console.warn("Static image failed:", getMediaUrl(images[0]));
+                console.warn("Static image load failed:", getMediaUrl(images[0]));
               }}
             />
           </div>
@@ -223,7 +227,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               </div>
             )}
 
-            {/* Overlay text */}
+            {/* Overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
               <div className="bg-black/50 backdrop-blur-md rounded-2xl p-6 max-w-lg w-full pointer-events-auto text-center border border-white/10">
                 <h3 className="text-2xl font-bold text-white mb-3 drop-shadow-lg">
