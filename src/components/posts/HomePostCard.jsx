@@ -1,7 +1,13 @@
 import { useState, useRef } from "react";
-import { Send, MessageCircle, Copy, Check, Share2, Mail, Phone, Globe, Download, Camera, Instagram } from "lucide-react";
+import { Send, MessageCircle, Copy, Check, Share2, Mail, Phone, Globe, Download, Camera, Instagram, X } from "lucide-react";
 import oweruLogo from "../../assets/oweru_logo.png";
 import html2canvas from "html2canvas";
+import { 
+  getMediaUrl, 
+  filterValidMedia, 
+  PLACEHOLDER_IMAGE, 
+  PLACEHOLDER_THUMBNAIL 
+} from "../../utils/mediaUtils";
 
 const HomePostCard = ({ post }) => {
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -14,25 +20,11 @@ const HomePostCard = ({ post }) => {
   const [postingToInstagram, setPostingToInstagram] = useState(false);
   const [instagramStatus, setInstagramStatus] = useState(null);
 
-  const BASE_URL = "http://31.97.176.48:8081";
+  const BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://31.97.176.48:8081";
 
-  const getMediaUrl = (media) => {
-    if (media.url) {
-      if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
-        return media.url;
-      }
-      return `${BASE_URL}${media.url.startsWith('/') ? '' : '/'}${media.url}`;
-    }
-
-    const filePath = media.file_path?.startsWith('/') 
-      ? media.file_path.substring(1) 
-      : media.file_path;
-
-    return `${BASE_URL}/storage/${filePath}`;
-  };
-
-  const images = post.media?.filter((m) => m.file_type === "image") || [];
-  const videos = post.media?.filter((m) => m.file_type === "video") || [];
+  // Use the utility function to filter valid media
+  const images = filterValidMedia(post.media, "image");
+  const videos = filterValidMedia(post.media, "video");
 
   const getCategoryStyles = (category) => {
     switch (category) {
@@ -64,7 +56,7 @@ const HomePostCard = ({ post }) => {
     return `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
   };
 
-  // NEW: Post to Instagram function
+  // Post to Instagram function
   const handlePostToInstagram = async () => {
     setPostingToInstagram(true);
     setInstagramStatus(null);
@@ -317,144 +309,166 @@ const HomePostCard = ({ post }) => {
         {/* Media Section */}
         <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 shrink-0"}`}>
           {/* Static Post */}
-          {post.post_type === "Static" && images.length > 0 && (
+          {post.post_type === "Static" && (
             <div className="w-full h-full flex items-center justify-center bg-black rounded-t-xl overflow-hidden">
-              <img
-                src={getMediaUrl(images[0])}
-                alt={post.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
-                }}
-              />
+              {images.length > 0 ? (
+                <img
+                  src={getMediaUrl(images[0])}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error("Static image failed:", e.target.src);
+                    e.target.src = PLACEHOLDER_IMAGE;
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                  <p className="text-white text-center px-4">No valid image available</p>
+                </div>
+              )}
             </div>
           )}
 
           {/* Carousel Post */}
-          {post.post_type === "Carousel" && images.length > 0 && (
-            <div className="w-full h-full flex flex-col rounded-t-xl overflow-hidden">
-              <div className="relative w-full h-full">
-                <img
-                  src={getMediaUrl(images[carouselIndex])}
-                  alt={`${post.title} - Image ${carouselIndex + 1}`}
-                  className="w-full h-full object-cover bg-black"
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
-                  }}
-                />
-                {images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
-                      }
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white px-3 py-1 rounded-full transition-all duration-200 font-bold"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      onClick={() =>
-                        setCarouselIndex((prev) => (prev + 1) % images.length)
-                      }
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white px-3 py-1 rounded-full transition-all duration-200 font-bold"
-                    >
-                      ›
-                    </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                      {carouselIndex + 1} / {images.length}
-                    </div>
-                  </>
-                )}
+          {post.post_type === "Carousel" && (
+            images.length > 0 ? (
+              <div className="w-full h-full flex flex-col rounded-t-xl overflow-hidden">
+                <div className="relative w-full h-full">
+                  <img
+                    src={getMediaUrl(images[carouselIndex])}
+                    alt={`${post.title} - Image ${carouselIndex + 1}`}
+                    className="w-full h-full object-cover bg-black"
+                    onError={(e) => {
+                      console.error("Carousel image failed:", e.target.src);
+                      e.target.src = PLACEHOLDER_IMAGE;
+                    }}
+                  />
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        onClick={() =>
+                          setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
+                        }
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white px-3 py-1 rounded-full transition-all duration-200 font-bold"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={() =>
+                          setCarouselIndex((prev) => (prev + 1) % images.length)
+                        }
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white px-3 py-1 rounded-full transition-all duration-200 font-bold"
+                      >
+                        ›
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        {carouselIndex + 1} / {images.length}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-t-xl">
+                <p className="text-white text-center px-4">No valid images available</p>
+              </div>
+            )
           )}
+
           {/* Reel Post - Video */}
-          {post.post_type === "Reel" && videos.length > 0 && (
-            <div className="relative w-full h-full bg-black rounded-xl overflow-hidden">
-              <video
-                ref={videoRef}
-                controls={isPlaying}
-                playsInline
-                preload="metadata"
-                className="w-full h-full object-cover"
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onClick={() => {
-                  if (videoRef.current?.paused) {
-                    videoRef.current?.play();
-                  } else {
-                    videoRef.current?.pause();
-                  }
-                }}
-                onError={(e) => {
-                  console.error("Video load error:", {
-                    videoUrl: getMediaUrl(videos[0]),
-                    media: videos[0]
-                  });
-                }}
-              >
-                <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
-                Your browser does not support the video tag.
-              </video>         
-              {!isPlaying && (
-                <div className="absolute bottom-6 left-6 z-50">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+          {post.post_type === "Reel" && (
+            videos.length > 0 ? (
+              <div className="relative w-full h-full bg-black rounded-xl overflow-hidden">
+                <video
+                  ref={videoRef}
+                  controls={isPlaying}
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-cover"
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onClick={() => {
+                    if (videoRef.current?.paused) {
                       videoRef.current?.play();
-                    }}
-                    className="bg-white rounded-full p-3 shadow-2xl hover:scale-110 transition-all duration-200"
-                    aria-label="Play video"
-                  >
-                    <svg className="w-6 h-6 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </button>
-                </div>
-              )}   
-              <div className="absolute top-4 left-4 z-10">
-                <img
-                  src={oweruLogo}
-                  alt="Oweru logo"
-                  className="h-12 w-auto shadow-lg bg-white/90 rounded-lg p-2"
-                />
-              </div>           
-              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
-                <div className="rounded-xl p-6 max-w-md w-full pointer-events-auto backdrop-blur-sm bg-black/20" style={{
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
-                }}>
-                  <h3 
-                    className="text-xl font-bold text-white mb-3 text-center"
-                    style={{
-                      textShadow: '3px 3px 6px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)',
-                      WebkitTextStroke: '0.5px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    {post.title}
-                  </h3>
-                  <p 
-                    className="text-sm font-semibold text-white mb-4 text-center"
-                    style={{
-                      textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
-                      WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
-                    }}
-                  >
-                    {post.post_type} • {post.category}
-                  </p>
-                  <p 
-                    className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
-                    style={{
-                      textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)',
-                      WebkitTextStroke: '0.4px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    {post.description}
-                  </p>
+                    } else {
+                      videoRef.current?.pause();
+                    }
+                  }}
+                  onError={(e) => {
+                    console.error("Video load error:", {
+                      videoUrl: getMediaUrl(videos[0]),
+                      media: videos[0]
+                    });
+                  }}
+                >
+                  <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || 'video/mp4'} />
+                  Your browser does not support the video tag.
+                </video>         
+                {!isPlaying && (
+                  <div className="absolute bottom-6 left-6 z-50">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        videoRef.current?.play();
+                      }}
+                      className="bg-white rounded-full p-3 shadow-2xl hover:scale-110 transition-all duration-200"
+                      aria-label="Play video"
+                    >
+                      <svg className="w-6 h-6 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </button>
+                  </div>
+                )}   
+                <div className="absolute top-4 left-4 z-10">
+                  <img
+                    src={oweruLogo}
+                    alt="Oweru logo"
+                    className="h-12 w-auto shadow-lg bg-white/90 rounded-lg p-2"
+                  />
+                </div>           
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
+                  <div className="rounded-xl p-6 max-w-md w-full pointer-events-auto backdrop-blur-sm bg-black/20" style={{
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
+                  }}>
+                    <h3 
+                      className="text-xl font-bold text-white mb-3 text-center"
+                      style={{
+                        textShadow: '3px 3px 6px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)',
+                        WebkitTextStroke: '0.5px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      {post.title}
+                    </h3>
+                    <p 
+                      className="text-sm font-semibold text-white mb-4 text-center"
+                      style={{
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
+                        WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
+                      }}
+                    >
+                      {post.post_type} • {post.category}
+                    </p>
+                    <p 
+                      className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
+                      style={{
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)',
+                        WebkitTextStroke: '0.4px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      {post.description}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-xl">
+                <p className="text-white text-center px-4">No valid video available</p>
+              </div>
+            )
           )}
         </div>
+
         {/* Content below media (not for Reel) */}
         {post.post_type !== "Reel" && (
           <>
@@ -508,6 +522,7 @@ const HomePostCard = ({ post }) => {
             <div className={`${categoryStyles.bg} h-3 rounded-b-xl`}></div>
           </>
         )}
+
         {/* Share Button */}
         <div className="absolute bottom-3 right-3 z-20 share-button-container">
           <div className="relative">
@@ -527,7 +542,7 @@ const HomePostCard = ({ post }) => {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
                 <div className="absolute right-0 bottom-14 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 min-w-[200px] z-20">
-                  {/* NEW: Post to Instagram Button */}
+                  {/* Post to Instagram Button */}
                   <button
                     onClick={handlePostToInstagram}
                     disabled={postingToInstagram}
