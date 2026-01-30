@@ -15,7 +15,6 @@ import {
   Hammer,
 } from "lucide-react";
 import logo from "../assets/oweru_logo.png";
-
 const HomePage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +23,6 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPostType, setSelectedPostType] = useState("all");
   const [postsToShow, setPostsToShow] = useState(12);
-
   useEffect(() => {
     const fetchApprovedPosts = async () => {
       setLoading(true);
@@ -32,7 +30,6 @@ const HomePage = () => {
       try {
         const API_BASE_URL =
           import.meta.env.VITE_API_URL || "http://31.97.176.48:8081";
-
         const response = await fetch(`${API_BASE_URL}/posts/approved`, {
           method: "GET",
           headers: {
@@ -40,7 +37,6 @@ const HomePage = () => {
             Accept: "application/json",
           },
         });
-
         if (!response.ok) {
           let errorMessage = `HTTP error! status: ${response.status}`;
           try {
@@ -51,10 +47,8 @@ const HomePage = () => {
           }
           throw new Error(errorMessage);
         }
-
         const data = await response.json();
         const postsArray = data.data || data || [];
-
         if (Array.isArray(postsArray) && postsArray.length > 0) {
           setPosts(postsArray);
         } else {
@@ -73,56 +67,44 @@ const HomePage = () => {
         } else {
           errorMessage += err.message;
         }
-
         setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
-
     fetchApprovedPosts();
   }, []);
-
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
       const matchesSearch =
         post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.description?.toLowerCase().includes(searchQuery.toLowerCase());
-
       const matchesCategory =
         selectedCategory === "all" || post.category === selectedCategory;
-
       const matchesPostType =
         selectedPostType === "all" || post.post_type === selectedPostType;
-
       return matchesSearch && matchesCategory && matchesPostType;
     });
   }, [posts, searchQuery, selectedCategory, selectedPostType]);
-
   useEffect(() => {
     setPostsToShow(12);
   }, [searchQuery, selectedCategory, selectedPostType]);
-
   const displayedPosts = useMemo(() => {
     return filteredPosts.slice(0, postsToShow);
   }, [filteredPosts, postsToShow]);
-
   const hasMorePosts = filteredPosts.length > postsToShow;
-
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(posts.map((p) => p.category))].filter(
       Boolean,
     );
     return uniqueCategories;
   }, [posts]);
-
   const postTypes = useMemo(() => {
     const uniqueTypes = [...new Set(posts.map((p) => p.post_type))].filter(
       Boolean,
     );
     return uniqueTypes;
   }, [posts]);
-
   const stats = useMemo(() => {
     return {
       totalPosts: posts.length,
@@ -165,7 +147,6 @@ const HomePage = () => {
       color: "from-amber-500 to-amber-600",
     },
   };
-
   const handleCategoryFilter = (categoryId) => {
     const categoryMap = {
       rentals: "rentals",
@@ -175,7 +156,6 @@ const HomePage = () => {
       "property-services": "property_services",
       investment: "investment",
     };
-
     const category = categoryMap[categoryId];
     if (category) {
       setSelectedCategory(category);
@@ -191,25 +171,21 @@ const HomePage = () => {
       }, 100);
     }
   };
-
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        
         .font-inter {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
       `}</style>
-
       <div className="min-h-screen bg-gray-50 font-inter">
         <Navbar
           onCategoryClick={handleCategoryFilter}
           selectedCategory={selectedCategory}
         />
-
         {/* Hero Section */}
         <section
           id="home"
@@ -222,7 +198,6 @@ const HomePage = () => {
             }}
           ></div>
           <div className="absolute inset-0 bg-g-to-b from-gray-900/50 via-gray-900/70 to-gray-900"></div>
-
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center py-16 lg:py-24">
               <div className="flex justify-center mb-8">
@@ -232,17 +207,14 @@ const HomePage = () => {
                   className="h-24 w-auto rounded-full shadow-2xl ring-4 ring-white/20 hover:ring-white/30 transition-all duration-300"
                 />
               </div>
-
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
                 Oweru Media Management System
               </h1>
-
               <p className="text-xl sm:text-2xl text-gray-200 mb-10 max-w-3xl mx-auto leading-relaxed font-medium">
                 Streamline your real estate content with professional post
                 management, multi-format media support, and intelligent
                 categorization
               </p>
-
               <div className="flex flex-wrap justify-center gap-4">
                 <Link
                   to="/about"
@@ -260,7 +232,6 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-
         {/* Posts Section */}
         <section id="posts" className="py-16 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -272,7 +243,6 @@ const HomePage = () => {
                 Discover our latest real estate content and property listings
               </p>
             </div>
-
             {/* Filters */}
             <div className="mb-8 bg-white p-6 rounded-xl shadow-md border border-gray-200">
               <div className="flex flex-col md:flex-row gap-4">
@@ -293,7 +263,6 @@ const HomePage = () => {
                   </select>
                 </div>
               </div>
-
               {/* Active Filters Display */}
               {(selectedCategory !== "all" ||
                 selectedPostType !== "all" ||
@@ -336,7 +305,6 @@ const HomePage = () => {
                 </div>
               )}
             </div>
-
             {loading && (
               <div className="flex justify-center items-center py-16">
                 <div className="text-gray-600 text-lg font-medium">
@@ -344,14 +312,12 @@ const HomePage = () => {
                 </div>
               </div>
             )}
-
             {error && !loading && (
               <div className="bg-red-50 border border-red-200 text-red-900 px-6 py-4 rounded-xl mb-6">
                 <p className="font-semibold mb-2">Error loading posts</p>
                 <p className="text-sm">{error}</p>
               </div>
             )}
-
             {!loading && !error && filteredPosts.length === 0 && (
               <div className="text-center py-20 bg-white rounded-xl shadow-md border border-gray-200">
                 <FileText className="w-20 h-20 mx-auto mb-4 text-gray-400" />
@@ -376,7 +342,6 @@ const HomePage = () => {
                 )}
               </div>
             )}
-
             {!loading && !error && filteredPosts.length > 0 && (
               <>
                 <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -414,13 +379,11 @@ const HomePage = () => {
                     </button>
                   )}
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                   {displayedPosts.map((post) => (
                     <HomePostCard key={post.id} post={post} />
                   ))}
                 </div>
-
                 {hasMorePosts && (
                   <div className="text-center mt-10">
                     <button
@@ -442,7 +405,6 @@ const HomePage = () => {
             )}
           </div>
         </section>
-
         {/* Call to Action Section */}
         <section className="py-20 bg-#C89128 bg-linear-to-r from-[#C89128] to-[#B08020]">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -466,5 +428,16 @@ const HomePage = () => {
     </>
   );
 };
-
 export default HomePage;
+     
+
+
+
+
+
+
+
+
+
+
+
