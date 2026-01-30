@@ -11,36 +11,58 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   const videoRef = useRef(null);
 
   const getMediaUrl = (media) => {
+    if (!media) {
+      console.warn("No media object provided");
+      return "https://via.placeholder.com/400x300?text=No+Media";
+    }
+
+    // Preferred: use full URL if backend already provided it (this fixes your issue)
     if (media.url) {
       if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
         return media.url;
       }
+      // If it's a relative path, prepend base
       const baseUrl =
-        import.meta.env.VITE_API_URL?.replace("/api", "") ||
+        import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
         "http://31.97.176.48:8081";
       return `${baseUrl}${media.url.startsWith("/") ? "" : "/"}${media.url}`;
     }
+
+    // Fallback: reconstruct from file_path (older data format)
     const baseUrl =
-      import.meta.env.VITE_API_URL?.replace("/api", "") ||
+      import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
       "http://31.97.176.48:8081";
-    const filePath = media.file_path?.startsWith("/")
-      ? media.file_path.substring(1)
-      : media.file_path;
-    return `${baseUrl}/storage/${filePath}`;
+
+    let path = "";
+    if (media.file_path) {
+      let cleaned = media.file_path.replace(/^\/?storage\//, "");
+      cleaned = cleaned.replace(/^\//, "");
+      path = `/storage/${cleaned}`;
+    } else if (media.filename || media.name) {
+      path = `/storage/${media.filename || media.name}`;
+    } else {
+      console.warn("Media has no usable url or file_path", media);
+      return "https://via.placeholder.com/400x300?text=Invalid+Media";
+    }
+
+    const fullUrl = `${baseUrl}${path}`;
+
+    // Optional warning if path looks suspicious
+    if (!fullUrl.includes("/storage/") && !media.url?.startsWith("http")) {
+      console.warn("Possibly incorrect media URL:", fullUrl, media);
+    }
+
+    return fullUrl;
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this post?")) {
-      return;
-    }
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     setDeleting(true);
     try {
       await postService.delete(post.id);
       window.dispatchEvent(new CustomEvent("postDeleted"));
-      if (onDelete) {
-        onDelete(post.id);
-      }
+      onDelete?.(post.id);
     } catch (error) {
       console.error("Failed to delete post:", error);
       alert("Failed to delete post");
@@ -52,141 +74,114 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   const images = post.media?.filter((m) => m.file_type === "image") || [];
   const videos = post.media?.filter((m) => m.file_type === "video") || [];
 
-  // Get background color based on category
   const getCategoryBackground = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "bg-[#C89128]"; // Gold background
+        return "bg-[#C89128]";
       case "property_sales":
       case "property_services":
-        return "bg-gray-300"; // Gray background
+        return "bg-gray-300";
       case "construction_property_management":
       case "investment":
-        return "bg-slate-900"; // Keep original
+        return "bg-slate-900";
       default:
-        return "bg-slate-900"; // Default to original
+        return "bg-slate-900";
     }
   };
 
-  // Get text color based on category for readability
   const getCategoryTextColor = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "text-gray-100"; // Dark text on gold background
+        return "text-gray-100";
       case "property_sales":
       case "property_services":
-        return "text-gray-800"; // White text on gray background
+        return "text-gray-800";
       case "construction_property_management":
       case "investment":
-        return "text-white"; // Keep original white text
+        return "text-white";
       default:
-        return "text-white"; // Default to white text
+        return "text-white";
     }
   };
 
+  const bg = getCategoryBackground(post.category);
+  const textColor = getCategoryTextColor(post.category);
+  const isReel = post.post_type === "Reel";
+
   return (
-    <div className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}>
-      {/* Media Section - Full height for Reel, fixed for others */}
-      <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 flex-shrink-0"}`}>
-        {/* Static Post - Single Image */}
+    <div
+      className={`shadow-lg overflow-hidden border border-gray-200 ${bg} rounded-lg flex flex-col relative h-[700px]`}
+    >
+      {/* Media Area */}
+      <div className={`w-full ${isReel ? "h-full" : "h-64 flex-shrink-0"}`}>
+        {/* Static - single image */}
         {post.post_type === "Static" && images.length > 0 && (
-          <div className="w-full h-full flex items-center justify-center bg-black">
+          <div className="w-full h-full bg-black flex items-center justify-center">
             <img
               src={getMediaUrl(images[0])}
               alt={post.title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src =
-                  "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                e.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                console.warn("Static image failed to load:", getMediaUrl(images[0]));
               }}
             />
           </div>
         )}
-        {/* Carousel Post - Multiple Images */}
+
+        {/* Carousel - multiple images */}
         {post.post_type === "Carousel" && images.length > 0 && (
-          <div className="w-full h-full flex flex-col">
-            <div className="relative w-full h-full">
-              <img
-                src={getMediaUrl(images[carouselIndex])}
-                alt={`${post.title} - Image ${carouselIndex + 1}`}
-                className="w-full h-full object-cover bg-black"
-                onError={(e) => {
-                  e.target.src =
-                    "https://via.placeholder.com/400x300?text=Image+Not+Found";
-                }}
-              />
-              {images.length > 1 && (
-                <>
-                  <button
-                    onClick={() =>
-                      setCarouselIndex(
-                        (prev) => (prev - 1 + images.length) % images.length
-                      )
-                    }
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCarouselIndex((prev) => (prev + 1) % images.length)
-                    }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                  >
-                    ›
-                  </button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                    {carouselIndex + 1} / {images.length}
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="relative w-full h-full">
+            <img
+              src={getMediaUrl(images[carouselIndex])}
+              alt={`${post.title} - ${carouselIndex + 1}`}
+              className="w-full h-full object-cover bg-black"
+              onError={(e) => {
+                e.target.src = "https://via.placeholder.com/400x300?text=Image+Failed";
+              }}
+            />
+
             {images.length > 1 && (
-              <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-2 overflow-x-auto bg-black bg-opacity-50">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCarouselIndex(idx)}
-                    className={`shrink-0 ${
-                      idx === carouselIndex ? "ring-2 ring-white" : ""
-                    }`}
-                  >
-                    <img
-                      src={getMediaUrl(img)}
-                      alt={`Thumbnail ${idx + 1}`}
-                      className="w-10 h-10 object-cover rounded"
-                      onError={(e) => {
-                        e.target.src =
-                          "https://via.placeholder.com/64x64?text=Image";
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
+              <>
+                <button
+                  onClick={() => setCarouselIndex((i) => (i - 1 + images.length) % images.length)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 text-white px-4 py-2 rounded-full hover:bg-black/80 z-10"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => setCarouselIndex((i) => (i + 1) % images.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 text-white px-4 py-2 rounded-full hover:bg-black/80 z-10"
+                >
+                  ›
+                </button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-1 rounded-full text-sm">
+                  {carouselIndex + 1} / {images.length}
+                </div>
+              </>
             )}
           </div>
         )}
 
-        {/* Reel Post - Video with Overlays */}
-        {post.post_type === "Reel" && videos.length > 0 && (
-          <div className="relative w-full h-full bg-white/50">
+        {/* Reel - video with overlays */}
+        {isReel && videos.length > 0 && (
+          <div className="relative w-full h-full">
             <video
               ref={videoRef}
               controls
               preload="metadata"
               playsInline
               className="w-full h-full object-cover"
-              onError={(e) => {
+              onError={() => {
                 setVideoError(true);
-                console.error("Video load error:", {
-                  videoUrl: getMediaUrl(videos[0]),
+                console.error("Video failed:", {
+                  url: getMediaUrl(videos[0]),
                   media: videos[0],
                 });
-                alert(`Video failed to load. URL: ${getMediaUrl(videos[0])}`);
               }}
-              onLoadStart={() => setVideoError(false)}
+              onLoadedData={() => setVideoError(false)}
             >
               <source
                 src={getMediaUrl(videos[0])}
@@ -196,49 +191,47 @@ const PostCard = ({ post, onDelete, onEdit }) => {
             </video>
 
             {videoError && (
-              <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border border-red-200 text-sm z-20">
-                <p className="text-red-700 font-semibold mb-1">
-                  Video failed to load
-                </p>
-                <p className="text-red-600 text-xs mb-2 break-all">
-                  URL: {getMediaUrl(videos[0])}
-                </p>
-                <a
-                  href={getMediaUrl(videos[0])}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 underline text-xs"
-                >
-                  Open video directly
-                </a>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white p-6 text-center z-20">
+                <div>
+                  <p className="text-xl font-bold mb-3">Video failed to load</p>
+                  <p className="text-sm opacity-80 break-all mb-4">
+                    {getMediaUrl(videos[0])}
+                  </p>
+                  <a
+                    href={getMediaUrl(videos[0])}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-5 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                  >
+                    Open video directly
+                  </a>
+                </div>
               </div>
             )}
 
-            {/* Logo at top left */}
-            <div className="absolute top-2 left-2 z-10">
-              <img
-                src={oweruLogo}
-                alt="Oweru logo"
-                className="h-10 w-auto shadow-lg bg-white bg-opacity-80 rounded p-1"
-              />
-            </div>
+            {/* Logo */}
+            <img
+              src={oweruLogo}
+              alt="Oweru"
+              className="absolute top-4 left-4 h-12 w-auto bg-white/80 rounded-lg p-2 shadow-lg z-10"
+            />
 
-            {/* Edit and Delete buttons at top right for Reel posts */}
-            {(onEdit || (onDelete && user && user.id === post.user_id)) && (
-              <div className="absolute top-2 right-2 z-10 flex gap-2">
+            {/* Edit/Delete buttons */}
+            {(onEdit || (onDelete && user?.id === post.user_id)) && (
+              <div className="absolute top-4 right-4 flex gap-3 z-10">
                 {onEdit && (
                   <button
                     onClick={() => onEdit(post)}
-                    className="bg-black bg-opacity-50 text-white hover:bg-opacity-70 text-sm px-3 py-1 rounded"
+                    className="bg-black/70 hover:bg-black/90 text-white px-4 py-2 rounded-lg text-sm font-medium"
                   >
                     Edit
                   </button>
                 )}
-                {onDelete && user && user.id === post.user_id && (
+                {onDelete && user?.id === post.user_id && (
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="bg-black bg-opacity-50 text-white hover:bg-opacity-70 text-sm px-3 py-1 rounded disabled:opacity-50"
+                    className="bg-red-600/80 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
                   >
                     {deleting ? "Deleting..." : "Delete"}
                   </button>
@@ -246,59 +239,39 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               </div>
             )}
 
-            {/* Content overlay in the middle */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
-              <div className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm" style={{
-                textShadow: '2px 2px 4px rgba(146, 131, 131, 0.8), -1px -1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
-              }}>
-                <h3 
-                  className="text-lg font-bold text-white mb-2 text-center"
-                  style={{
-                    textShadow: '3px 3px 6px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,1)',
-                    WebkitTextStroke: '0.5px rgba(0,0,0,0.5)'
-                  }}
-                >
+            {/* Content overlay */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
+              <div className="bg-black/50 backdrop-blur-md rounded-2xl p-6 max-w-lg w-full pointer-events-auto text-center border border-white/10">
+                <h3 className="text-2xl font-bold text-white mb-3 drop-shadow-lg">
                   {post.title}
                 </h3>
-                <p 
-                  className="text-xs font-medium text-white mb-3 text-center"
-                  style={{
-                    textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
-                    WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
-                  }}
-                >
+                <p className="text-sm text-gray-300 mb-4">
                   {post.post_type} • {post.category} •{" "}
                   {new Date(post.created_at).toLocaleDateString()}
                 </p>
-                <p 
-                  className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
-                  style={{
-                    textShadow: '2px 2px 4px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8), 1px 1px 3px rgba(0,0,0,1)',
-                    WebkitTextStroke: '0.4px rgba(0,0,0,0.5)'
-                  }}
-                >
+                <p className="text-white text-base leading-relaxed whitespace-pre-wrap">
                   {post.description}
                 </p>
               </div>
             </div>
-            {/* Admin rejection note overlay for Reel posts */}
+
+            {/* Admin rejection note */}
             {user?.role === "admin" && post.status === "rejected" && (
-              <div className="absolute top-16 left-4 right-4 z-20">
-                <div className="p-3 rounded border border-red-300 bg-red-50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-red-700">
-                      Status: Rejected
+              <div className="absolute top-20 left-6 right-6 z-20">
+                <div className="p-4 rounded-xl border border-red-400 bg-red-50/90 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold uppercase text-red-700">
+                      Rejected
                     </span>
                     {post.moderator?.name && (
-                      <span className="text-[11px] text-gray-600">
-                        Reviewed by {post.moderator.name}
+                      <span className="text-xs text-gray-700">
+                        by {post.moderator.name}
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-xs text-gray-800 leading-relaxed">
-                    <span className="font-semibold">Feedback:</span>{" "}
-                    {post.moderation_note ||
-                      "Please review and update before resubmitting."}
+                  <p className="text-sm text-gray-800">
+                    <strong>Feedback:</strong>{" "}
+                    {post.moderation_note || "Please review and resubmit."}
                   </p>
                 </div>
               </div>
@@ -306,121 +279,82 @@ const PostCard = ({ post, onDelete, onEdit }) => {
           </div>
         )}
       </div>
-      {/* Content Section - Title and Description (hidden for Reel posts) */}
-      {post.post_type !== "Reel" && (
-      <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">
-                {post.title}
-              </h3>
-              <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
-                {post.post_type} • {post.category} •{" "}
-                {new Date(post.created_at).toLocaleDateString()}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(post)}
-                  className="text-blue-400 hover:text-blue-300 text-sm px-2 py-1"
-                >
-                  Edit
-                </button>
-              )}
-              {onDelete && user && user.id === post.user_id && (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="text-red-400 hover:text-red-300 text-sm px-2 py-1 disabled:opacity-50"
-                >
-                  {deleting ? "Deleting..." : "Delete"}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* Admin rejection note */}
-        {user?.role === "admin" && post.status === "rejected" && (
-          <div className="px-4 pb-3 bg-white">
-            <div className="p-3 rounded border border-red-300 bg-red-50">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-red-700">
-                  Status: Rejected
-                </span>
-                {post.moderator?.name && (
-                  <span className="text-[11px] text-gray-600">
-                    Reviewed by {post.moderator.name}
-                  </span>
+
+      {/* Non-Reel content */}
+      {!isReel && (
+        <>
+          <div className="flex flex-col flex-grow px-5 pt-5">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold text-gray-900 bg-white/90 px-4 py-2 rounded-lg inline-block shadow-sm">
+                  {post.title}
+                </h3>
+                <p className={`text-sm ${textColor} mt-2 opacity-90`}>
+                  {post.post_type} • {post.category} •{" "}
+                  {new Date(post.created_at).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(post)}
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDelete && user?.id === post.user_id && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </button>
                 )}
               </div>
-              <p className="mt-2 text-xs text-gray-800 leading-relaxed">
-                <span className="font-semibold">Feedback:</span>{" "}
-                {post.moderation_note ||
-                  "Please review and update before resubmitting."}
+            </div>
+
+            <div className="flex-grow overflow-y-auto pr-2 mb-6">
+              <p className={`${textColor} text-sm leading-relaxed whitespace-pre-wrap`}>
+                {post.description}
               </p>
             </div>
+
+            <div className="flex justify-end mb-4">
+              <img src={oweruLogo} alt="Oweru" className="h-10 w-auto opacity-90" />
+            </div>
           </div>
-        )}
-        <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
-          <p className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}>
-            {post.description}
-          </p>
-        </div>
-        {/* Oweru Logo - Below description, always visible */}
-        <div className="px-4 pb-3 flex justify-end items-center">
-          <img
-            src={oweruLogo}
-            alt="Oweru logo"
-            className="h-12 w-auto shadow-lg"
-          />
-        </div>
-      </div>
-      )}
-      {/* Contact Information Footer - Always at bottom (hidden for Reel posts) */}
-      {post.post_type !== "Reel" && (
-      <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
-        <div className="text-center text-gray-800">
-          <div className="text-sm whitespace-nowrap ">
-            <span className="inline-block">
-              <a
-                href="mailto:info@oweru.com"
-                className="text-gray-950 text-sm hover:underline"
-              >
-                info@oweru.com
-              </a>
-            </span>{" "}
-            &nbsp;
-            <span className="inline-block">
-              <a
-                href="tel:+255711890764"
-                className="text-gray-950 hover:underline"
-              >
-                +255 711 890 764
-              </a>
-            </span>{" "}
-            &nbsp;
-            <span className="inline-block">
-              <a
-                href="https://www.oweru.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-950 hover:underline"
-              >
-                www.oweru.com
-              </a>
-            </span>
+
+          {/* Footer */}
+          <div className="bg-white px-6 py-4 text-center text-sm text-gray-700 border-t">
+            <a href="mailto:info@oweru.com" className="hover:underline mx-2">
+              info@oweru.com
+            </a>
+            •
+            <a href="tel:+255711890764" className="hover:underline mx-2">
+              +255 711 890 764
+            </a>
+            •
+            <a
+              href="https://www.oweru.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline mx-2"
+            >
+              www.oweru.com
+            </a>
           </div>
-        </div>
-      </div>
+        </>
       )}
 
-      {/* Empty div with category-based background (hidden for Reel posts) */}
-      {post.post_type !== "Reel" && (
-        <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`}></div>
+      {/* Bottom bar for non-reels */}
+      {!isReel && (
+        <div className={`${bg} h-3 rounded-b-lg`}></div>
       )}
     </div>
   );
 };
+
 export default PostCard;
