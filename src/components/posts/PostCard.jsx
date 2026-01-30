@@ -11,22 +11,44 @@ const PostCard = ({ post, onDelete, onEdit }) => {
   const videoRef = useRef(null);
 
   const getMediaUrl = (media) => {
+    // Return placeholder if media is invalid
+    if (!media) {
+      console.error("Invalid media object:", media);
+      return "https://via.placeholder.com/400x300?text=Media+Not+Found";
+    }
+
+    const baseUrl =
+      import.meta.env.VITE_API_URL?.replace("/api", "") ||
+      "http://31.97.176.48:8081";
+
+    // Handle direct URL
     if (media.url) {
       if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
         return media.url;
       }
-      const baseUrl =
-        import.meta.env.VITE_API_URL?.replace("/api", "") ||
-        "http://31.97.176.48:8081";
-      return `${baseUrl}${media.url.startsWith("/") ? "" : "/"}${media.url}`;
+      // Ensure URL is valid before returning
+      if (media.url && media.url.length > 1) {
+        return `${baseUrl}${media.url.startsWith("/") ? "" : "/"}${media.url}`;
+      }
     }
-    const baseUrl =
-      import.meta.env.VITE_API_URL?.replace("/api", "") ||
-      "http://31.97.176.48:8081";
-    const filePath = media.file_path?.startsWith("/")
-      ? media.file_path.substring(1)
-      : media.file_path;
-    return `${baseUrl}/storage/${filePath}`;
+
+    // Handle file_path
+    if (media.file_path) {
+      const filePath = media.file_path.startsWith("/")
+        ? media.file_path.substring(1)
+        : media.file_path;
+      
+      // Check if file_path is valid (not just "0" or empty)
+      if (filePath && filePath !== "0" && filePath.length > 1) {
+        return `${baseUrl}/storage/${filePath}`;
+      }
+    }
+
+    // Log the error for debugging
+    console.error("Invalid media data:", media);
+    
+    // Return placeholder for invalid media
+    return "https://via.placeholder.com/400x300?text=Media+Not+Found";
   };
 
   const handleDelete = async () => {
@@ -98,6 +120,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
               alt={post.title}
               className="w-full h-full object-cover"
               onError={(e) => {
+                console.error("Static image failed:", e.target.src);
                 e.target.src =
                   "https://via.placeholder.com/400x300?text=Image+Not+Found";
               }}
@@ -113,6 +136,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                 alt={`${post.title} - Image ${carouselIndex + 1}`}
                 className="w-full h-full object-cover bg-black"
                 onError={(e) => {
+                  console.error("Carousel image failed:", e.target.src);
                   e.target.src =
                     "https://via.placeholder.com/400x300?text=Image+Not+Found";
                 }}
@@ -158,6 +182,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                       alt={`Thumbnail ${idx + 1}`}
                       className="w-10 h-10 object-cover rounded"
                       onError={(e) => {
+                        console.error("Thumbnail failed:", e.target.src);
                         e.target.src =
                           "https://via.placeholder.com/64x64?text=Image";
                       }}
@@ -184,7 +209,6 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                   videoUrl: getMediaUrl(videos[0]),
                   media: videos[0],
                 });
-                alert(`Video failed to load. URL: ${getMediaUrl(videos[0])}`);
               }}
               onLoadStart={() => setVideoError(false)}
             >
