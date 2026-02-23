@@ -49,7 +49,7 @@ export const isValidMedia = (media) => {
 };
 
 /**
- * Get the full URL for a media object
+ * Get the full URL for a media object using proxy to avoid CORS issues
  * @param {Object} media - The media object with url or file_path
  * @returns {string} - The full URL or a placeholder if invalid
  */
@@ -60,31 +60,25 @@ export const getMediaUrl = (media) => {
     return PLACEHOLDER_IMAGE;
   }
 
+  // Use localhost to match frontend origin
   const baseUrl =
     import.meta.env.VITE_API_URL?.replace("/api", "") ||
-    "http://31.97.176.48:8081";
+    "http://localhost:8000";
 
   // Handle direct URL
   if (media.url) {
     if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
       return media.url;
     }
-    // Ensure URL is valid before returning
-    if (media.url && media.url.length > 1) {
-      return `${baseUrl}${media.url.startsWith("/") ? "" : "/"}${media.url}`;
-    }
+    // Route through proxy to avoid CORS issues
+    const cleanUrl = media.url.startsWith("/") ? media.url.substring(1) : media.url;
+    return `${baseUrl}/api/proxy/media/${cleanUrl}`;
   }
 
   // Handle file_path
   if (media.file_path) {
-    const filePath = media.file_path.startsWith("/")
-      ? media.file_path.substring(1)
-      : media.file_path;
-    
-    // Check if file_path is valid (not just "0" or empty)
-    if (filePath && filePath !== "0" && filePath.length > 1) {
-      return `${baseUrl}/storage/${filePath}`;
-    }
+    const cleanPath = media.file_path.startsWith("/") ? media.file_path.substring(1) : media.file_path;
+    return `${baseUrl}/api/proxy/media/${cleanPath}`;
   }
 
   // Log the error for debugging
