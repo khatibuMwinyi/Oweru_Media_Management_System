@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { postService } from "../services/api";
+import PostDetailCard from "../components/posts/PostDetailCard";
 import Navbar from "../components/Navbar";
-import HomePostCard from "../components/posts/HomePostCard";
-import { ArrowLeft, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 
 const PostDetail = () => {
   const { id } = useParams();
@@ -16,33 +17,28 @@ const PostDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const API_BASE_URL =
-          import.meta.env.VITE_API_URL || "http://31.97.176.48";
-        const response = await fetch(`${API_BASE_URL}/posts/approved/${id}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("Post not found");
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setPost(data);
+        // Use API service instead of manual fetch
+        const response = await postService.getById(id);
+        const postData = response.data;
+        
+        setPost(postData);
 
         // Update page title and meta tags for better sharing
-        if (data.title) {
-          document.title = `${data.title} | Oweru Media`;
+        if (postData.title) {
+          document.title = `${postData.title} | Oweru Media`;
         }
       } catch (err) {
-        console.error("Failed to load post:", err);
-        setError(err.message || "Failed to load post");
+        let errorMessage = "Failed to load post. ";
+        if (err.response?.status === 404) {
+          errorMessage = "Post not found";
+        } else if (err.response?.status === 500) {
+          errorMessage += "Server error. Please check Laravel logs.";
+        } else if (err.code === "NETWORK_ERROR") {
+          errorMessage += "Cannot connect to API server. Please check your connection.";
+        } else {
+          errorMessage += err.response?.data?.message || err.message || "Unknown error occurred.";
+        }
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

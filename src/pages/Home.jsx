@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { postService } from "../services/api";
 import Navbar from "../components/Navbar";
 import HomePostCard from "../components/posts/HomePostCard";
 import {
@@ -33,27 +34,10 @@ const HomePage = () => {
       setLoading(true);
       setError(null);
       try {
-        const API_BASE_URL =
-          import.meta.env.VITE_API_URL || "http://31.97.176.48";
-        const response = await fetch(`${API_BASE_URL}/posts/approved`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        });
-        if (!response.ok) {
-          let errorMessage = `HTTP error! status: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (e) {
-            const text = await response.text();
-          }
-          throw new Error(errorMessage);
-        }
-        const data = await response.json();
-        const postsArray = data.data || data || [];
+        // Use the API service instead of manual fetch
+        const response = await postService.getAll({ status: 'approved' });
+        const postsArray = response.data?.data || response.data || [];
+        
         if (Array.isArray(postsArray) && postsArray.length > 0) {
           setPosts(postsArray);
         } else {
@@ -61,16 +45,14 @@ const HomePage = () => {
         }
       } catch (err) {
         let errorMessage = "Failed to load posts. ";
-        if (err.name === "TypeError" && err.message.includes("fetch")) {
-          errorMessage +=
-            "Cannot connect to the API server. Please make sure the Laravel server is running (php artisan serve).";
-        } else if (err.message.includes("404")) {
-          errorMessage +=
-            "API endpoint not found. Please check the API routes.";
-        } else if (err.message.includes("500")) {
-          errorMessage += "Server error. Please check the Laravel logs.";
+        if (err.response?.status === 500) {
+          errorMessage += "Server error. Please check Laravel logs.";
+        } else if (err.response?.status === 404) {
+          errorMessage += "API endpoint not found. Please check API routes.";
+        } else if (err.code === "NETWORK_ERROR") {
+          errorMessage += "Cannot connect to API server. Please check your connection.";
         } else {
-          errorMessage += err.message;
+          errorMessage += err.response?.data?.message || err.message || "Unknown error occurred.";
         }
         setError(errorMessage);
       } finally {
