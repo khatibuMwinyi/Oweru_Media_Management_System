@@ -22,12 +22,32 @@ const ModeratorDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await postService.getAll({ status: "pending" });
-      const postsData = response.data?.data || response.data || [];
+      // Use the public pending posts endpoint instead of the protected one
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://31.97.176.48:8081/api'}/posts/pending`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const postsData = data.data || data || [];
       setPosts(postsData);
     } catch (err) {
       console.error("Fetch pending failed:", err);
-      setError(err.response?.data?.message || "Unable to load pending posts. Please try again.");
+      const errorMessage = err.status === 500 
+        ? "Server error. Please check Laravel logs."
+        : err.status === 404
+        ? "API endpoint not found."
+        : err.name === "TypeError" && err.message.includes("fetch")
+        ? "Cannot connect to API server. Please check your connection."
+        : err.message || "Unable to load pending posts. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
