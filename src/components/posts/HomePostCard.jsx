@@ -313,7 +313,7 @@ const HomePostCard = ({ post }) => {
       const W           = 600 * SCALE;
       const PAD         = 24  * SCALE;
       const MEDIA_H     = 360 * SCALE;
-      const HEADER_H    = 60  * SCALE;   // taller to fit logo
+      const HEADER_H    = 60  * SCALE;   
       const BADGE_H     = 28  * SCALE;
       const FOOTER_H    = 80  * SCALE;
       const TEXT_AREA_W = W - PAD * 2;
@@ -1392,7 +1392,24 @@ const HomePostCard = ({ post }) => {
                   </button>
                 )}
 
-               
+                {/* ── Download branded post image (ALL post types including Reel) ── */}
+                <button
+                  onClick={handleDownloadPostAsImage}
+                  disabled={downloading}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
+                >
+                  {downloading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} className="text-[#C89128]" />
+                      {isReelPost ? "Download Branded Post (image)" : "Download Branded Post"}
+                    </>
+                  )}
+                </button>
 
                 {/* ── Screenshot of the live card (non-Reel only) ── */}
                 {!isReelPost && (
