@@ -17,26 +17,39 @@ const PostDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        // Use API service instead of manual fetch
-        const response = await postService.getById(id);
-        const postData = response.data;
-        
-        setPost(postData);
+        // Use the public approved post endpoint instead of the protected one
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://31.97.176.48:8081/api'}/posts/approved/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error("Post not found");
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setPost(data);
 
         // Update page title and meta tags for better sharing
-        if (postData.title) {
-          document.title = `${postData.title} | Oweru Media`;
+        if (data.title) {
+          document.title = `${data.title} | Oweru Media`;
         }
       } catch (err) {
         let errorMessage = "Failed to load post. ";
-        if (err.response?.status === 404) {
+        if (err.status === 404) {
           errorMessage = "Post not found";
-        } else if (err.response?.status === 500) {
+        } else if (err.status === 500) {
           errorMessage += "Server error. Please check Laravel logs.";
-        } else if (err.code === "NETWORK_ERROR") {
+        } else if (err.name === "TypeError" && err.message.includes("fetch")) {
           errorMessage += "Cannot connect to API server. Please check your connection.";
         } else {
-          errorMessage += err.response?.data?.message || err.message || "Unknown error occurred.";
+          errorMessage += err.message || "Unknown error occurred.";
         }
         setError(errorMessage);
       } finally {

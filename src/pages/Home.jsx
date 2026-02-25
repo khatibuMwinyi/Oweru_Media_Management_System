@@ -34,9 +34,21 @@ const HomePage = () => {
       setLoading(true);
       setError(null);
       try {
-        // Use the API service instead of manual fetch
-        const response = await postService.getAll({ status: 'approved' });
-        const postsArray = response.data?.data || response.data || [];
+        // Use the public approved posts endpoint instead of the protected one
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://31.97.176.48:8081/api'}/posts/approved`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const postsArray = data.data || data || [];
         
         if (Array.isArray(postsArray) && postsArray.length > 0) {
           setPosts(postsArray);
@@ -45,14 +57,14 @@ const HomePage = () => {
         }
       } catch (err) {
         let errorMessage = "Failed to load posts. ";
-        if (err.response?.status === 500) {
+        if (err.status === 500) {
           errorMessage += "Server error. Please check Laravel logs.";
-        } else if (err.response?.status === 404) {
+        } else if (err.status === 404) {
           errorMessage += "API endpoint not found. Please check API routes.";
-        } else if (err.code === "NETWORK_ERROR") {
+        } else if (err.name === "TypeError" && err.message.includes("fetch")) {
           errorMessage += "Cannot connect to API server. Please check your connection.";
         } else {
-          errorMessage += err.response?.data?.message || err.message || "Unknown error occurred.";
+          errorMessage += err.message || "Unknown error occurred.";
         }
         setError(errorMessage);
       } finally {
