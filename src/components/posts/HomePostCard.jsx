@@ -33,7 +33,7 @@ const HomePostCard = ({ post }) => {
   const [instagramStatus, setInstagramStatus] = useState(null);
 
   const BASE_URL =
-    import.meta.env.VITE_API_URL?.replace("/api", "") || "http://127.0.0.1:8000";
+    import.meta.env.VITE_API_URL?.replace("/api", "") || "http://31.97.176.48";
 
   const images = filterValidMedia(post.media, "image");
   const videos = filterValidMedia(post.media, "video");
