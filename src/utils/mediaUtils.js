@@ -60,10 +60,10 @@ export const getMediaUrl = (media) => {
     return PLACEHOLDER_IMAGE;
   }
 
-  // Use localhost to match frontend origin
+  // Use the correct hosted server URL
   const baseUrl =
     import.meta.env.VITE_API_URL?.replace("/api", "") ||
-    "http://localhost:8000";
+    "http://31.97.176.48:8081";
 
   // Handle direct URL
   if (media.url) {

@@ -1,6 +1,7 @@
 import { postService } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState, useRef } from "react";
+import { API_BASE_URL } from "../../config/api";
 import oweruLogo from "../../assets/oweru_logo.png";
 
 const PostCard = ({ post, onDelete, onEdit }) => {
@@ -17,9 +18,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
       return "https://via.placeholder.com/400x300?text=Media+Not+Found";
     }
 
-    const baseUrl =
-      import.meta.env.VITE_API_URL?.replace("/api", "") ||
-      "http://31.97.176.48:8081";
+    const baseUrl = API_BASE_URL?.replace("/api", "") || "http://31.97.176.48:8081";
 
     // Handle direct URL
     if (media.url) {
