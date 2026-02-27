@@ -1,7 +1,9 @@
 import { postService } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState, useRef } from "react";
+import { Trash2, Edit, Eye, EyeOff } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
+import { getMediaUrl, filterValidMedia, PLACEHOLDER_IMAGE, PLACEHOLDER_THUMBNAIL } from "../../utils/mediaUtils";
 import oweruLogo from "../../assets/oweru_logo.png";
 
 const PostCard = ({ post, onDelete, onEdit }) => {
@@ -15,7 +17,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
     // Return placeholder if media is invalid
     if (!media) {
       console.error("Invalid media object:", media);
-      return "https://via.placeholder.com/400x300?text=Media+Not+Found";
+      return PLACEHOLDER_IMAGE;
     }
 
     const baseUrl = API_BASE_URL?.replace("/api", "") || "http://31.97.176.48:8081";
@@ -47,7 +49,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
     console.error("Invalid media data:", media);
     
     // Return placeholder for invalid media
-    return "https://via.placeholder.com/400x300?text=Media+Not+Found";
+    return PLACEHOLDER_IMAGE;
   };
 
   const handleDelete = async () => {
@@ -144,8 +146,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   console.error("Static image failed:", e.target.src);
-                  e.target.src =
-                    "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                  e.target.src = PLACEHOLDER_IMAGE;
                 }}
               />
             ) : (
@@ -167,8 +168,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                   className="w-full h-full object-cover bg-black"
                   onError={(e) => {
                     console.error("Carousel image failed:", e.target.src);
-                    e.target.src =
-                      "https://via.placeholder.com/400x300?text=Image+Not+Found";
+                    e.target.src = PLACEHOLDER_IMAGE;
                   }}
                 />
                 {images.length > 1 && (
@@ -213,8 +213,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
                         className="w-10 h-10 object-cover rounded"
                         onError={(e) => {
                           console.error("Thumbnail failed:", e.target.src);
-                          e.target.src =
-                            "https://via.placeholder.com/64x64?text=Image";
+                          e.target.src = PLACEHOLDER_THUMBNAIL;
                         }}
                       />
                     </button>

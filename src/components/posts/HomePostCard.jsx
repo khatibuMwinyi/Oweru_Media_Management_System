@@ -1151,14 +1151,14 @@ const HomePostCard = ({ post }) => {
                   <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
                     info@oweru.com
                   </a>
-                </span>
-                &nbsp;&nbsp;
+                </span>{" "}
+                &nbsp;
                 <span className="inline-block">
                   <a href="tel:+255711890764" className="text-gray-950 hover:underline">
                     +255 711 890 764
                   </a>
-                </span>
-                &nbsp;&nbsp;
+                </span>{" "}
+                &nbsp;
                 <span className="inline-block">
                   <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="text-gray-950 hover:underline">
                     www.oweru.com
