@@ -125,18 +125,121 @@ const HomePage = () => {
         .stat-label { font-size: 14px; color: #6b7280; margin-top: 5px; }
         .posts-container { max-width: 1200px; margin: 0 auto; }
         .post-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px; }
-        .post-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .post-media { width: 100%; height: 250px; background: black; }
-        .post-media img, .post-media video { width: 100%; height: 100%; object-fit: cover; }
-        .post-content { padding: 20px; }
-        .post-title { font-size: 20px; font-weight: 700; color: #1f2937; margin-bottom: 10px; }
-        .post-meta { font-size: 12px; color: #6b7280; margin-bottom: 15px; }
-        .post-description { color: #4b5563; line-height: 1.6; white-space: pre-wrap; }
-        .category-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 10px; }
-        .footer { text-align: center; margin-top: 60px; padding: 40px; background: white; border-radius: 16px; }
-        .contact-info { display: flex; justify-content: center; gap: 30px; margin-bottom: 20px; flex-wrap: wrap; }
-        .contact-item { color: #374151; text-decoration: none; font-weight: 500; }
-        .generated-date { color: #6b7280; font-size: 14px; }
+        .post-card { 
+            background: white; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            height: 700px;
+        }
+        .post-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+        }
+        .post-media { 
+            width: 100%; 
+            height: 256px; 
+            background: #000; 
+            position: relative; 
+            flex-shrink: 0;
+        }
+        .post-media img, .post-media video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
+        .post-content { 
+            padding: 16px; 
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .post-title { 
+            font-size: 18px; 
+            font-weight: 600; 
+            color: #1f2937; 
+            margin-bottom: 8px;
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        .post-meta { 
+            font-size: 12px; 
+            color: #6b7280; 
+            margin-bottom: 12px; 
+        }
+        .post-description { 
+            color: #4b5563; 
+            line-height: 1.6; 
+            white-space: pre-wrap; 
+            font-size: 14px;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 120px;
+        }
+        .category-badge { 
+            display: inline-block; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 11px; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            margin-bottom: 8px;
+        }
+        /* Category backgrounds matching PostCard exactly */
+        .bg-rentals, .bg-lands_and_plots { 
+            background: #C89128; 
+        }
+        .bg-property_sales, .bg-property_services { 
+            background: #d1d5db; 
+        }
+        .bg-investment, .bg-construction_property_management { 
+            background: #0f172a; 
+        }
+        .text-rentals, .text-lands_and_plots { 
+            color: #f3f4f6; 
+        }
+        .text-property_sales, .text-property_services { 
+            color: #374151; 
+        }
+        .text-investment, .text-construction_property_management { 
+            color: white; 
+        }
+        .footer { 
+            text-align: center; 
+            margin-top: 60px; 
+            padding: 40px; 
+            background: white; 
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .contact-info { 
+            display: flex; 
+            justify-content: center; 
+            gap: 30px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap; 
+        }
+        .contact-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            color: #374151; 
+            text-decoration: none; 
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .contact-item:hover { 
+            color: #C89128; 
+        }
+        .generated-date { 
+            color: #6b7280; 
+            font-size: 14px; 
+        }
     </style>
 </head>
 <body>
@@ -153,8 +256,12 @@ const HomePage = () => {
     </div>
     <div class="posts-container">
         <div class="post-grid">
-            ${filteredPosts.map((post) => `
-                <div class="post-card">
+            ${filteredPosts.map((post) => {
+              const categoryClass = post.category || 'default';
+              const bgClass = `bg-${categoryClass}`;
+              const textClass = `text-${categoryClass}`;
+              return `
+                <div class="post-card ${bgClass}">
                     <div class="post-media">
                         ${post.post_type === "Reel" && post.media?.filter((m) => m.file_type === "video").length > 0
                             ? `<video controls><source src="${post.media.filter((m) => m.file_type === "video")[0]?.url || ""}" type="video/mp4"></video>`
@@ -162,14 +269,27 @@ const HomePage = () => {
                             ? `<img src="${post.media.filter((m) => m.file_type === "image")[0]?.url || ""}" alt="${post.title}">`
                             : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:white;">No media</div>'}
                     </div>
-                    <div class="post-content">
-                        <div class="category-badge">${post.category?.replace(/_/g, " ") || "Uncategorized"}</div>
-                        <h3 class="post-title">${post.title}</h3>
-                        <div class="post-meta">${post.post_type} • ${new Date(post.created_at).toLocaleDateString()}</div>
-                        <div class="post-description">${post.description}</div>
+                    ${post.post_type !== "Reel" ? `
+                    <div class="post-content ${bgClass} rounded-b-lg">
+                        <div class="px-4 pt-4 pb-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h3 class="post-title">${post.title || 'Untitled Post'}</h3>
+                                    <div class="post-meta ${textClass} mt-2 text-left">${post.post_type || 'Unknown'} • ${post.category || 'Uncategorized'} • ${new Date(post.created_at).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
+                            <div class="${textClass} text-left whitespace-pre-wrap text-sm leading-relaxed">${post.description || 'No description available.'}</div>
+                        </div>
+                        <div class="px-4 pb-3 flex justify-end items-center">
+                            <div style="font-size: 12px; color: #6b7280;">Oweru Media</div>
+                        </div>
                     </div>
+                    ` : ''}
                 </div>
-            `).join("")}
+              `;
+            }).join("")}
         </div>
     </div>
     <div class="footer">
