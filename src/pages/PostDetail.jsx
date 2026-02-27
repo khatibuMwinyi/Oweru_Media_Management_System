@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { postService } from "../services/api";
-import PostDetailCard from "../components/posts/PostDetailCard";
+import { API_BASE_URL } from "../config/api";
 import Navbar from "../components/Navbar";
 import { ArrowLeft, Home } from "lucide-react";
 
@@ -18,7 +17,7 @@ const PostDetail = () => {
       setError(null);
       try {
         // Use the public approved post endpoint instead of the protected one
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://31.97.176.48:8081/api'}/posts/approved/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/posts/approved/${id}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

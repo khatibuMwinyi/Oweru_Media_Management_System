@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
 import PostCard from "../../components/posts/PostCard";
 
@@ -23,7 +24,7 @@ const ModeratorDashboard = () => {
     setError(null);
     try {
       // Use the public pending posts endpoint instead of the protected one
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://31.97.176.48:8081/api'}/posts/pending`, {
+      const response = await fetch(`${API_BASE_URL}/posts/pending`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
