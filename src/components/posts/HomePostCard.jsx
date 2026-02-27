@@ -698,215 +698,46 @@ const HomePostCard = ({ post }) => {
     }
 
     try {
-      const video    = videos[0];
-      const logoImg  = await loadImage(oweruLogo).catch(() => null);
-
-      let videoSrc;
+      const video = videos[0];
+      const mediaUrl = getMediaUrl(video);
+      
+      // Simple direct download approach
+      const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+      const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
+      
+      // Try direct download first
       try {
-        const dataUrl = await fetchMediaAsDataUrl(video);
-        videoSrc = dataUrl;
-      } catch {
-        videoSrc = getMediaUrl(video);
-      }
-
-      const srcVideo = document.createElement("video");
-      srcVideo.src         = videoSrc;
-      srcVideo.muted       = true;
-      srcVideo.crossOrigin = "anonymous";
-      srcVideo.playsInline = true;
-      srcVideo.style.cssText = "position:fixed;left:-9999px;top:0;";
-      document.body.appendChild(srcVideo);
-
-      await new Promise((res, rej) => {
-        srcVideo.onloadedmetadata = res;
-        srcVideo.onerror          = rej;
-        srcVideo.load();
-      });
-
-      const vidW   = srcVideo.videoWidth  || 720;
-      const vidH   = srcVideo.videoHeight || 1280;
-      const duration = srcVideo.duration  || 30;
-
-      const HEADER_H  = Math.round(vidH * 0.08);
-      const FOOTER_H  = Math.round(vidH * 0.22);
-      const CANVAS_H  = vidH + HEADER_H + FOOTER_H;
-      const CANVAS_W  = vidW;
-      const PAD       = Math.round(CANVAS_W * 0.04);
-
-      const canvas  = document.createElement("canvas");
-      canvas.width  = CANVAS_W;
-      canvas.height = CANVAS_H;
-      const ctx     = canvas.getContext("2d");
-
-      const drawFrame = () => {
-        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.fillStyle = categoryHex;
-        ctx.fillRect(0, 0, CANVAS_W, HEADER_H);
-
-        if (logoImg) {
-          const lH = HEADER_H * 0.65;
-          const lW = logoImg.naturalWidth
-            ? (logoImg.naturalWidth / logoImg.naturalHeight) * lH
-            : lH * 3;
-          ctx.drawImage(logoImg, PAD, (HEADER_H - lH) / 2, lW, lH);
-        } else {
-          ctx.fillStyle    = "#ffffff";
-          ctx.font         = `bold ${HEADER_H * 0.38}px 'Segoe UI', Arial, sans-serif`;
-          ctx.textBaseline = "middle";
-          ctx.textAlign    = "left";
-          ctx.fillText("OWERU MEDIA", PAD, HEADER_H / 2);
+        const response = await fetch(mediaUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          setDownloading(false);
+          return;
         }
-
-        ctx.fillStyle    = "#ffffff";
-        ctx.textAlign    = "right";
-        ctx.textBaseline = "middle";
-        ctx.font = `bold ${HEADER_H * 0.30}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillText(
-          (post.category || "").replace(/_/g, " ").toUpperCase(),
-          CANVAS_W - PAD,
-          HEADER_H * 0.38
-        );
-        ctx.globalAlpha = 0.75;
-        ctx.font = `${HEADER_H * 0.24}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillText(
-          new Date(post.created_at).toLocaleDateString("en-GB", {
-            day: "2-digit", month: "short", year: "numeric",
-          }),
-          CANVAS_W - PAD,
-          HEADER_H * 0.72
-        );
-        ctx.globalAlpha = 1;
-
-        ctx.drawImage(srcVideo, 0, HEADER_H, CANVAS_W, vidH);
-
-        const gradH = vidH * 0.45;
-        const grad  = ctx.createLinearGradient(0, HEADER_H + vidH - gradH, 0, HEADER_H + vidH);
-        grad.addColorStop(0, "rgba(0,0,0,0)");
-        grad.addColorStop(1, "rgba(0,0,0,0.82)");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, HEADER_H + vidH - gradH, CANVAS_W, gradH);
-
-        const footerY = HEADER_H + vidH;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, footerY, CANVAS_W, FOOTER_H);
-        ctx.fillStyle = categoryHex;
-        ctx.fillRect(0, footerY, CANVAS_W, 3);
-
-        const fTitleFS = Math.round(FOOTER_H * 0.18);
-        const fTitleLH = fTitleFS * 1.3;
-        ctx.font         = `800 ${fTitleFS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle    = "#0f172a";
-        ctx.textBaseline = "top";
-        ctx.textAlign    = "left";
-        const fTitleY    = footerY + PAD * 0.6;
-        const { lines: ftLines } = wrapText(
-          ctx, post.title || "", PAD, fTitleY, CANVAS_W - PAD * 2, fTitleLH
-        );
-        ftLines.slice(0, 2).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
-
-        const fDescFS  = Math.round(FOOTER_H * 0.12);
-        const fDescLH  = fDescFS * 1.55;
-        const fDescY   = fTitleY + Math.min(ftLines.length, 2) * fTitleLH + fDescFS * 0.4;
-        ctx.font       = `400 ${fDescFS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle  = "#475569";
-        const { lines: fdLines } = wrapText(
-          ctx, post.description || "", PAD, fDescY, CANVAS_W - PAD * 2, fDescLH
-        );
-        fdLines.slice(0, 3).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
-
-        const contactFS  = Math.round(FOOTER_H * 0.10);
-        const contactY   = footerY + FOOTER_H - PAD * 0.8 - contactFS;
-        ctx.font         = `400 ${contactFS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle    = "#64748b";
-        ctx.textBaseline = "bottom";
-        ctx.textAlign    = "left";
-        ctx.fillText("✉ info@oweru.com   ✆ +255 711 890 764   ⌂ oweru.com", PAD, contactY);
-
-        if (logoImg) {
-          const flH = FOOTER_H * 0.22;
-          const flW = logoImg.naturalWidth
-            ? (logoImg.naturalWidth / logoImg.naturalHeight) * flH
-            : flH * 3;
-          ctx.drawImage(logoImg, CANVAS_W - PAD - flW, contactY - flH - PAD * 0.2, flW, flH);
-        }
-      };
-
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-        ? "video/webm;codecs=vp9"
-        : MediaRecorder.isTypeSupported("video/webm")
-        ? "video/webm"
-        : null;
-
-      if (!mimeType) {
-        document.body.removeChild(srcVideo);
-        const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
-        const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
-        const proxyUrl = `${BASE_URL}/api/media/download?url=${encodeURIComponent(getMediaUrl(video))}&filename=${encodeURIComponent(fileName)}`;
-        const a = document.createElement("a");
-        a.href = proxyUrl; a.download = fileName; a.target = "_blank";
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setDownloading(false);
-        return;
+      } catch (directError) {
+        console.warn("Direct download failed, trying proxy:", directError);
       }
-
-      const stream   = canvas.captureStream(30);
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4_000_000 });
-      const chunks = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-      let rafId;
-      let recording = true;
-      const loop = () => {
-        if (!recording) return;
-        drawFrame();
-        rafId = requestAnimationFrame(loop);
-      };
-
-      recorder.onstart = () => {
-        srcVideo.currentTime = 0;
-        srcVideo.play();
-        loop();
-      };
-
-      await new Promise((resolve, reject) => {
-        recorder.onstop = resolve;
-        recorder.onerror = reject;
-        recorder.start(100);
-        srcVideo.onended = () => {
-          recording = false;
-          cancelAnimationFrame(rafId);
-          recorder.stop();
-        };
-        setTimeout(() => {
-          if (recorder.state === "recording") {
-            recording = false;
-            cancelAnimationFrame(rafId);
-            recorder.stop();
-          }
-        }, (duration + 2) * 1000);
-      });
-
-      srcVideo.pause();
-      document.body.removeChild(srcVideo);
-
-      const ext      = mimeType.includes("mp4") ? "mp4" : "webm";
-      const outBlob  = new Blob(chunks, { type: mimeType });
-      const outUrl   = URL.createObjectURL(outBlob);
-      const slug     = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
-      const fileName = `Oweru_${slug}_Reel_${Date.now()}.${ext}`;
-      const link     = document.createElement("a");
-      link.href      = outUrl;
-      link.download  = fileName;
+      
+      // Fallback to proxy download
+      const proxyUrl = `${BASE_URL}/api/media/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
+      const link = document.createElement("a");
+      link.href = proxyUrl;
+      link.download = fileName;
+      link.target = "_blank";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(outUrl), 10000);
-
+      
     } catch (error) {
-      console.error("Branded video download error:", error);
-      alert("Failed to create branded video. Please try again.");
+      console.error("Video download error:", error);
+      alert("Failed to download video. Please try again.");
     } finally {
       setDownloading(false);
     }
