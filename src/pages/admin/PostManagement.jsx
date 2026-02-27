@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
 import PostCard from "../../components/posts/PostCard";
 import EditPostModal from "../../components/posts/EditPostModal";
@@ -25,25 +26,61 @@ const PostManagement = () => {
     setLoading(true);
     setError(null);
     try {
+      // Use public endpoints for fetching posts
+      let response;
       const params = { status: filterStatus, page };
-      const response = filterCategory === "all"
-        ? await postService.getAll(params)
-        : await postService.getByCategory(filterCategory, params);
-      if (response.data.data) {
-        setPosts(response.data.data);
-        setPagination({
-          current_page: response.data.current_page,
-          last_page: response.data.last_page,
-          per_page: response.data.per_page,
-          total: response.data.total,
+      
+      if (filterCategory === "all") {
+        // Use the approved posts endpoint for public access
+        const url = filterStatus === "all" 
+          ? `${API_BASE_URL}/posts/approved`
+          : `${API_BASE_URL}/posts/approved`; // We'll need to create filtered endpoints
+        
+        response = await fetch(`${url}?page=${page}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.data) {
+          setPosts(data.data);
+          setPagination({
+            current_page: data.current_page,
+            last_page: data.last_page,
+            per_page: data.per_page,
+            total: data.total,
+          });
+        } else {
+          setPosts(Array.isArray(data) ? data : []);
+          setPagination(null);
+        }
       } else {
-        setPosts(Array.isArray(response.data) ? response.data : []);
-        setPagination(null);
+        // For category-specific posts, we still need authentication for now
+        response = await postService.getByCategory(filterCategory, params);
+        if (response.data.data) {
+          setPosts(response.data.data);
+          setPagination({
+            current_page: response.data.current_page,
+            last_page: response.data.last_page,
+            per_page: response.data.per_page,
+            total: response.data.total,
+          });
+        } else {
+          setPosts(Array.isArray(response.data) ? response.data : []);
+          setPagination(null);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch posts:", err);
-      setError(err.response?.data?.message || "Failed to load posts");
+      setError(err.message || "Failed to load posts");
       setPosts([]);
     } finally {
       setLoading(false);

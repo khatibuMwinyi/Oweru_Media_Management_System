@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
 import PostCard from "./PostCard";
 
@@ -13,9 +14,28 @@ const PostList = ({ category = null, showTitle = true }) => {
       setLoading(true);
       setError(null);
       try {
-        const response = category
-          ? await postService.getByCategory(category)
-          : await postService.getAll();
+        let response;
+        
+        if (category) {
+          // For category-specific posts, we still need authentication for now
+          response = await postService.getByCategory(category);
+        } else {
+          // Use public approved posts endpoint
+          const url = `${API_BASE_URL}/posts/approved?page=${page}`;
+          const fetchResponse = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          });
+          
+          if (!fetchResponse.ok) {
+            throw new Error(`HTTP error! status: ${fetchResponse.status}`);
+          }
+          
+          response = { data: await fetchResponse.json() };
+        }
 
         // Handle paginated response
         if (response.data.data) {
@@ -33,7 +53,7 @@ const PostList = ({ category = null, showTitle = true }) => {
         }
       } catch (err) {
         console.error("Failed to fetch posts:", err);
-        setError(err.response?.data?.message || "Failed to load posts");
+        setError(err.message || "Failed to load posts");
         setPosts([]);
       } finally {
         setLoading(false);

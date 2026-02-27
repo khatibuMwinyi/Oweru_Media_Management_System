@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
 import {
   FileText,
@@ -30,15 +31,33 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await postService.getAll();
-        const posts = response.data.data || response.data;
+        // Use the public stats endpoint instead of the protected one
+        const response = await fetch(`${API_BASE_URL}/stats`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
         setStats({
-          totalPosts: posts.length || 0,
-          totalCategories: 6,
-          recentPosts: posts.slice(0, 5).length,
+          totalPosts: data.totalPosts || 0,
+          totalCategories: data.totalCategories || 6,
+          recentPosts: data.recentPosts || 0,
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
+        // Set default values on error
+        setStats({
+          totalPosts: 0,
+          totalCategories: 6,
+          recentPosts: 0,
+        });
       } finally {
         setLoading(false);
       }
