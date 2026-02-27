@@ -200,6 +200,9 @@ const HomePage = () => {
         .bg-investment, .bg-construction_property_management { 
             background: #0f172a; 
         }
+        .bg-default { 
+            background: #0f172a; 
+        }
         .text-rentals, .text-lands_and_plots { 
             color: #f3f4f6; 
         }
@@ -207,6 +210,9 @@ const HomePage = () => {
             color: #374151; 
         }
         .text-investment, .text-construction_property_management { 
+            color: white; 
+        }
+        .text-default { 
             color: white; 
         }
         .footer { 
