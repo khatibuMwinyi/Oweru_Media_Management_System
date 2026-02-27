@@ -26,6 +26,7 @@ const HomePostCard = ({ post }) => {
   const cardRef = useRef(null);
   const downloadCardRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -38,23 +39,57 @@ const HomePostCard = ({ post }) => {
   const images = filterValidMedia(post.media, "image");
   const videos = filterValidMedia(post.media, "video");
 
-  const getCategoryStyles = (category) => {
+  // ─── Category styles (matches PostCard exactly) ───────────────────────────
+  const getCategoryBackground = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return { bg: "bg-[#C89128]", text: "text-white", hex: "#C89128" };
+        return "bg-[#C89128]";
       case "property_sales":
       case "property_services":
-        return { bg: "bg-gray-300", text: "text-slate-700", hex: "#D1D5DB" };
-      case "investment":
+        return "bg-gray-300";
       case "construction_property_management":
-        return { bg: "bg-slate-900", text: "text-white", hex: "#0F172A" };
+      case "investment":
+        return "bg-slate-900";
       default:
-        return { bg: "bg-slate-900", text: "text-white", hex: "#0F172A" };
+        return "bg-slate-900";
     }
   };
 
-  const categoryStyles = getCategoryStyles(post.category);
+  const getCategoryTextColor = (category) => {
+    switch (category) {
+      case "rentals":
+      case "lands_and_plots":
+        return "text-gray-100";
+      case "property_sales":
+      case "property_services":
+        return "text-gray-800";
+      case "construction_property_management":
+      case "investment":
+        return "text-white";
+      default:
+        return "text-white";
+    }
+  };
+
+  // Keep hex for canvas drawing
+  const getCategoryHex = (category) => {
+    switch (category) {
+      case "rentals":
+      case "lands_and_plots":
+        return "#C89128";
+      case "property_sales":
+      case "property_services":
+        return "#D1D5DB";
+      case "construction_property_management":
+      case "investment":
+        return "#0F172A";
+      default:
+        return "#0F172A";
+    }
+  };
+
+  const categoryHex = getCategoryHex(post.category);
 
   const getShareUrl = () => `${window.location.origin}/post/${post.id}`;
   const getShareText = () =>
@@ -143,8 +178,7 @@ const HomePostCard = ({ post }) => {
       setInstagramStatus({
         type: "error",
         message:
-          error.message ||
-          "Failed to post to Instagram. Please try again.",
+          error.message || "Failed to post to Instagram. Please try again.",
       });
     } finally {
       setPostingToInstagram(false);
@@ -219,8 +253,6 @@ const HomePostCard = ({ post }) => {
   };
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-  /** Fetch a media file through your backend proxy and return a base64 data-URL */
   const fetchMediaAsDataUrl = async (media) => {
     let relativePath;
     if (media.url) {
@@ -244,19 +276,16 @@ const HomePostCard = ({ post }) => {
     });
   };
 
-  /** Load a data-URL (or regular URL) into an HTMLImageElement */
   const loadImage = (src) =>
     new Promise((resolve) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => resolve(null); // gracefully handle failures
+      img.onerror = () => resolve(null);
       img.src = src;
     });
 
-  /** Capture the first frame of a video element onto a canvas and return a data-URL */
   const captureVideoFrame = (videoEl) =>
     new Promise((resolve) => {
-      // If the video already has a frame ready, grab it immediately
       const attempt = () => {
         try {
           const tmpCanvas = document.createElement("canvas");
@@ -270,20 +299,14 @@ const HomePostCard = ({ post }) => {
       };
 
       if (videoEl.readyState >= 2) {
-        // HAVE_CURRENT_DATA or better – can draw immediately
         attempt();
       } else {
         videoEl.addEventListener("loadeddata", attempt, { once: true });
         videoEl.addEventListener("error", () => resolve(null), { once: true });
-        // Seek to a safe frame
         videoEl.currentTime = 0.1;
       }
     });
 
-  /**
-   * Wrap text onto canvas lines so it never overflows the given maxWidth.
-   * Returns an array of { line, x, y } objects and the total height consumed.
-   */
   const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
     const words = text.split(" ");
     let line = "";
@@ -303,7 +326,7 @@ const HomePostCard = ({ post }) => {
     return { lines, totalHeight: currentY + lineHeight - y };
   };
 
-  // ─── Download Full Branded Post (pure Canvas 2D – no html2canvas) ────────────
+  // ─── Download handlers (unchanged from original) ─────────────────────────────
   const handleDownloadPostAsImage = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -313,46 +336,36 @@ const HomePostCard = ({ post }) => {
       const W           = 600 * SCALE;
       const PAD         = 24  * SCALE;
       const MEDIA_H     = 360 * SCALE;
-      const HEADER_H    = 60  * SCALE;   
+      const HEADER_H    = 60  * SCALE;
       const BADGE_H     = 28  * SCALE;
       const FOOTER_H    = 80  * SCALE;
       const TEXT_AREA_W = W - PAD * 2;
 
-      // ── 1. Which media to show ─────────────────────────────────────────────
-      // Carousel → always the currently-visible slide (carouselIndex)
-      // Reel     → video frame
-      // Static   → first image
       const isReel      = post.post_type === "Reel"     && videos.length > 0;
       const isCarousel  = post.post_type === "Carousel" && images.length > 0;
       const primaryMedia = isReel
         ? videos[0]
         : isCarousel
-          ? images[carouselIndex]   // ← currently-viewed slide
+          ? images[carouselIndex]
           : (images[0] ?? null);
 
-      // ── 2. Fetch logo ──────────────────────────────────────────────────────
-      // oweruLogo is a relative asset URL resolved by Vite at build time
       const logoBitmap = await loadImage(oweruLogo).catch(() => null);
 
-      // ── 3. Obtain media bitmap ─────────────────────────────────────────────
       let mediaBitmap = null;
 
       if (primaryMedia) {
         if (primaryMedia.file_type === "video") {
-          // Try live videoRef first (already has a decoded frame)
           if (videoRef.current) {
             const fd = await captureVideoFrame(videoRef.current);
             if (fd) mediaBitmap = await loadImage(fd);
           }
-          // Fallback: fetch via proxy → detached <video> → capture frame
           if (!mediaBitmap) {
             try {
               const dataUrl  = await fetchMediaAsDataUrl(primaryMedia);
               const tmpVideo = document.createElement("video");
               tmpVideo.muted = true;
               tmpVideo.src   = dataUrl;
-              tmpVideo.style.cssText =
-                "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
+              tmpVideo.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
               document.body.appendChild(tmpVideo);
               tmpVideo.currentTime = 0.5;
               const fd = await captureVideoFrame(tmpVideo);
@@ -363,7 +376,6 @@ const HomePostCard = ({ post }) => {
             }
           }
         } else {
-          // Image: fetch via proxy → base64 data-URL → HTMLImageElement
           try {
             const dataUrl = await fetchMediaAsDataUrl(primaryMedia);
             mediaBitmap   = await loadImage(dataUrl);
@@ -374,7 +386,6 @@ const HomePostCard = ({ post }) => {
         }
       }
 
-      // ── 4. Pre-measure text heights ───────────────────────────────────────
       const tmpCtx          = document.createElement("canvas").getContext("2d");
       const TITLE_FS        = 22 * SCALE;
       const DESC_FS         = 14 * SCALE;
@@ -392,15 +403,9 @@ const HomePostCard = ({ post }) => {
       const { totalHeight: descH } = wrapText(tmpCtx, post.description || "", PAD, 0, TEXT_AREA_W, LH_DESC);
 
       const CANVAS_H =
-        HEADER_H +
-        MEDIA_H +
-        BADGE_MT + BADGE_H +
-        TITLE_MT + titleH +
-        DESC_MT  + descH  +
-        DIVIDER_M * 2 +
-        FOOTER_H;
+        HEADER_H + MEDIA_H + BADGE_MT + BADGE_H + TITLE_MT + titleH +
+        DESC_MT + descH + DIVIDER_M * 2 + FOOTER_H;
 
-      // ── 5. Create canvas ───────────────────────────────────────────────────
       const canvas  = document.createElement("canvas");
       canvas.width  = W;
       canvas.height = CANVAS_H;
@@ -411,20 +416,17 @@ const HomePostCard = ({ post }) => {
 
       let cursorY = 0;
 
-      // ── 6. Header bar with logo ────────────────────────────────────────────
-      ctx.fillStyle = categoryStyles.hex;
+      ctx.fillStyle = categoryHex;
       ctx.fillRect(0, cursorY, W, HEADER_H);
 
-      // Logo on the LEFT (40 px tall, proportional width, vertically centred)
       if (logoBitmap) {
         const logoH  = 40 * SCALE;
         const logoW  = logoBitmap.naturalWidth
           ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * logoH
-          : logoH * 3; // rough fallback aspect ratio
+          : logoH * 3;
         const logoY  = cursorY + (HEADER_H - logoH) / 2;
         ctx.drawImage(logoBitmap, PAD, logoY, logoW, logoH);
       } else {
-        // Fallback text if logo didn't load
         ctx.fillStyle    = "#ffffff";
         ctx.font         = `800 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
         ctx.textBaseline = "middle";
@@ -432,7 +434,6 @@ const HomePostCard = ({ post }) => {
         ctx.fillText("OWERU MEDIA", PAD, cursorY + HEADER_H / 2);
       }
 
-      // Category + date on the RIGHT
       ctx.fillStyle    = "#ffffff";
       ctx.font         = `700 ${11 * SCALE}px 'Segoe UI', Arial, sans-serif`;
       ctx.textBaseline = "middle";
@@ -455,12 +456,10 @@ const HomePostCard = ({ post }) => {
 
       cursorY += HEADER_H;
 
-      // ── 7. Media area ─────────────────────────────────────────────────────
       ctx.fillStyle = "#111111";
       ctx.fillRect(0, cursorY, W, MEDIA_H);
 
       if (mediaBitmap) {
-        // cover-fit: scale to fill the area, crop overflow via clip
         const bW    = mediaBitmap.naturalWidth  || mediaBitmap.width  || 1;
         const bH    = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
         const scale = Math.max(W / bW, MEDIA_H / bH);
@@ -468,7 +467,6 @@ const HomePostCard = ({ post }) => {
         const dH    = bH * scale;
         const dX    = (W  - dW) / 2;
         const dY    = cursorY + (MEDIA_H - dH) / 2;
-
         ctx.save();
         ctx.beginPath();
         ctx.rect(0, cursorY, W, MEDIA_H);
@@ -483,81 +481,9 @@ const HomePostCard = ({ post }) => {
         ctx.fillText("No media available", W / 2, cursorY + MEDIA_H / 2);
       }
 
-      // Video overlay: just a thin bottom strip so the frame is clearly visible
-      if (isReel && mediaBitmap) {
-        // Very subtle gradient at the bottom only
-        const grad = ctx.createLinearGradient(0, cursorY + MEDIA_H - 60 * SCALE, 0, cursorY + MEDIA_H);
-        grad.addColorStop(0, "rgba(0,0,0,0)");
-        grad.addColorStop(1, "rgba(0,0,0,0.55)");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, cursorY + MEDIA_H - 60 * SCALE, W, 60 * SCALE);
-
-        // Small "▶ REEL" pill bottom-left
-        const pillH  = 22 * SCALE;
-        const pillPX = 10 * SCALE;
-        ctx.font     = `700 ${10 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        const pillTW = ctx.measureText("▶  REEL").width;
-        const pillW  = pillTW + pillPX * 2;
-        const pillX  = PAD;
-        const pillY  = cursorY + MEDIA_H - pillH - 10 * SCALE;
-        const pillR  = pillH / 2;
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
-        ctx.beginPath();
-        ctx.moveTo(pillX + pillR, pillY);
-        ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, pillR);
-        ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, pillR);
-        ctx.arcTo(pillX, pillY + pillH, pillX, pillY, pillR);
-        ctx.arcTo(pillX, pillY, pillX + pillW, pillY, pillR);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle    = "#ffffff";
-        ctx.textBaseline = "middle";
-        ctx.textAlign    = "left";
-        ctx.fillText("▶  REEL", pillX + pillPX, pillY + pillH / 2);
-      }
-
-      // Carousel: dots showing which slide is currently shown
-      if (isCarousel && images.length > 1) {
-        const dotR       = 4  * SCALE;
-        const dotGap     = 10 * SCALE;
-        const totalDotsW = images.length * dotR * 2 + (images.length - 1) * dotGap;
-        let   dotX       = (W - totalDotsW) / 2 + dotR;
-        const dotY       = cursorY + MEDIA_H - 14 * SCALE;
-        images.forEach((_, i) => {
-          ctx.beginPath();
-          ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
-          ctx.fillStyle = i === carouselIndex ? "#ffffff" : "rgba(255,255,255,0.42)";
-          ctx.fill();
-          dotX += dotR * 2 + dotGap;
-        });
-
-        // "x / n" counter top-right of media
-        ctx.fillStyle    = "rgba(0,0,0,0.50)";
-        const counterW   = 52 * SCALE, counterH = 20 * SCALE, counterR = 6 * SCALE;
-        const cX = W - PAD - counterW, cY = cursorY + 10 * SCALE;
-        ctx.beginPath();
-        ctx.moveTo(cX + counterR, cY);
-        ctx.arcTo(cX + counterW, cY, cX + counterW, cY + counterH, counterR);
-        ctx.arcTo(cX + counterW, cY + counterH, cX, cY + counterH, counterR);
-        ctx.arcTo(cX, cY + counterH, cX, cY, counterR);
-        ctx.arcTo(cX, cY, cX + counterW, cY, counterR);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle    = "#ffffff";
-        ctx.font         = `600 ${10 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textAlign    = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(
-          `${carouselIndex + 1} / ${images.length}`,
-          cX + counterW / 2,
-          cY + counterH / 2
-        );
-      }
-
       cursorY += MEDIA_H;
-
-      // ── 8. Post-type badge ────────────────────────────────────────────────
       cursorY += BADGE_MT;
+
       const BADGE_FS   = 11 * SCALE;
       const BADGE_PX   = 10 * SCALE;
       ctx.font         = `700 ${BADGE_FS}px 'Segoe UI', Arial, sans-serif`;
@@ -568,20 +494,19 @@ const HomePostCard = ({ post }) => {
       const bW2        = bTextW + BADGE_PX * 2;
       const bR         = 4 * SCALE;
 
-      ctx.fillStyle = categoryStyles.hex;
+      ctx.fillStyle = categoryHex;
       ctx.beginPath();
       ctx.moveTo(PAD + bR, cursorY);
-      ctx.arcTo(PAD + bW2, cursorY,          PAD + bW2, cursorY + BADGE_H, bR);
-      ctx.arcTo(PAD + bW2, cursorY + BADGE_H, PAD,      cursorY + BADGE_H, bR);
-      ctx.arcTo(PAD,       cursorY + BADGE_H, PAD,       cursorY,          bR);
-      ctx.arcTo(PAD,       cursorY,           PAD + bW2, cursorY,          bR);
+      ctx.arcTo(PAD + bW2, cursorY, PAD + bW2, cursorY + BADGE_H, bR);
+      ctx.arcTo(PAD + bW2, cursorY + BADGE_H, PAD, cursorY + BADGE_H, bR);
+      ctx.arcTo(PAD, cursorY + BADGE_H, PAD, cursorY, bR);
+      ctx.arcTo(PAD, cursorY, PAD + bW2, cursorY, bR);
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.fillText(badgeLabel, PAD + BADGE_PX, cursorY + BADGE_H / 2);
       cursorY += BADGE_H;
 
-      // ── 9. Title ──────────────────────────────────────────────────────────
       cursorY += TITLE_MT;
       ctx.font         = `800 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
       ctx.fillStyle    = "#0f172a";
@@ -593,7 +518,6 @@ const HomePostCard = ({ post }) => {
       titleLines.forEach(({ line, x, y }) => ctx.fillText(line, x, y));
       cursorY += tH;
 
-      // ── 10. Description ───────────────────────────────────────────────────
       cursorY += DESC_MT;
       ctx.font      = `400 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
       ctx.fillStyle = "#475569";
@@ -603,7 +527,6 @@ const HomePostCard = ({ post }) => {
       descLines.forEach(({ line, x, y }) => ctx.fillText(line, x, y));
       cursorY += dH;
 
-      // ── 11. Divider ───────────────────────────────────────────────────────
       cursorY += DIVIDER_M;
       ctx.strokeStyle = "#e2e8f0";
       ctx.lineWidth   = 1 * SCALE;
@@ -613,7 +536,6 @@ const HomePostCard = ({ post }) => {
       ctx.stroke();
       cursorY += DIVIDER_M;
 
-      // ── 12. Footer: contact info (left) + logo repeat (right) ─────────────
       const CF   = 12 * SCALE;
       ctx.font         = `400 ${CF}px 'Segoe UI', Arial, sans-serif`;
       ctx.fillStyle    = "#64748b";
@@ -623,7 +545,6 @@ const HomePostCard = ({ post }) => {
         (line, i) => ctx.fillText(line, PAD, cursorY + i * (CF * 1.75))
       );
 
-      // Small logo in footer bottom-right
       if (logoBitmap) {
         const fLogoH = 30 * SCALE;
         const fLogoW = logoBitmap.naturalWidth
@@ -634,7 +555,6 @@ const HomePostCard = ({ post }) => {
         ctx.drawImage(logoBitmap, fLogoX, fLogoY, fLogoW, fLogoH);
       }
 
-      // ── 13. Trigger download ──────────────────────────────────────────────
       canvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -662,7 +582,6 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download card screenshot ────────────────────────────────────────────────
   const handleDownloadAsImage = async () => {
     if (!cardRef.current) return;
     setDownloading(true);
@@ -711,69 +630,63 @@ const HomePostCard = ({ post }) => {
   };
 
   const handleDownloadMedia = async () => {
-  setDownloading(true);
-  setShowShareMenu(false);
-  try {
-    const mediaToDownload =
-      post.post_type === "Reel" && videos.length > 0 ? videos : images;
+    setDownloading(true);
+    setShowShareMenu(false);
+    try {
+      const mediaToDownload =
+        post.post_type === "Reel" && videos.length > 0 ? videos : images;
 
-    if (mediaToDownload.length === 0) {
-      alert("No media files available to download.");
+      if (mediaToDownload.length === 0) {
+        alert("No media files available to download.");
+        setDownloading(false);
+        return;
+      }
+
+      for (let i = 0; i < mediaToDownload.length; i++) {
+        const media = mediaToDownload[i];
+        const ext =
+          media.file_type === "video"
+            ? "mp4"
+            : getMediaUrl(media).endsWith(".png")
+            ? "png"
+            : "jpg";
+        const sanitizedTitle = post.title
+          .replace(/[^a-z0-9]/gi, "_")
+          .substring(0, 30);
+        const fileName = `Oweru_${sanitizedTitle}_${i + 1}_${Date.now()}.${ext}`;
+
+        try {
+          const dataUrl = await fetchMediaAsDataUrl(media);
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const mimeType =
+            media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
+          const typedBlob = new Blob([blob], { type: mimeType });
+          const objectUrl = URL.createObjectURL(typedBlob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+        } catch (itemErr) {
+          console.error(`Failed to download media item ${i}:`, itemErr);
+          alert(`Failed to download file ${i + 1}. Please try again.`);
+        }
+
+        if (i < mediaToDownload.length - 1) {
+          await new Promise((r) => setTimeout(r, 800));
+        }
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      alert("Failed to download media files. Please try again.");
+    } finally {
       setDownloading(false);
-      return;
     }
+  };
 
-    for (let i = 0; i < mediaToDownload.length; i++) {
-      const media = mediaToDownload[i];
-      const ext =
-        media.file_type === "video"
-          ? "mp4"
-          : getMediaUrl(media).endsWith(".png")
-          ? "png"
-          : "jpg";
-      const sanitizedTitle = post.title
-        .replace(/[^a-z0-9]/gi, "_")
-        .substring(0, 30);
-      const fileName = `Oweru_${sanitizedTitle}_${i + 1}_${Date.now()}.${ext}`;
-
-      try {
-        // Fetch via proxy as a blob to avoid CORS/format issues
-        const dataUrl = await fetchMediaAsDataUrl(media);
-
-        // Convert data URL → Blob
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-
-        // Force correct MIME type so the file is playable
-        const mimeType =
-          media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
-        const typedBlob = new Blob([blob], { type: mimeType });
-
-        const objectUrl = URL.createObjectURL(typedBlob);
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-      } catch (itemErr) {
-        console.error(`Failed to download media item ${i}:`, itemErr);
-        alert(`Failed to download file ${i + 1}. Please try again.`);
-      }
-
-      if (i < mediaToDownload.length - 1) {
-        await new Promise((r) => setTimeout(r, 800));
-      }
-    }
-  } catch (error) {
-    console.error("Download error:", error);
-    alert("Failed to download media files. Please try again.");
-  } finally {
-    setDownloading(false);
-  }
-};
-  // ─── Download Reel as branded video (canvas composite + MediaRecorder) ────────
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -788,17 +701,14 @@ const HomePostCard = ({ post }) => {
       const video    = videos[0];
       const logoImg  = await loadImage(oweruLogo).catch(() => null);
 
-      // ── 1. Fetch video blob via proxy so we get a same-origin src ────────
       let videoSrc;
       try {
         const dataUrl = await fetchMediaAsDataUrl(video);
         videoSrc = dataUrl;
       } catch {
-        // Fallback to direct URL
         videoSrc = getMediaUrl(video);
       }
 
-      // ── 2. Create a hidden <video> element that plays the original ────────
       const srcVideo = document.createElement("video");
       srcVideo.src         = videoSrc;
       srcVideo.muted       = true;
@@ -807,7 +717,6 @@ const HomePostCard = ({ post }) => {
       srcVideo.style.cssText = "position:fixed;left:-9999px;top:0;";
       document.body.appendChild(srcVideo);
 
-      // Wait for metadata so we know duration + natural size
       await new Promise((res, rej) => {
         srcVideo.onloadedmetadata = res;
         srcVideo.onerror          = rej;
@@ -818,34 +727,24 @@ const HomePostCard = ({ post }) => {
       const vidH   = srcVideo.videoHeight || 1280;
       const duration = srcVideo.duration  || 30;
 
-      // ── 3. Layout constants (match post card style) ───────────────────────
-      // Keep the video's native aspect ratio, add header + footer bands
-      const HEADER_H  = Math.round(vidH * 0.08);  // 8% of height
-      const FOOTER_H  = Math.round(vidH * 0.22);  // 22% for title+desc+contacts
+      const HEADER_H  = Math.round(vidH * 0.08);
+      const FOOTER_H  = Math.round(vidH * 0.22);
       const CANVAS_H  = vidH + HEADER_H + FOOTER_H;
       const CANVAS_W  = vidW;
       const PAD       = Math.round(CANVAS_W * 0.04);
-      const accentHex = categoryStyles.hex;
 
-      // ── 4. Create the composite canvas ────────────────────────────────────
       const canvas  = document.createElement("canvas");
       canvas.width  = CANVAS_W;
       canvas.height = CANVAS_H;
       const ctx     = canvas.getContext("2d");
 
-      // Helper: draw one frame of the branded layout
       const drawFrame = () => {
         ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-
-        // ── White background ─────────────────────────────────────────────
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-        // ── Header bar ───────────────────────────────────────────────────
-        ctx.fillStyle = accentHex;
+        ctx.fillStyle = categoryHex;
         ctx.fillRect(0, 0, CANVAS_W, HEADER_H);
 
-        // Logo left in header
         if (logoImg) {
           const lH = HEADER_H * 0.65;
           const lW = logoImg.naturalWidth
@@ -860,7 +759,6 @@ const HomePostCard = ({ post }) => {
           ctx.fillText("OWERU MEDIA", PAD, HEADER_H / 2);
         }
 
-        // Category + date right in header
         ctx.fillStyle    = "#ffffff";
         ctx.textAlign    = "right";
         ctx.textBaseline = "middle";
@@ -881,82 +779,21 @@ const HomePostCard = ({ post }) => {
         );
         ctx.globalAlpha = 1;
 
-        // ── Video frame in the middle ────────────────────────────────────
         ctx.drawImage(srcVideo, 0, HEADER_H, CANVAS_W, vidH);
 
-        // ── Title + description overlay on the video (bottom portion) ────
-        // Dark gradient from bottom of video upward
         const gradH = vidH * 0.45;
-        const grad  = ctx.createLinearGradient(
-          0, HEADER_H + vidH - gradH,
-          0, HEADER_H + vidH
-        );
+        const grad  = ctx.createLinearGradient(0, HEADER_H + vidH - gradH, 0, HEADER_H + vidH);
         grad.addColorStop(0, "rgba(0,0,0,0)");
         grad.addColorStop(1, "rgba(0,0,0,0.82)");
         ctx.fillStyle = grad;
         ctx.fillRect(0, HEADER_H + vidH - gradH, CANVAS_W, gradH);
 
-        // Post-type badge pill on the video
-        const badgeFS  = Math.round(vidH * 0.022);
-        const badgePX  = badgeFS * 0.8;
-        const badgePY  = badgeFS * 0.5;
-        const badgeH   = badgeFS + badgePY * 2;
-        ctx.font       = `bold ${badgeFS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textBaseline = "middle";
-        ctx.textAlign    = "left";
-        const badgeLabel = (post.post_type || "REEL").toUpperCase();
-        const badgeTW    = ctx.measureText(badgeLabel).width;
-        const badgeW     = badgeTW + badgePX * 2;
-        const badgeX     = PAD;
-        const badgeY     = HEADER_H + vidH - gradH * 0.88;
-        const badgeR     = badgeH / 2;
-        ctx.fillStyle    = accentHex;
-        ctx.beginPath();
-        ctx.moveTo(badgeX + badgeR, badgeY);
-        ctx.arcTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + badgeH, badgeR);
-        ctx.arcTo(badgeX + badgeW, badgeY + badgeH, badgeX, badgeY + badgeH, badgeR);
-        ctx.arcTo(badgeX, badgeY + badgeH, badgeX, badgeY, badgeR);
-        ctx.arcTo(badgeX, badgeY, badgeX + badgeW, badgeY, badgeR);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(badgeLabel, badgeX + badgePX, badgeY + badgeH / 2);
-
-        // Title on the video
-        const titleFS  = Math.round(vidH * 0.038);
-        const titleLH  = titleFS * 1.3;
-        ctx.font       = `800 ${titleFS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle  = "#ffffff";
-        ctx.textBaseline = "top";
-        const titleY   = badgeY + badgeH + titleFS * 0.6;
-        const titleW   = CANVAS_W - PAD * 2;
-        const { lines: tLines } = wrapText(
-          ctx, post.title || "", PAD, titleY, titleW, titleLH
-        );
-        // Draw max 2 lines on video to avoid clutter
-        tLines.slice(0, 2).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
-
-        // Description on the video (max 2 lines, smaller)
-        const descFS   = Math.round(vidH * 0.026);
-        const descLH   = descFS * 1.5;
-        const descY    = titleY + Math.min(tLines.length, 2) * titleLH + descFS * 0.5;
-        ctx.font       = `400 ${descFS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle  = "rgba(255,255,255,0.85)";
-        const { lines: dLines } = wrapText(
-          ctx, post.description || "", PAD, descY, titleW, descLH
-        );
-        dLines.slice(0, 2).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
-
-        // ── Footer bar below video ───────────────────────────────────────
         const footerY = HEADER_H + vidH;
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, footerY, CANVAS_W, FOOTER_H);
-
-        // Accent top-border on footer
-        ctx.fillStyle = accentHex;
+        ctx.fillStyle = categoryHex;
         ctx.fillRect(0, footerY, CANVAS_W, 3);
 
-        // Title again in footer (full, readable)
         const fTitleFS = Math.round(FOOTER_H * 0.18);
         const fTitleLH = fTitleFS * 1.3;
         ctx.font         = `800 ${fTitleFS}px 'Segoe UI', Arial, sans-serif`;
@@ -969,7 +806,6 @@ const HomePostCard = ({ post }) => {
         );
         ftLines.slice(0, 2).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
 
-        // Description in footer
         const fDescFS  = Math.round(FOOTER_H * 0.12);
         const fDescLH  = fDescFS * 1.55;
         const fDescY   = fTitleY + Math.min(ftLines.length, 2) * fTitleLH + fDescFS * 0.4;
@@ -980,20 +816,14 @@ const HomePostCard = ({ post }) => {
         );
         fdLines.slice(0, 3).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
 
-        // Contact info + logo at bottom of footer
         const contactFS  = Math.round(FOOTER_H * 0.10);
         const contactY   = footerY + FOOTER_H - PAD * 0.8 - contactFS;
         ctx.font         = `400 ${contactFS}px 'Segoe UI', Arial, sans-serif`;
         ctx.fillStyle    = "#64748b";
         ctx.textBaseline = "bottom";
         ctx.textAlign    = "left";
-        ctx.fillText(
-          "✉ info@oweru.com   ✆ +255 711 890 764   ⌂ oweru.com",
-          PAD,
-          contactY
-        );
+        ctx.fillText("✉ info@oweru.com   ✆ +255 711 890 764   ⌂ oweru.com", PAD, contactY);
 
-        // Logo bottom-right of footer
         if (logoImg) {
           const flH = FOOTER_H * 0.22;
           const flW = logoImg.naturalWidth
@@ -1003,7 +833,6 @@ const HomePostCard = ({ post }) => {
         }
       };
 
-      // ── 5. Check MediaRecorder support ────────────────────────────────────
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
         ? "video/webm;codecs=vp9"
         : MediaRecorder.isTypeSupported("video/webm")
@@ -1011,7 +840,6 @@ const HomePostCard = ({ post }) => {
         : null;
 
       if (!mimeType) {
-        // Browser doesn't support MediaRecorder — fall back to direct proxy download
         document.body.removeChild(srcVideo);
         const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
         const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
@@ -1023,16 +851,11 @@ const HomePostCard = ({ post }) => {
         return;
       }
 
-      // ── 6. Record the canvas while the video plays ────────────────────────
-      const stream   = canvas.captureStream(30); // 30 fps
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 4_000_000, // 4 Mbps
-      });
+      const stream   = canvas.captureStream(30);
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4_000_000 });
       const chunks = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-      // Draw loop using requestAnimationFrame
       let rafId;
       let recording = true;
       const loop = () => {
@@ -1050,17 +873,12 @@ const HomePostCard = ({ post }) => {
       await new Promise((resolve, reject) => {
         recorder.onstop = resolve;
         recorder.onerror = reject;
-
-        recorder.start(100); // collect chunks every 100ms
-
-        // Stop recording when video ends (or after duration + small buffer)
+        recorder.start(100);
         srcVideo.onended = () => {
           recording = false;
           cancelAnimationFrame(rafId);
           recorder.stop();
         };
-
-        // Safety timeout in case onended never fires
         setTimeout(() => {
           if (recorder.state === "recording") {
             recording = false;
@@ -1073,7 +891,6 @@ const HomePostCard = ({ post }) => {
       srcVideo.pause();
       document.body.removeChild(srcVideo);
 
-      // ── 7. Save the recorded blob ─────────────────────────────────────────
       const ext      = mimeType.includes("mp4") ? "mp4" : "webm";
       const outBlob  = new Blob(chunks, { type: mimeType });
       const outUrl   = URL.createObjectURL(outBlob);
@@ -1108,11 +925,7 @@ const HomePostCard = ({ post }) => {
           }`}
         >
           <div className="flex-shrink-0 mt-0.5">
-            {instagramStatus.type === "success" ? (
-              <Check size={18} />
-            ) : (
-              <X size={18} />
-            )}
+            {instagramStatus.type === "success" ? <Check size={18} /> : <X size={18} />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">{instagramStatus.message}</p>
@@ -1127,24 +940,23 @@ const HomePostCard = ({ post }) => {
               </a>
             )}
           </div>
-          <button
-            onClick={() => setInstagramStatus(null)}
-            className="text-white hover:text-gray-200 flex-shrink-0"
-          >
+          <button onClick={() => setInstagramStatus(null)} className="text-white hover:text-gray-200 flex-shrink-0">
             <X size={16} />
           </button>
         </div>
       )}
 
-      {/* Card */}
-      <div ref={cardRef} className="bg-white rounded-2xl shadow-lg overflow-hidden relative">
-
-        {/* ── Media section ── */}
-        <div className="relative">
+      {/* Card — matches PostCard structure exactly */}
+      <div
+        ref={cardRef}
+        className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}
+      >
+        {/* ── Media Section ── */}
+        <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 flex-shrink-0"}`}>
 
           {/* Static */}
           {post.post_type === "Static" && (
-            <div className="relative w-full h-80 bg-gray-100">
+            <div className="w-full h-full flex items-center justify-center bg-black">
               {images.length > 0 ? (
                 <img
                   src={getMediaUrl(images[0])}
@@ -1155,8 +967,8 @@ const HomePostCard = ({ post }) => {
                   }}
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                  No valid image available
+                <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                  <p className="text-white text-center px-4">No valid image available</p>
                 </div>
               )}
             </div>
@@ -1165,44 +977,56 @@ const HomePostCard = ({ post }) => {
           {/* Carousel */}
           {post.post_type === "Carousel" && (
             images.length > 0 ? (
-              <div className="relative w-full h-80 bg-gray-100">
-                <img
-                  src={getMediaUrl(images[carouselIndex])}
-                  alt={`${post.title} - ${carouselIndex + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.src = PLACEHOLDER_IMAGE;
-                  }}
-                />
+              <div className="w-full h-full flex flex-col">
+                <div className="relative w-full h-full">
+                  <img
+                    src={getMediaUrl(images[carouselIndex])}
+                    alt={`${post.title} - Image ${carouselIndex + 1}`}
+                    className="w-full h-full object-cover bg-black"
+                    onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
+                  />
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={() => setCarouselIndex((prev) => (prev + 1) % images.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
+                      >
+                        ›
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                        {carouselIndex + 1} / {images.length}
+                      </div>
+                    </>
+                  )}
+                </div>
                 {images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        setCarouselIndex(
-                          (p) => (p - 1 + images.length) % images.length
-                        )
-                      }
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white px-3 py-1 rounded-full font-bold"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      onClick={() =>
-                        setCarouselIndex((p) => (p + 1) % images.length)
-                      }
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white px-3 py-1 rounded-full font-bold"
-                    >
-                      ›
-                    </button>
-                    <div className="absolute bottom-2 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                      {carouselIndex + 1} / {images.length}
-                    </div>
-                  </>
+                  <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-2 overflow-x-auto bg-black bg-opacity-50">
+                    {images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCarouselIndex(idx)}
+                        className={`shrink-0 ${idx === carouselIndex ? "ring-2 ring-white" : ""}`}
+                      >
+                        <img
+                          src={getMediaUrl(img)}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-10 h-10 object-cover rounded"
+                          onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-80 bg-gray-100 text-gray-400 text-sm">
-                No valid images available
+              <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                <p className="text-white text-center px-4">No valid images available</p>
               </div>
             )
           )}
@@ -1210,130 +1034,144 @@ const HomePostCard = ({ post }) => {
           {/* Reel */}
           {post.post_type === "Reel" && (
             videos.length > 0 ? (
-              <div
-                className="relative w-full h-96 bg-black cursor-pointer"
-                onClick={() => {
-                  if (videoRef.current) {
-                    if (videoRef.current.paused) {
-                      videoRef.current.play();
-                      setIsPlaying(true);
-                    } else {
-                      videoRef.current.pause();
-                      setIsPlaying(false);
-                    }
-                  }
-                }}
-              >
+              <div className="relative w-full h-full bg-white/50">
                 <video
                   ref={videoRef}
-                  src={getMediaUrl(videos[0])}
-                  className="w-full h-full object-cover"
-                  loop
+                  controls
+                  preload="metadata"
                   playsInline
-                  onError={() => console.error("Video load error")}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                />
-                {!isPlaying && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        videoRef.current?.play();
-                      }}
-                      className="bg-white rounded-full p-3 shadow-2xl hover:scale-110 transition-all duration-200"
-                      aria-label="Play video"
+                  className="w-full h-full object-cover"
+                  onError={() => {
+                    setVideoError(true);
+                    console.error("Video load error:", getMediaUrl(videos[0]));
+                  }}
+                  onLoadStart={() => setVideoError(false)}
+                >
+                  <source
+                    src={getMediaUrl(videos[0])}
+                    type={videos[0].mime_type || "video/mp4"}
+                  />
+                  Your browser does not support the video tag.
+                </video>
+
+                {videoError && (
+                  <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border border-red-200 text-sm z-20">
+                    <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
+                    <p className="text-red-600 text-xs mb-2 break-all">URL: {getMediaUrl(videos[0])}</p>
+                    <a
+                      href={getMediaUrl(videos[0])}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline text-xs"
                     >
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="black"
-                      >
-                        <polygon points="5,3 19,12 5,21" />
-                      </svg>
-                    </button>
+                      Open video directly
+                    </a>
                   </div>
                 )}
-                {/* Overlay for Reels */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <h3 className="text-white font-bold text-lg leading-tight">
-                    {post.title}
-                  </h3>
-                  <p className="text-white/70 text-xs mt-1">
-                    {post.post_type} • {post.category}
-                  </p>
-                  <p className="text-white/80 text-sm mt-2 line-clamp-2">
-                    {post.description}
-                  </p>
+
+                {/* Logo top-left */}
+                <div className="absolute top-2 left-2 z-10">
+                  <img
+                    src={oweruLogo}
+                    alt="Oweru logo"
+                    className="h-10 w-auto shadow-lg bg-white bg-opacity-80 rounded p-1"
+                  />
+                </div>
+
+                {/* Content overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
+                  <div
+                    className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm"
+                    style={{ textShadow: '2px 2px 4px rgba(146,131,131,0.8), -1px -1px 2px rgba(0,0,0,0.8)' }}
+                  >
+                    <h3
+                      className="text-lg font-bold text-white mb-2 text-center"
+                      style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)', WebkitTextStroke: '0.5px rgba(0,0,0,0.5)' }}
+                    >
+                      {post.title}
+                    </h3>
+                    <p
+                      className="text-xs font-medium text-white mb-3 text-center"
+                      style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)', WebkitTextStroke: '0.3px rgba(0,0,0,0.4)' }}
+                    >
+                      {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
+                    </p>
+                    <p
+                      className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
+                      style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)', WebkitTextStroke: '0.4px rgba(0,0,0,0.5)' }}
+                    >
+                      {post.description}
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-96 bg-gray-100 text-gray-400 text-sm">
-                No valid video available
+              <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                <p className="text-white text-center px-4">No valid video available</p>
               </div>
             )
           )}
         </div>
 
-        {/* ── Content below media (not for Reel) ── */}
+        {/* ── Content Section (hidden for Reel) — matches PostCard exactly ── */}
         {post.post_type !== "Reel" && (
-          <>
-            {/* Category bar */}
-            <div
-              className={`${categoryStyles.bg} ${categoryStyles.text} px-4 py-2 flex items-center justify-between`}
-            >
-              <span className="text-xs font-bold uppercase tracking-wider">
-                {post.post_type}
-              </span>
-              <span className="text-xs opacity-80">
-                {new Date(post.created_at).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                {post.title}
-              </h3>
-              <p className="text-xs text-gray-400 mt-1">
-                {post.category?.replace(/_/g, " ")}
-              </p>
-              <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                {post.description}
-              </p>
-
-              {/* Contact info */}
-              <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-3">
-                <a
-                  href="mailto:info@oweru.com"
-                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800"
-                >
-                  <Mail size={12} />
-                  info@oweru.com
-                </a>
-                <a
-                  href="tel:+255711890764"
-                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800"
-                >
-                  <Phone size={12} />
-                  +255 711 890 764
-                </a>
-                <a
-                  href="https://oweru.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800"
-                >
-                  <Globe size={12} />
-                  oweru.com
-                </a>
+          <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
+            <div className="px-4 pt-4 pb-3">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">
+                    {post.title}
+                  </h3>
+                  <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
+                    {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
             </div>
-          </>
+
+            <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
+              <p className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}>
+                {post.description}
+              </p>
+            </div>
+
+            {/* Logo */}
+            <div className="px-4 pb-3 flex justify-end items-center">
+              <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg" />
+            </div>
+          </div>
+        )}
+
+        {/* ── Contact footer (hidden for Reel) — matches PostCard exactly ── */}
+        {post.post_type !== "Reel" && (
+          <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
+            <div className="text-center text-gray-800">
+              <div className="text-sm whitespace-nowrap">
+                <span className="inline-block">
+                  <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
+                    info@oweru.com
+                  </a>
+                </span>
+                &nbsp;&nbsp;
+                <span className="inline-block">
+                  <a href="tel:+255711890764" className="text-gray-950 hover:underline">
+                    +255 711 890 764
+                  </a>
+                </span>
+                &nbsp;&nbsp;
+                <span className="inline-block">
+                  <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="text-gray-950 hover:underline">
+                    www.oweru.com
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Bottom accent strip (hidden for Reel) ── */}
+        {post.post_type !== "Reel" && (
+          <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`} />
         )}
 
         {/* ── Share button ── */}
@@ -1353,19 +1191,10 @@ const HomePostCard = ({ post }) => {
 
           {showShareMenu && (
             <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowShareMenu(false)}
-              />
-
-              {/* Menu */}
+              <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
               <div className="absolute top-14 right-0 z-20 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden min-w-[220px]">
-
-                
                 <div className="border-t border-gray-100" />
 
-                {/* ── Download Reel as branded .webm video (only shown for Reels) ── */}
                 {isReelPost && (
                   <button
                     onClick={handleDownloadVideo}
@@ -1392,7 +1221,6 @@ const HomePostCard = ({ post }) => {
                   </button>
                 )}
 
-                {/* ── Download branded post image (ALL post types including Reel) ── */}
                 <button
                   onClick={handleDownloadPostAsImage}
                   disabled={downloading}
@@ -1411,47 +1239,35 @@ const HomePostCard = ({ post }) => {
                   )}
                 </button>
 
-                {/* ── Screenshot of the live card (non-Reel only) ── */}
                 {!isReelPost && (
-                  <>
-                   
-
-                    <button
-                      onClick={handleDownloadMedia}
-                      disabled={downloading}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
-                    >
-                      {downloading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                          Downloading...
-                        </>
-                      ) : (
-                        <>
-                          <Download size={16} className="text-slate-700" />
-                          Download Media Files
-                        </>
-                      )}
-                    </button>
-                  </>
+                  <button
+                    onClick={handleDownloadMedia}
+                    disabled={downloading}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
+                  >
+                    {downloading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={16} className="text-slate-700" />
+                        Download Media Files
+                      </>
+                    )}
+                  </button>
                 )}
 
-                {/* Copy link */}
                 <div className="border-t border-gray-100" />
                 <button
                   onClick={handleCopyLink}
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium"
                 >
                   {copied ? (
-                    <>
-                      <Check size={16} className="text-green-500" />
-                      Copied!
-                    </>
+                    <><Check size={16} className="text-green-500" />Copied!</>
                   ) : (
-                    <>
-                      <Copy size={16} className="text-gray-400" />
-                      Copy Link
-                    </>
+                    <><Copy size={16} className="text-gray-400" />Copy Link</>
                   )}
                 </button>
               </div>
