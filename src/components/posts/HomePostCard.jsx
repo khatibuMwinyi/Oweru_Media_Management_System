@@ -32,6 +32,8 @@ const HomePostCard = ({ post }) => {
   const [downloading, setDownloading] = useState(false);
   const [postingToInstagram, setPostingToInstagram] = useState(false);
   const [instagramStatus, setInstagramStatus] = useState(null);
+  const [reelProgress, setReelProgress] = useState(null); // null | { stage, pct }
+  const ffmpegRef = useRef(null);
 
   const BASE_URL =
     import.meta.env.VITE_API_URL?.replace("/api", "") || "http://31.97.176.48:8081";
@@ -778,58 +780,234 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: Simple video download (no overlay) ───────────────────────────
+  // ─── Download: branded reel with ffmpeg.wasm overlay (fast, frontend-only) ───
+  //
+  // Pipeline:
+  //   1. Fetch video blob via proxy
+  //   2. Render the overlay (logo + scrim + title + meta + desc) onto an
+  //      offscreen canvas → export as PNG  (single frame, static overlay)
+  //   3. Load ffmpeg.wasm dynamically from CDN (cached after first load)
+  //   4. Write input.mp4 + overlay.png into ffmpeg's virtual FS
+  //   5. Run:  ffmpeg -i input.mp4 -i overlay.png
+  //              -filter_complex "[0:v][1:v]overlay=0:0"
+  //              -c:v libx264 -c:a copy -preset ultrafast output.mp4
+  //   6. Read output.mp4 → Blob → download
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleDownloadVideo = async () => {
-    setDownloading(true);
-    setShowShareMenu(false);
-
     if (videos.length === 0) {
       alert("No video available to download.");
-      setDownloading(false);
       return;
     }
 
+    setDownloading(true);
+    setShowShareMenu(false);
+    setReelProgress({ stage: "Fetching video…", pct: 0 });
+
     try {
-      const video = videos[0];
-      const mediaUrl = getMediaUrl(video);
-      
-      // Simple direct download approach
-      const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
-      const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
-      
-      // Try direct download first
+      // ── STEP 1: Fetch video as Uint8Array ──────────────────────────────────
+      let videoBytes;
       try {
-        const response = await fetch(mediaUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          setDownloading(false);
-          return;
-        }
-      } catch (directError) {
-        console.warn("Direct download failed, trying proxy:", directError);
+        const dataUrl = await fetchMediaAsDataUrl(videos[0]);
+        const res     = await fetch(dataUrl);
+        const buf     = await res.arrayBuffer();
+        videoBytes    = new Uint8Array(buf);
+      } catch {
+        const res  = await fetch(getMediaUrl(videos[0]));
+        const buf  = await res.arrayBuffer();
+        videoBytes = new Uint8Array(buf);
       }
-      
-      // Fallback to proxy download
-      const proxyUrl = `${BASE_URL}/api/media/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
+      setReelProgress({ stage: "Building overlay…", pct: 15 });
+
+      // ── STEP 2: Render overlay PNG on a canvas ─────────────────────────────
+      // We need the video dimensions first — spin up a temporary video element
+      const { vw, vh } = await new Promise((resolve) => {
+        const tmp   = document.createElement("video");
+        tmp.muted   = true;
+        tmp.preload = "metadata";
+        const blobForMeta = new Blob([videoBytes], { type: "video/mp4" });
+        const blobUrl = URL.createObjectURL(blobForMeta);
+        tmp.onloadedmetadata = () => {
+          resolve({ vw: tmp.videoWidth || 1080, vh: tmp.videoHeight || 1920 });
+          URL.revokeObjectURL(blobUrl);
+        };
+        tmp.onerror = () => { resolve({ vw: 1080, vh: 1920 }); URL.revokeObjectURL(blobUrl); };
+        tmp.src = blobUrl;
+      });
+
+      // Create overlay canvas at full video resolution
+      const oc  = document.createElement("canvas");
+      oc.width  = vw;
+      oc.height = vh;
+      const octx = oc.getContext("2d");
+
+      // Load logo
+      const logoBitmap = await loadImage(oweruLogo).catch(() => null);
+
+      // Proportional sizing (design base 390px wide)
+      const BASE      = vw / 390;
+      const PAD       = vw * 0.035;
+      const LOGO_H    = vh * 0.052;
+      const LOGO_W    = logoBitmap
+        ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * LOGO_H
+        : LOGO_H * 3;
+      const TITLE_FS  = Math.round(18 * BASE);
+      const META_FS   = Math.round(11 * BASE);
+      const DESC_FS   = Math.round(13 * BASE);
+      const LINE_H    = DESC_FS * 1.6;
+      const OVERLAY_W = Math.min(vw * 0.85, 448 * BASE);
+
+      // Pre-wrap description
+      octx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
+      const descLines = wrapTextLines(octx, post.description || "", OVERLAY_W, 5);
+
+      // Total text block height
+      const textBlockH  = TITLE_FS + 12 * BASE + META_FS + 16 * BASE + descLines.length * LINE_H;
+      const overlayTopY = vh / 2 - textBlockH / 2;
+
+      // ── Draw semi-transparent scrim (full frame) ──
+      octx.fillStyle = "rgba(0,0,0,0.38)";
+      octx.fillRect(0, 0, vw, vh);
+
+      // ── Logo top-left with white pill ──
+      if (logoBitmap) {
+        const lPad = vw * 0.008;
+        octx.fillStyle = "rgba(255,255,255,0.85)";
+        roundRect(octx, PAD - lPad, PAD - lPad, LOGO_W + lPad * 2, LOGO_H + lPad * 2, vw * 0.012);
+        octx.fill();
+        octx.drawImage(logoBitmap, PAD, PAD, LOGO_W, LOGO_H);
+      }
+
+      // ── Text helpers ──
+      const setShadow = (blur, off) => {
+        octx.shadowColor = "rgba(0,0,0,0.92)";
+        octx.shadowBlur  = blur;
+        octx.shadowOffsetX = off;
+        octx.shadowOffsetY = off;
+      };
+      const clrShadow = () => {
+        octx.shadowColor = "transparent";
+        octx.shadowBlur  = octx.shadowOffsetX = octx.shadowOffsetY = 0;
+      };
+
+      octx.textAlign    = "center";
+      octx.fillStyle    = "#FFFFFF";
+      let ty = overlayTopY;
+
+      // Title
+      octx.font         = `700 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
+      octx.textBaseline = "top";
+      setShadow(TITLE_FS * 0.5, TITLE_FS * 0.1);
+      octx.fillText(post.title || "", vw / 2, ty);
+      ty += TITLE_FS + 12 * BASE;
+
+      // Meta
+      octx.font = `600 ${META_FS}px 'Segoe UI', Arial, sans-serif`;
+      setShadow(META_FS * 0.5, META_FS * 0.1);
+      octx.fillText(
+        `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`,
+        vw / 2, ty
+      );
+      ty += META_FS + 16 * BASE;
+
+      // Description lines
+      octx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
+      setShadow(DESC_FS * 0.55, DESC_FS * 0.1);
+      descLines.forEach((line) => { octx.fillText(line, vw / 2, ty); ty += LINE_H; });
+      clrShadow();
+
+      // Export overlay canvas → PNG bytes
+      const overlayBytes = await new Promise((resolve, reject) => {
+        oc.toBlob((blob) => {
+          if (!blob) return reject(new Error("Overlay canvas toBlob failed"));
+          blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)));
+        }, "image/png");
+      });
+
+      setReelProgress({ stage: "Loading encoder (first time ~30 MB)…", pct: 25 });
+
+      // ── STEP 3: Load ffmpeg.wasm dynamically ──────────────────────────────
+      // Uses @ffmpeg/ffmpeg v0.12 UMD build from CDN
+      let ffmpeg = ffmpegRef.current;
+      if (!ffmpeg) {
+        // Dynamically import the UMD bundle
+        await new Promise((resolve, reject) => {
+          if (window.FFmpegWASM) return resolve();
+          const script  = document.createElement("script");
+          script.src    = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js";
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
+        const { FFmpeg } = window.FFmpegWASM;
+        ffmpeg = new FFmpeg();
+
+        ffmpeg.on("progress", ({ progress }) => {
+          setReelProgress({
+            stage: "Encoding branded reel…",
+            pct: Math.round(25 + progress * 70), // 25→95
+          });
+        });
+
+        setReelProgress({ stage: "Loading encoder (first time ~30 MB)…", pct: 26 });
+
+        await ffmpeg.load({
+          coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+          wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
+        });
+
+        ffmpegRef.current = ffmpeg;
+      }
+
+      setReelProgress({ stage: "Encoding branded reel…", pct: 28 });
+
+      // ── STEP 4: Write files into ffmpeg virtual FS ────────────────────────
+      const { fetchFile } = window.FFmpegWASM;
+      await ffmpeg.writeFile("input.mp4",    videoBytes);
+      await ffmpeg.writeFile("overlay.png",  overlayBytes);
+
+      // ── STEP 5: Run ffmpeg ─────────────────────────────────────────────────
+      // Overlay the PNG (full-frame scrim + text) on every video frame.
+      // -preset ultrafast keeps encoding fast; -crf 20 keeps quality good.
+      await ffmpeg.exec([
+        "-i",  "input.mp4",
+        "-i",  "overlay.png",
+        "-filter_complex", "[0:v][1:v]overlay=0:0",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-crf",  "20",
+        "-c:a", "copy",
+        "-movflags", "+faststart",
+        "output.mp4",
+      ]);
+
+      setReelProgress({ stage: "Saving file…", pct: 97 });
+
+      // ── STEP 6: Read output and download ──────────────────────────────────
+      const outputData = await ffmpeg.readFile("output.mp4");
+      const outputBlob = new Blob([outputData.buffer], { type: "video/mp4" });
+      const url  = URL.createObjectURL(outputBlob);
       const link = document.createElement("a");
-      link.href = proxyUrl;
-      link.download = fileName;
-      link.target = "_blank";
+      const slug = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+      link.download = `Oweru_${slug}_Branded_Reel_${Date.now()}.mp4`;
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+      setTimeout(() => URL.revokeObjectURL(url), 15_000);
+
+      // Cleanup virtual FS
+      try { await ffmpeg.deleteFile("input.mp4");   } catch {}
+      try { await ffmpeg.deleteFile("overlay.png"); } catch {}
+      try { await ffmpeg.deleteFile("output.mp4");  } catch {}
+
+      setReelProgress({ stage: "Done!", pct: 100 });
+      setTimeout(() => setReelProgress(null), 2000);
+
     } catch (error) {
-      console.error("Video download error:", error);
-      alert("Failed to download video. Please try again.");
+      console.error("Branded reel download error:", error);
+      alert("Failed to generate branded reel: " + error.message);
+      setReelProgress(null);
     } finally {
       setDownloading(false);
     }
@@ -840,7 +1018,26 @@ const HomePostCard = ({ post }) => {
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Instagram status notification */}
+      {/* Reel encoding progress toast */}
+      {reelProgress && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-4 flex flex-col gap-2 min-w-[280px] max-w-sm">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-medium truncate">{reelProgress.stage}</span>
+            <span className="text-xs text-gray-400 shrink-0">{reelProgress.pct}%</span>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${reelProgress.pct}%`,
+                background: "linear-gradient(90deg, #C89128, #f5c842)",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+
       {instagramStatus && (
         <div
           className={`fixed top-4 right-4 z-50 max-w-sm rounded-xl shadow-2xl p-4 flex items-start gap-3 text-white ${
@@ -1122,10 +1319,10 @@ const HomePostCard = ({ post }) => {
                     disabled={downloading}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
                   >
-                    {downloading ? (
+                    {downloading && reelProgress ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
-                        Encoding branded reel…
+                        <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin shrink-0" />
+                        <span className="truncate">{reelProgress.stage}</span>
                       </>
                     ) : (
                       <>
