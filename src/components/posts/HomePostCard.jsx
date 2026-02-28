@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, memo } from "react";
 import {
   Send,
   MessageCircle,
@@ -21,7 +21,6 @@ import {
 } from "../../utils/mediaUtils";
 
 const HomePostCard = ({ post }) => {
-  const [carouselIndex, setCarouselIndex] = useState(0);
   const videoRef = useRef(null);
   const cardRef = useRef(null);
   const downloadCardRef = useRef(null);
@@ -32,6 +31,8 @@ const HomePostCard = ({ post }) => {
   const [downloading, setDownloading] = useState(false);
   const [postingToInstagram, setPostingToInstagram] = useState(false);
   const [instagramStatus, setInstagramStatus] = useState(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [imageCache, setImageCache] = useState(new Map());
 
   const BASE_URL =
     import.meta.env.VITE_API_URL?.replace("/api", "") || "http://31.97.176.48:8081";
@@ -112,6 +113,19 @@ const HomePostCard = ({ post }) => {
   const getShareUrl = () => `${window.location.origin}/post/${post.id}`;
   const getShareText = () =>
     `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
+
+  // ─── Cached image URL function ──────────────────────────────────────────────
+  const getCachedMediaUrl = (media) => {
+    const cacheKey = `${media.id}-${media.updated_at || media.created_at}`;
+    
+    if (imageCache.has(cacheKey)) {
+      return imageCache.get(cacheKey);
+    }
+    
+    const url = getMediaUrl(media);
+    setImageCache(prev => new Map(prev).set(cacheKey, url));
+    return url;
+  };
 
   // ─── Instagram ──────────────────────────────────────────────────────────────
   const handlePostToInstagram = async () => {
@@ -778,19 +792,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: branded reel with burned-in overlay ───────────────────────────
-  //
-  // Strategy:
-  //   1. Load the video as a blob (via proxy) into a hidden <video> element.
-  //   2. Create an offscreen <canvas> the same size as the video.
-  //   3. Each animation frame: draw the current video frame, then draw the
-  //      overlay (logo + semi-transparent backdrop + title / meta / description)
-  //      on top — exactly mirroring the PostCard Reel overlay.
-  //   4. Capture the canvas stream with MediaRecorder → WebM blob → download.
-  //
-  // Note: MediaRecorder produces WebM (VP8/VP9). All modern browsers support it.
-  // Audio is captured from the video element and muxed in via AudioContext.
-  // ─────────────────────────────────────────────────────────────────────────────
+  
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -1068,9 +1070,10 @@ const HomePostCard = ({ post }) => {
             <div className="w-full h-full flex items-center justify-center bg-black">
               {images.length > 0 ? (
                 <img
-                  src={getMediaUrl(images[0])}
+                  src={getCachedMediaUrl(images[0])}
                   alt={post.title}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                   onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                 />
               ) : (
@@ -1087,9 +1090,10 @@ const HomePostCard = ({ post }) => {
               <div className="w-full h-full flex flex-col">
                 <div className="relative w-full h-full">
                   <img
-                    src={getMediaUrl(images[carouselIndex])}
+                    src={getCachedMediaUrl(images[carouselIndex])}
                     alt={`${post.title} - Image ${carouselIndex + 1}`}
                     className="w-full h-full object-cover bg-black"
+                    loading="lazy"
                     onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                   />
                   {images.length > 1 && (
@@ -1121,9 +1125,10 @@ const HomePostCard = ({ post }) => {
                         className={`shrink-0 ${idx === carouselIndex ? "ring-2 ring-white" : ""}`}
                       >
                         <img
-                          src={getMediaUrl(img)}
+                          src={getCachedMediaUrl(img)}
                           alt={`Thumbnail ${idx + 1}`}
                           className="w-10 h-10 object-cover rounded"
+                          loading="lazy"
                           onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                         />
                       </button>
@@ -1386,4 +1391,4 @@ const HomePostCard = ({ post }) => {
   );
 };
 
-export default HomePostCard;
+export default memo(HomePostCard);
