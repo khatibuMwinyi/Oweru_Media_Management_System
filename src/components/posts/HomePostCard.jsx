@@ -778,7 +778,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: raw video reel (instant) ──────────────────────────────────────
+  // ─── Download: Simple video download (no overlay) ───────────────────────────
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -790,56 +790,43 @@ const HomePostCard = ({ post }) => {
     }
 
     try {
-      const video          = videos[0];
-      const mediaUrl       = getMediaUrl(video);
+      const video = videos[0];
+      const mediaUrl = getMediaUrl(video);
+      
+      // Simple direct download approach
       const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
-      const fileName       = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
-
-      // Try proxy fetch first (most reliable, avoids CORS issues)
+      const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
+      
+      // Try direct download first
       try {
-        const dataUrl = await fetchMediaAsDataUrl(video);
-        const res     = await fetch(dataUrl);
-        const blob    = await res.blob();
-        const url     = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
-        const link    = document.createElement("a");
-        link.href     = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
-        return;
-      } catch (proxyErr) {
-        console.warn("Proxy fetch failed, trying direct:", proxyErr);
+        const response = await fetch(mediaUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          setDownloading(false);
+          return;
+        }
+      } catch (directError) {
+        console.warn("Direct download failed, trying proxy:", directError);
       }
-
-      // Fallback: direct fetch
-      try {
-        const res  = await fetch(mediaUrl);
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href     = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
-        return;
-      } catch (directErr) {
-        console.warn("Direct fetch failed, trying server proxy route:", directErr);
-      }
-
-      // Last resort: server-side proxy download endpoint
+      
+      // Fallback to proxy download
       const proxyUrl = `${BASE_URL}/api/media/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
       const link = document.createElement("a");
-      link.href     = proxyUrl;
+      link.href = proxyUrl;
       link.download = fileName;
-      link.target   = "_blank";
+      link.target = "_blank";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
+      
     } catch (error) {
       console.error("Video download error:", error);
       alert("Failed to download video. Please try again.");
@@ -1138,7 +1125,7 @@ const HomePostCard = ({ post }) => {
                     {downloading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
-                        Downloading reel…
+                        Encoding branded reel…
                       </>
                     ) : (
                       <>
