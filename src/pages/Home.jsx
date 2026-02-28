@@ -98,9 +98,271 @@ const HomePage = () => {
   );
 
   const handleDownloadAll = async () => {
-    // ← your previous download logic remains here (omitted for brevity)
-    // You can keep the version we prepared earlier
-  };
+  setDownloadingAll(true);
+  try {
+    const allPostsHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oweru Media - All Posts Export</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-gold:    #C89128;
+      --color-gold-light: #f3f4f6;
+      --color-gray:    #d1d5db;
+      --color-dark:    #0f172a;
+      --color-dark-text: #f3f4f6;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0;
+      padding: 30px 20px;
+      background: #f8f9fa;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 50px; }
+    .title { font-size: 3.2rem; font-weight: 800; color: var(--color-gold); margin: 0.3em 0; }
+    .subtitle { color: #6b7280; font-size: 1.3rem; margin-bottom: 2rem; }
+    .stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; margin-bottom: 3rem; }
+    .stat-item {
+      background: white;
+      padding: 1.2rem 1.8rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      min-width: 110px;
+      text-align: center;
+    }
+    .stat-number { font-size: 2.1rem; font-weight: 700; color: var(--color-gold); }
+    .stat-label { font-size: 0.9rem; color: #6b7280; margin-top: 0.3rem; }
+
+    .post-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 2rem;
+    }
+    .post-card {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: white;
+      display: flex;
+      flex-direction: column;
+      height: 720px;
+      position: relative;
+    }
+
+    /* ─── Media Area ──────────────────────────────────────── */
+    .media-wrapper {
+      position: relative;
+      width: 100%;
+      height: 340px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: #111;
+    }
+    .media-wrapper img,
+    .media-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .media-fallback {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.1rem;
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    /* Reel overlay style — most important visual match */
+    .reel-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.75) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      color: white;
+      text-align: center;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+    }
+    .reel-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      line-height: 1.2;
+    }
+    .reel-meta {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      margin-bottom: 1.2rem;
+    }
+    .reel-desc {
+      font-size: 1.05rem;
+      max-width: 90%;
+      line-height: 1.45;
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+
+    /* Content area (non-reel) */
+    .content-area {
+      padding: 1.5rem;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .post-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      background: rgba(255,255,255,0.9);
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    .post-meta {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-bottom: 1rem;
+    }
+    .post-desc {
+      flex-grow: 1;
+      font-size: 0.97rem;
+      line-height: 1.55;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .post-desc::-webkit-scrollbar { width: 6px; }
+    .post-desc::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+    /* Category backgrounds */
+    .cat-rentals,       .cat-lands_and_plots              { background: var(--color-gold); color: var(--color-gold-light); }
+    .cat-property_sales, .cat-property_services           { background: var(--color-gray);  color: #1f2937; }
+    .cat-investment,     .cat-construction_property_management { background: var(--color-dark); color: white; }
+    .cat-default                                  { background: var(--color-dark); color: white; }
+
+    .footer {
+      text-align: center;
+      margin-top: 4rem;
+      padding: 2.5rem;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .contact { display: flex; justify-content: center; gap: 2.2rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .contact a { color: #374151; text-decoration: none; font-weight: 500; }
+    .contact a:hover { color: var(--color-gold); }
+    .generated { color: #6b7280; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">Oweru Media</h1>
+      <p class="subtitle">Real Estate Content Overview — ${new Date().toLocaleDateString()}</p>
+      <div class="stats">
+        <div class="stat-item"><div class="stat-number">${stats.totalPosts}</div><div class="stat-label">Total</div></div>
+        <div class="stat-item"><div class="stat-number">${stats.staticPosts}</div><div class="stat-label">Static</div></div>
+        <div class="stat-item"><div class="stat-number">${stats.carouselPosts}</div><div class="stat-label">Carousel</div></div>
+        <div class="stat-item"><div class="stat-number">${stats.reelPosts}</div><div class="stat-label">Reels</div></div>
+      </div>
+    </div>
+
+    <div class="post-grid">
+      ${filteredPosts.map(post => {
+        const cat = post.category || 'default';
+        const catClass = `cat-${cat}`;
+
+        let mediaHTML = '';
+        const firstImage = post.media?.find(m => m.file_type === 'image');
+        const firstVideo = post.media?.find(m => m.file_type === 'video');
+
+        if (post.post_type === 'Reel' && firstVideo) {
+          mediaHTML = `
+            <div class="media-wrapper">
+              <video autoplay muted loop playsinline>
+                <source src="${firstVideo.url || ''}" type="video/mp4">
+              </video>
+              <div class="reel-overlay">
+                <div class="reel-title">${post.title || 'Untitled Reel'}</div>
+                <div class="reel-meta">
+                  ${post.post_type} • ${post.category || '—'} • ${new Date(post.created_at).toLocaleDateString()}
+                </div>
+                <div class="reel-desc">${post.description?.replace(/\n/g, '<br>') || 'No description'}</div>
+              </div>
+            </div>`;
+        } else if (firstImage) {
+          mediaHTML = `<div class="media-wrapper"><img src="${firstImage.url || ''}" alt="${post.title || ''}"></div>`;
+        } else {
+          mediaHTML = `
+            <div class="media-wrapper ${catClass}">
+              <div class="media-fallback">No media available</div>
+            </div>`;
+        }
+
+        const contentHTML = post.post_type !== 'Reel' ? `
+          <div class="content-area ${catClass}">
+            <div class="post-title">${post.title || 'Untitled Post'}</div>
+            <div class="post-meta">
+              ${post.post_type || '?'} • ${post.category || 'Uncategorized'} • ${new Date(post.created_at).toLocaleDateString()}
+            </div>
+            <div class="post-desc">
+              ${post.description?.replace(/\n/g, '<br>') || '<em>No description provided.</em>'}
+            </div>
+          </div>
+        ` : '';
+
+        return `
+          <div class="post-card">
+            ${mediaHTML}
+            ${contentHTML}
+          </div>`;
+      }).join('\n      ')}
+    </div>
+
+    <div class="footer">
+      <div class="contact">
+        <a href="mailto:info@oweru.com">info@oweru.com</a>
+        <a href="tel:+255711890764">+255 711 890 764</a>
+        <a href="https://www.oweru.com" target="_blank">www.oweru.com</a>
+      </div>
+      <div class="generated">
+        Generated on ${new Date().toLocaleString()}
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([allPostsHTML], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `oweru-posts-${Date.now()}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert('Failed to generate file. Please try again.');
+  } finally {
+    setDownloadingAll(false);
+  }
+};
 
   const categoryInfo = {
     rentals: { name: "Rentals", icon: Home },
