@@ -332,17 +332,14 @@ const HomePostCard = ({ post }) => {
     setShowShareMenu(false);
 
     try {
-      const SCALE       = 2;
-      const W           = 600 * SCALE;
-      const PAD         = 24  * SCALE;
-      const MEDIA_H     = 360 * SCALE;
-      const HEADER_H    = 60  * SCALE;
-      const BADGE_H     = 28  * SCALE;
-      const FOOTER_H    = 80  * SCALE;
-      const TEXT_AREA_W = W - PAD * 2;
-
-      const isReel      = post.post_type === "Reel"     && videos.length > 0;
-      const isCarousel  = post.post_type === "Carousel" && images.length > 0;
+      const SCALE = 2;
+      const W = 600 * SCALE;
+      const PAD = 24 * SCALE;
+      const MEDIA_H = 256 * SCALE;
+      const CONTENT_H = 444 * SCALE; // Remaining height for content section
+      
+      const isReel = post.post_type === "Reel" && videos.length > 0;
+      const isCarousel = post.post_type === "Carousel" && images.length > 0;
       const primaryMedia = isReel
         ? videos[0]
         : isCarousel
@@ -361,10 +358,10 @@ const HomePostCard = ({ post }) => {
           }
           if (!mediaBitmap) {
             try {
-              const dataUrl  = await fetchMediaAsDataUrl(primaryMedia);
+              const dataUrl = await fetchMediaAsDataUrl(primaryMedia);
               const tmpVideo = document.createElement("video");
               tmpVideo.muted = true;
-              tmpVideo.src   = dataUrl;
+              tmpVideo.src = dataUrl;
               tmpVideo.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
               document.body.appendChild(tmpVideo);
               tmpVideo.currentTime = 0.5;
@@ -378,7 +375,7 @@ const HomePostCard = ({ post }) => {
         } else {
           try {
             const dataUrl = await fetchMediaAsDataUrl(primaryMedia);
-            mediaBitmap   = await loadImage(dataUrl);
+            mediaBitmap = await loadImage(dataUrl);
           } catch (e) {
             console.warn("Proxy image fetch failed, trying direct URL:", e);
             mediaBitmap = await loadImage(getMediaUrl(primaryMedia));
@@ -386,87 +383,40 @@ const HomePostCard = ({ post }) => {
         }
       }
 
-      const tmpCtx          = document.createElement("canvas").getContext("2d");
-      const TITLE_FS        = 22 * SCALE;
-      const DESC_FS         = 14 * SCALE;
-      const LH_TITLE        = TITLE_FS * 1.35;
-      const LH_DESC         = DESC_FS  * 1.6;
-      const BADGE_MT        = 16 * SCALE;
-      const TITLE_MT        = 12 * SCALE;
-      const DESC_MT         = 10 * SCALE;
-      const DIVIDER_M       = 16 * SCALE;
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = 700 * SCALE; // Total card height
+      const ctx = canvas.getContext("2d");
 
-      tmpCtx.font = `800 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
-      const { totalHeight: titleH } = wrapText(tmpCtx, post.title || "", PAD, 0, TEXT_AREA_W, LH_TITLE);
-
-      tmpCtx.font = `400 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
-      const { totalHeight: descH } = wrapText(tmpCtx, post.description || "", PAD, 0, TEXT_AREA_W, LH_DESC);
-
-      const CANVAS_H =
-        HEADER_H + MEDIA_H + BADGE_MT + BADGE_H + TITLE_MT + titleH +
-        DESC_MT + descH + DIVIDER_M * 2 + FOOTER_H;
-
-      const canvas  = document.createElement("canvas");
-      canvas.width  = W;
-      canvas.height = CANVAS_H;
-      const ctx     = canvas.getContext("2d");
-
+      // White background for entire card
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, W, CANVAS_H);
+      ctx.fillRect(0, 0, W, 700 * SCALE);
 
       let cursorY = 0;
 
+      // Category background for media section
       ctx.fillStyle = categoryHex;
-      ctx.fillRect(0, cursorY, W, HEADER_H);
-
-      if (logoBitmap) {
-        const logoH  = 40 * SCALE;
-        const logoW  = logoBitmap.naturalWidth
-          ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * logoH
-          : logoH * 3;
-        const logoY  = cursorY + (HEADER_H - logoH) / 2;
-        ctx.drawImage(logoBitmap, PAD, logoY, logoW, logoH);
-      } else {
-        ctx.fillStyle    = "#ffffff";
-        ctx.font         = `800 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textBaseline = "middle";
-        ctx.textAlign    = "left";
-        ctx.fillText("OWERU MEDIA", PAD, cursorY + HEADER_H / 2);
-      }
-
-      ctx.fillStyle    = "#ffffff";
-      ctx.font         = `700 ${11 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textBaseline = "middle";
-      ctx.textAlign    = "right";
-      ctx.fillText(
-        (post.category || "").replace(/_/g, " ").toUpperCase(),
-        W - PAD,
-        cursorY + HEADER_H / 2 - 9 * SCALE
-      );
-      ctx.globalAlpha = 0.75;
-      ctx.font        = `400 ${10 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.fillText(
-        new Date(post.created_at).toLocaleDateString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric",
-        }),
-        W - PAD,
-        cursorY + HEADER_H / 2 + 9 * SCALE
-      );
-      ctx.globalAlpha = 1;
-
-      cursorY += HEADER_H;
-
-      ctx.fillStyle = "#111111";
       ctx.fillRect(0, cursorY, W, MEDIA_H);
 
+      // Logo in header (top-left)
+      if (logoBitmap) {
+        const logoH = 40 * SCALE;
+        const logoW = logoBitmap.naturalWidth
+          ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * logoH
+          : logoH * 3;
+        const logoY = cursorY + (MEDIA_H - logoH) / 2;
+        ctx.drawImage(logoBitmap, PAD, logoY, logoW, logoH);
+      }
+
+      // Media content
       if (mediaBitmap) {
-        const bW    = mediaBitmap.naturalWidth  || mediaBitmap.width  || 1;
-        const bH    = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
-        const scale = Math.max(W / bW, MEDIA_H / bH);
-        const dW    = bW * scale;
-        const dH    = bH * scale;
-        const dX    = (W  - dW) / 2;
-        const dY    = cursorY + (MEDIA_H - dH) / 2;
+        const bW = mediaBitmap.naturalWidth || mediaBitmap.width || 1;
+        const bH = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
+        const scale = Math.min(W / bW, MEDIA_H / bH);
+        const dW = bW * scale;
+        const dH = bH * scale;
+        const dX = (W - dW) / 2;
+        const dY = cursorY + (MEDIA_H - dH) / 2;
         ctx.save();
         ctx.beginPath();
         ctx.rect(0, cursorY, W, MEDIA_H);
@@ -474,86 +424,84 @@ const HomePostCard = ({ post }) => {
         ctx.drawImage(mediaBitmap, dX, dY, dW, dH);
         ctx.restore();
       } else {
-        ctx.fillStyle    = "#374151";
-        ctx.font         = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textAlign    = "center";
+        ctx.fillStyle = "#374151";
+        ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("No media available", W / 2, cursorY + MEDIA_H / 2);
       }
 
       cursorY += MEDIA_H;
-      cursorY += BADGE_MT;
 
-      const BADGE_FS   = 11 * SCALE;
-      const BADGE_PX   = 10 * SCALE;
-      ctx.font         = `700 ${BADGE_FS}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textBaseline = "middle";
-      ctx.textAlign    = "left";
-      const badgeLabel = (post.post_type || "").toUpperCase();
-      const bTextW     = ctx.measureText(badgeLabel).width;
-      const bW2        = bTextW + BADGE_PX * 2;
-      const bR         = 4 * SCALE;
-
+      // Content section with category background
+      const contentHeight = CONTENT_H;
       ctx.fillStyle = categoryHex;
-      ctx.beginPath();
-      ctx.moveTo(PAD + bR, cursorY);
-      ctx.arcTo(PAD + bW2, cursorY, PAD + bW2, cursorY + BADGE_H, bR);
-      ctx.arcTo(PAD + bW2, cursorY + BADGE_H, PAD, cursorY + BADGE_H, bR);
-      ctx.arcTo(PAD, cursorY + BADGE_H, PAD, cursorY, bR);
-      ctx.arcTo(PAD, cursorY, PAD + bW2, cursorY, bR);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillRect(0, cursorY, W, contentHeight);
+
+      // Title section
+      const titlePadding = 16 * SCALE;
+      const titleBgHeight = 40 * SCALE;
+      ctx.fillStyle = "#f3f4f6";
+      ctx.fillRect(PAD, cursorY + titlePadding, W - PAD * 2, titleBgHeight);
+      
+      ctx.fillStyle = "#1f2937";
+      ctx.font = `600 ${18 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      const titleText = post.title || "Untitled Post";
+      ctx.fillText(titleText, PAD + 8 * SCALE, cursorY + titlePadding + 8 * SCALE);
+
+      cursorY += titlePadding + titleBgHeight + 8 * SCALE;
+
+      // Meta information
+      ctx.fillStyle = getCategoryTextColor(post.category);
+      ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      const metaText = `${post.post_type || "Unknown"} • ${post.category || "Uncategorized"} • ${new Date(post.created_at).toLocaleDateString()}`;
+      ctx.fillText(metaText, PAD, cursorY);
+
+      cursorY += 12 * SCALE + 12 * SCALE;
+
+      // Description section
+      const descHeight = 120 * SCALE;
+      ctx.fillStyle = getCategoryTextColor(post.category);
+      ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      
+      const descText = post.description || "No description available.";
+      const lines = wrapText(ctx, descText, PAD, cursorY, W - PAD * 2, 14 * SCALE * 1.6);
+      lines.slice(0, 6).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
+
+      cursorY += descHeight + 16 * SCALE;
+
+      // Oweru branding
+      ctx.fillStyle = "#6b7280";
+      ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textAlign = "right";
+      ctx.fillText("Oweru Media", W - PAD, cursorY);
+
+      cursorY += 20 * SCALE;
+
+      // Contact information (white background section)
+      const contactHeight = 60 * SCALE;
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(badgeLabel, PAD + BADGE_PX, cursorY + BADGE_H / 2);
-      cursorY += BADGE_H;
+      ctx.fillRect(0, cursorY, W, contactHeight);
+      
+      // Contact details
+      ctx.fillStyle = "#374151";
+      ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      const contactY = cursorY + contactHeight / 2;
+      ctx.fillText("✉ info@oweru.com", W / 2 - 120 * SCALE, contactY);
+      ctx.fillText("✆ +255 711 890 764", W / 2, contactY);
+      ctx.fillText("⌂ www.oweru.com", W / 2 + 120 * SCALE, contactY);
 
-      cursorY += TITLE_MT;
-      ctx.font         = `800 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
-      ctx.fillStyle    = "#0f172a";
-      ctx.textBaseline = "top";
-      ctx.textAlign    = "left";
-      const { lines: titleLines, totalHeight: tH } = wrapText(
-        ctx, post.title || "", PAD, cursorY, TEXT_AREA_W, LH_TITLE
-      );
-      titleLines.forEach(({ line, x, y }) => ctx.fillText(line, x, y));
-      cursorY += tH;
-
-      cursorY += DESC_MT;
-      ctx.font      = `400 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
-      ctx.fillStyle = "#475569";
-      const { lines: descLines, totalHeight: dH } = wrapText(
-        ctx, post.description || "", PAD, cursorY, TEXT_AREA_W, LH_DESC
-      );
-      descLines.forEach(({ line, x, y }) => ctx.fillText(line, x, y));
-      cursorY += dH;
-
-      cursorY += DIVIDER_M;
-      ctx.strokeStyle = "#e2e8f0";
-      ctx.lineWidth   = 1 * SCALE;
-      ctx.beginPath();
-      ctx.moveTo(PAD, cursorY);
-      ctx.lineTo(W - PAD, cursorY);
-      ctx.stroke();
-      cursorY += DIVIDER_M;
-
-      const CF   = 12 * SCALE;
-      ctx.font         = `400 ${CF}px 'Segoe UI', Arial, sans-serif`;
-      ctx.fillStyle    = "#64748b";
-      ctx.textBaseline = "top";
-      ctx.textAlign    = "left";
-      ["✉  info@oweru.com", "✆  +255 711 890 764", "⌂  oweru.com"].forEach(
-        (line, i) => ctx.fillText(line, PAD, cursorY + i * (CF * 1.75))
-      );
-
-      if (logoBitmap) {
-        const fLogoH = 30 * SCALE;
-        const fLogoW = logoBitmap.naturalWidth
-          ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * fLogoH
-          : fLogoH * 3;
-        const fLogoX = W - PAD - fLogoW;
-        const fLogoY = cursorY + (FOOTER_H - DIVIDER_M * 2 - fLogoH) / 2;
-        ctx.drawImage(logoBitmap, fLogoX, fLogoY, fLogoW, fLogoH);
-      }
+      // Bottom accent strip
+      cursorY += contactHeight;
+      ctx.fillStyle = categoryHex;
+      ctx.fillRect(0, cursorY, W, 10 * SCALE);
 
       canvas.toBlob(
         (blob) => {
@@ -562,7 +510,7 @@ const HomePostCard = ({ post }) => {
             setDownloading(false);
             return;
           }
-          const url  = URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           const slug = (post.title || "post").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
           const suffix = isCarousel ? `_slide${carouselIndex + 1}` : "";
