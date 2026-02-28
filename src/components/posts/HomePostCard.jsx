@@ -72,24 +72,42 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // Keep hex for canvas drawing
+  // Canvas hex equivalents of PostCard Tailwind colors
   const getCategoryHex = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "#C89128";
+        return "#C89128"; // bg-[#C89128]
       case "property_sales":
       case "property_services":
-        return "#D1D5DB";
+        return "#D1D5DB"; // bg-gray-300
       case "construction_property_management":
       case "investment":
-        return "#0F172A";
+        return "#0F172A"; // bg-slate-900
       default:
         return "#0F172A";
     }
   };
 
+  // Text hex equivalents matching getCategoryTextColor
+  const getCategoryTextHex = (category) => {
+    switch (category) {
+      case "rentals":
+      case "lands_and_plots":
+        return "#F3F4F6"; // text-gray-100
+      case "property_sales":
+      case "property_services":
+        return "#1F2937"; // text-gray-800
+      case "construction_property_management":
+      case "investment":
+        return "#FFFFFF"; // text-white
+      default:
+        return "#FFFFFF";
+    }
+  };
+
   const categoryHex = getCategoryHex(post.category);
+  const categoryTextHex = getCategoryTextHex(post.category);
 
   const getShareUrl = () => `${window.location.origin}/post/${post.id}`;
   const getShareText = () =>
@@ -307,38 +325,89 @@ const HomePostCard = ({ post }) => {
       }
     });
 
-  const wrapText = (ctx, text, x, y, maxWidth, lineHeight) => {
-    const words = text.split(" ");
-    let line = "";
-    let currentY = y;
+  /**
+   * Wrap text and return array of line objects. Trims to maxLines if provided.
+   */
+  const wrapTextLines = (ctx, text, maxWidth, maxLines = null) => {
+    const paragraphs = text.split("\n");
     const lines = [];
-    for (const word of words) {
-      const test = line ? `${line} ${word}` : word;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        lines.push({ line, x, y: currentY });
-        currentY += lineHeight;
-        line = word;
-      } else {
-        line = test;
+    for (const para of paragraphs) {
+      if (para.trim() === "") {
+        lines.push("");
+        continue;
       }
+      const words = para.split(" ");
+      let line = "";
+      for (const word of words) {
+        const test = line ? `${line} ${word}` : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
     }
-    if (line) lines.push({ line, x, y: currentY });
-    return { lines, totalHeight: currentY + lineHeight - y };
+    if (maxLines && lines.length > maxLines) {
+      const trimmed = lines.slice(0, maxLines);
+      // Add ellipsis to last line if truncated
+      const last = trimmed[trimmed.length - 1];
+      trimmed[trimmed.length - 1] = last.replace(/\s+\S*$/, "") + "…";
+      return trimmed;
+    }
+    return lines;
   };
 
-  // ─── Download handlers (unchanged from original) ─────────────────────────────
+  /**
+   * Draw a rounded rectangle path.
+   */
+  const roundRect = (ctx, x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  };
+
+  // ─── Download: Branded Post Image (matches PostCard layout) ──────────────────
   const handleDownloadPostAsImage = async () => {
     setDownloading(true);
     setShowShareMenu(false);
 
     try {
-      const SCALE = 2;
-      const W = 600 * SCALE;
-      const PAD = 24 * SCALE;
-      const MEDIA_H = 256 * SCALE;
-      const CONTENT_H = 444 * SCALE; // Remaining height for content section
-      
-      const isReel = post.post_type === "Reel" && videos.length > 0;
+      // ── Dimensions (mirror PostCard's h-[700px] at 600px wide, @2x) ──
+      const SCALE   = 2;
+      const W       = 600 * SCALE;   // card width
+      const H       = 700 * SCALE;   // card total height  (matches h-[700px])
+      const PAD     = 16 * SCALE;    // px-4
+      const PAD_X   = 24 * SCALE;    // px-6 for footer
+      const RADIUS  = 8 * SCALE;     // rounded-lg
+
+      // PostCard layout (non-Reel):
+      //  ┌─────────────────────────┐
+      //  │  Media  h-64 = 256px    │  ← h-64
+      //  ├─────────────────────────┤
+      //  │  Category bg section    │  ← flex-col (title + meta + desc + logo)
+      //  ├─────────────────────────┤
+      //  │  White footer (contacts)│  ← bg-white py-3
+      //  ├─────────────────────────┤
+      //  │  Category accent h-10   │  ← h-10 = 40px
+      //  └─────────────────────────┘
+
+      const MEDIA_H    = 256 * SCALE;  // h-64
+      const ACCENT_H   =  40 * SCALE;  // h-10
+      const FOOTER_H   =  48 * SCALE;  // bg-white footer (~py-3 + one text line)
+      // Everything between media and footer/accent is the content section
+      const CONTENT_H  = H - MEDIA_H - FOOTER_H - ACCENT_H;
+
+      const isReel     = post.post_type === "Reel" && videos.length > 0;
       const isCarousel = post.post_type === "Carousel" && images.length > 0;
       const primaryMedia = isReel
         ? videos[0]
@@ -346,10 +415,10 @@ const HomePostCard = ({ post }) => {
           ? images[carouselIndex]
           : (images[0] ?? null);
 
+      // ── Load assets ──
       const logoBitmap = await loadImage(oweruLogo).catch(() => null);
 
       let mediaBitmap = null;
-
       if (primaryMedia) {
         if (primaryMedia.file_type === "video") {
           if (videoRef.current) {
@@ -383,38 +452,36 @@ const HomePostCard = ({ post }) => {
         }
       }
 
+      // ── Create canvas ──
       const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = 700 * SCALE; // Total card height
+      canvas.width  = W;
+      canvas.height = H;
       const ctx = canvas.getContext("2d");
 
-      // White background for entire card
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, W, 700 * SCALE);
+      // ── 1. Card rounded background (white base) ──
+      ctx.fillStyle = "#FFFFFF";
+      roundRect(ctx, 0, 0, W, H, RADIUS);
+      ctx.fill();
+      ctx.save();
+      roundRect(ctx, 0, 0, W, H, RADIUS);
+      ctx.clip();
 
       let cursorY = 0;
 
-      // Category background for media section
-      ctx.fillStyle = categoryHex;
+      // ── 2. Media section (h-64 = MEDIA_H) ──
+      // Background: black (like the wrapping div in PostCard)
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, cursorY, W, MEDIA_H);
 
-      // Logo in header (top-left)
-      if (logoBitmap) {
-        const logoH = 40 * SCALE;
-        const logoW = logoBitmap.naturalWidth
-          ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * logoH
-          : logoH * 3;
-        const logoY = cursorY + (MEDIA_H - logoH) / 2;
-        ctx.drawImage(logoBitmap, PAD, logoY, logoW, logoH);
-      }
-
-      // Media content
       if (mediaBitmap) {
-        const bW = mediaBitmap.naturalWidth || mediaBitmap.width || 1;
+        // object-cover: fill area, crop center
+        const bW = mediaBitmap.naturalWidth  || mediaBitmap.width  || 1;
         const bH = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
-        const scale = Math.min(W / bW, MEDIA_H / bH);
-        const dW = bW * scale;
-        const dH = bH * scale;
+        const scaleX = W / bW;
+        const scaleY = MEDIA_H / bH;
+        const s = Math.max(scaleX, scaleY); // cover
+        const dW = bW * s;
+        const dH = bH * s;
         const dX = (W - dW) / 2;
         const dY = cursorY + (MEDIA_H - dH) / 2;
         ctx.save();
@@ -431,78 +498,157 @@ const HomePostCard = ({ post }) => {
         ctx.fillText("No media available", W / 2, cursorY + MEDIA_H / 2);
       }
 
+      // Reel overlay text on top of media (mimics PostCard Reel content overlay)
+      if (isReel) {
+        // semi-transparent overlay backdrop
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(0, cursorY, W, MEDIA_H);
+
+        // Logo top-left (same as PostCard: bg-white/80 rounded p-1, h-10)
+        if (logoBitmap) {
+          const lH = 40 * SCALE;
+          const lW = logoBitmap.naturalWidth
+            ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
+            : lH * 3;
+          const lPad = 4 * SCALE;
+          ctx.fillStyle = "rgba(255,255,255,0.8)";
+          roundRect(ctx, PAD - lPad, cursorY + PAD - lPad, lW + lPad * 2, lH + lPad * 2, 4 * SCALE);
+          ctx.fill();
+          ctx.drawImage(logoBitmap, PAD, cursorY + PAD, lW, lH);
+        }
+
+        // Center text overlay (title, meta, description) — matches PostCard Reel overlay
+        const overlayW = Math.min(448 * SCALE, W - PAD * 4);
+        const overlayX = (W - overlayW) / 2;
+        const centerY  = cursorY + MEDIA_H / 2;
+
+        // Title
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = `700 ${18 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0,0,0,0.9)";
+        ctx.shadowBlur  = 10 * SCALE;
+        ctx.shadowOffsetX = 2 * SCALE;
+        ctx.shadowOffsetY = 2 * SCALE;
+        ctx.fillText(post.title || "", W / 2, centerY - 40 * SCALE);
+
+        // Meta
+        ctx.font = `600 ${11 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.shadowBlur = 6 * SCALE;
+        const metaText = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
+        ctx.fillText(metaText, W / 2, centerY - 14 * SCALE);
+
+        // Description (wrapped, up to 4 lines)
+        ctx.font = `500 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.shadowBlur = 8 * SCALE;
+        const descLines = wrapTextLines(ctx, post.description || "", overlayW, 4);
+        const descLineH = 18 * SCALE;
+        descLines.forEach((line, i) => {
+          ctx.fillText(line, W / 2, centerY + 10 * SCALE + i * descLineH);
+        });
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur  = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+
       cursorY += MEDIA_H;
 
-      // Content section with category background
-      const contentHeight = CONTENT_H;
+      // ── 3. Content section (category background) ──
       ctx.fillStyle = categoryHex;
-      ctx.fillRect(0, cursorY, W, contentHeight);
+      ctx.fillRect(0, cursorY, W, CONTENT_H);
 
-      // Title section
-      const titlePadding = 16 * SCALE;
-      const titleBgHeight = 40 * SCALE;
-      ctx.fillStyle = "#f3f4f6";
-      ctx.fillRect(PAD, cursorY + titlePadding, W - PAD * 2, titleBgHeight);
-      
-      ctx.fillStyle = "#1f2937";
-      ctx.font = `600 ${18 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      const contentStartY = cursorY;
+
+      // px-4 pt-4 pb-3  →  title block
+      const titleAreaTop = contentStartY + PAD;
+
+      // Title pill: bg-gray-100 rounded-lg p-2 text-gray-900 font-semibold
+      // Matches: <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg">
+      const TITLE_PAD_X  = 8  * SCALE;  // p-2
+      const TITLE_PAD_Y  = 8  * SCALE;
+      const TITLE_FONT_SIZE = 18 * SCALE; // text-lg
+      ctx.font = `600 ${TITLE_FONT_SIZE}px 'Segoe UI', Arial, sans-serif`;
+
+      const titleText  = post.title || "Untitled Post";
+      const titleW     = Math.min(ctx.measureText(titleText).width + TITLE_PAD_X * 2, W - PAD * 2);
+      const titleH     = TITLE_FONT_SIZE + TITLE_PAD_Y * 2;
+
+      // bg-gray-100 pill
+      ctx.fillStyle = "#F3F4F6";
+      roundRect(ctx, PAD, titleAreaTop, titleW, titleH, 8 * SCALE);
+      ctx.fill();
+
+      // title text
+      ctx.fillStyle    = "#111827"; // text-gray-900
+      ctx.textAlign    = "left";
       ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-      const titleText = post.title || "Untitled Post";
-      ctx.fillText(titleText, PAD + 8 * SCALE, cursorY + titlePadding + 8 * SCALE);
+      ctx.fillText(titleText, PAD + TITLE_PAD_X, titleAreaTop + TITLE_PAD_Y);
 
-      cursorY += titlePadding + titleBgHeight + 8 * SCALE;
-
-      // Meta information
-      ctx.fillStyle = getCategoryTextColor(post.category);
+      // Meta line: text-xs text-category  (pt-2 below title)
+      const metaTop = titleAreaTop + titleH + 8 * SCALE;
+      ctx.fillStyle = categoryTextHex;
       ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      const metaText = `${post.post_type || "Unknown"} • ${post.category || "Uncategorized"} • ${new Date(post.created_at).toLocaleDateString()}`;
-      ctx.fillText(metaText, PAD, cursorY);
-
-      cursorY += 12 * SCALE + 12 * SCALE;
-
-      // Description section
-      const descHeight = 120 * SCALE;
-      ctx.fillStyle = getCategoryTextColor(post.category);
-      ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
       ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-      
-      const descText = post.description || "No description available.";
-      const lines = wrapText(ctx, descText, PAD, cursorY, W - PAD * 2, 14 * SCALE * 1.6);
-      lines.slice(0, 6).forEach(({ line, x, y }) => ctx.fillText(line, x, y));
+      const metaStr = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
+      ctx.fillText(metaStr, PAD, metaTop);
 
-      cursorY += descHeight + 16 * SCALE;
+      // ── Description block: px-4 py-4 h-32 ──
+      // h-32 = 128px
+      const DESC_AREA_H = 128 * SCALE;
+      const descTop = metaTop + 12 * SCALE + PAD; // meta height + py-4
+      ctx.fillStyle    = categoryTextHex;
+      ctx.font         = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.textAlign    = "left";
 
-      // Oweru branding
-      ctx.fillStyle = "#6b7280";
-      ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textAlign = "right";
-      ctx.fillText("Oweru Media", W - PAD, cursorY);
+      const maxDescLines = Math.floor(DESC_AREA_H / (14 * SCALE * 1.6));
+      const descLines = wrapTextLines(ctx, post.description || "No description available.", W - PAD * 2, maxDescLines);
+      const descLineH = 14 * SCALE * 1.6;
+      descLines.forEach((line, i) => {
+        ctx.fillText(line, PAD, descTop + i * descLineH);
+      });
 
-      cursorY += 20 * SCALE;
+      // ── Logo: px-4 pb-3 flex justify-end — h-12 = 48px ──
+      const logoAreaTop = descTop + DESC_AREA_H;
+      if (logoBitmap) {
+        const lH = 48 * SCALE; // h-12
+        const lW = logoBitmap.naturalWidth
+          ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
+          : lH * 3;
+        // justify-end → right-align inside PAD
+        ctx.drawImage(logoBitmap, W - PAD - lW, logoAreaTop, lW, lH);
+      }
 
-      // Contact information (white background section)
-      const contactHeight = 60 * SCALE;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, cursorY, W, contactHeight);
-      
-      // Contact details
-      ctx.fillStyle = "#374151";
-      ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textAlign = "center";
+      cursorY = contentStartY + CONTENT_H;
+
+      // ── 4. White contact footer (bg-white px-6 py-3) ──
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, cursorY, W, FOOTER_H);
+
+      ctx.fillStyle    = "#030712"; // text-gray-950
+      ctx.font         = `400 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
-      
-      const contactY = cursorY + contactHeight / 2;
-      ctx.fillText("✉ info@oweru.com", W / 2 - 120 * SCALE, contactY);
-      ctx.fillText("✆ +255 711 890 764", W / 2, contactY);
-      ctx.fillText("⌂ www.oweru.com", W / 2 + 120 * SCALE, contactY);
+      const footerMidY = cursorY + FOOTER_H / 2;
 
-      // Bottom accent strip
-      cursorY += contactHeight;
+      // Three contact items spaced evenly (whitespace-nowrap)
+      const contacts = ["info@oweru.com", "+255 711 890 764", "www.oweru.com"];
+      const colW = W / 3;
+      contacts.forEach((c, i) => {
+        ctx.fillText(c, colW * i + colW / 2, footerMidY);
+      });
+
+      cursorY += FOOTER_H;
+
+      // ── 5. Bottom accent strip (category bg, h-10) ──
       ctx.fillStyle = categoryHex;
-      ctx.fillRect(0, cursorY, W, 10 * SCALE);
+      ctx.fillRect(0, cursorY, W, ACCENT_H);
 
+      ctx.restore(); // end rounded clip
+
+      // ── Export ──
       canvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -510,9 +656,9 @@ const HomePostCard = ({ post }) => {
             setDownloading(false);
             return;
           }
-          const url = URL.createObjectURL(blob);
+          const url  = URL.createObjectURL(blob);
           const link = document.createElement("a");
-          const slug = (post.title || "post").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+          const slug   = (post.title || "post").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
           const suffix = isCarousel ? `_slide${carouselIndex + 1}` : "";
           link.download = `Oweru_${slug}${suffix}_Post_${Date.now()}.jpg`;
           link.href = url;
@@ -530,6 +676,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
+  // ─── Download: html2canvas screenshot of the live card ───────────────────────
   const handleDownloadAsImage = async () => {
     if (!cardRef.current) return;
     setDownloading(true);
@@ -554,11 +701,9 @@ const HomePostCard = ({ post }) => {
 
       canvas.toBlob(
         (blob) => {
-          const url = URL.createObjectURL(blob);
+          const url  = URL.createObjectURL(blob);
           const link = document.createElement("a");
-          const sanitizedTitle = post.title
-            .replace(/[^a-z0-9]/gi, "_")
-            .substring(0, 30);
+          const sanitizedTitle = post.title.replace(/[^a-z0-9]/gi, "_").substring(0, 30);
           link.download = `Oweru_${sanitizedTitle}_${Date.now()}.png`;
           link.href = url;
           link.click();
@@ -577,6 +722,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
+  // ─── Download: raw media files ────────────────────────────────────────────────
   const handleDownloadMedia = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -598,21 +744,18 @@ const HomePostCard = ({ post }) => {
             : getMediaUrl(media).endsWith(".png")
             ? "png"
             : "jpg";
-        const sanitizedTitle = post.title
-          .replace(/[^a-z0-9]/gi, "_")
-          .substring(0, 30);
+        const sanitizedTitle = post.title.replace(/[^a-z0-9]/gi, "_").substring(0, 30);
         const fileName = `Oweru_${sanitizedTitle}_${i + 1}_${Date.now()}.${ext}`;
 
         try {
-          const dataUrl = await fetchMediaAsDataUrl(media);
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
-          const mimeType =
-            media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
-          const typedBlob = new Blob([blob], { type: mimeType });
-          const objectUrl = URL.createObjectURL(typedBlob);
+          const dataUrl  = await fetchMediaAsDataUrl(media);
+          const res      = await fetch(dataUrl);
+          const blob     = await res.blob();
+          const mimeType = media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
+          const typedBlob  = new Blob([blob], { type: mimeType });
+          const objectUrl  = URL.createObjectURL(typedBlob);
           const link = document.createElement("a");
-          link.href = objectUrl;
+          link.href     = objectUrl;
           link.download = fileName;
           document.body.appendChild(link);
           link.click();
@@ -635,6 +778,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
+  // ─── Download: video reel ────────────────────────────────────────────────────
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -646,21 +790,19 @@ const HomePostCard = ({ post }) => {
     }
 
     try {
-      const video = videos[0];
+      const video    = videos[0];
       const mediaUrl = getMediaUrl(video);
-      
-      // Simple direct download approach
       const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
       const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
-      
+
       // Try direct download first
       try {
         const response = await fetch(mediaUrl);
         if (response.ok) {
           const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
+          const url  = URL.createObjectURL(blob);
           const link = document.createElement("a");
-          link.href = url;
+          link.href     = url;
           link.download = fileName;
           document.body.appendChild(link);
           link.click();
@@ -672,17 +814,16 @@ const HomePostCard = ({ post }) => {
       } catch (directError) {
         console.warn("Direct download failed, trying proxy:", directError);
       }
-      
+
       // Fallback to proxy download
       const proxyUrl = `${BASE_URL}/api/media/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
       const link = document.createElement("a");
-      link.href = proxyUrl;
+      link.href     = proxyUrl;
       link.download = fileName;
-      link.target = "_blank";
+      link.target   = "_blank";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
     } catch (error) {
       console.error("Video download error:", error);
       alert("Failed to download video. Please try again.");
@@ -741,9 +882,7 @@ const HomePostCard = ({ post }) => {
                   src={getMediaUrl(images[0])}
                   alt={post.title}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.src = PLACEHOLDER_IMAGE;
-                  }}
+                  onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
@@ -983,7 +1122,7 @@ const HomePostCard = ({ post }) => {
                     {downloading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
-                        Creating branded video...
+                        Downloading reel...
                       </>
                     ) : (
                       <>
