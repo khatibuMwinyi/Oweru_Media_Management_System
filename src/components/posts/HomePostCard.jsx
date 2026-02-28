@@ -778,7 +778,19 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: video reel ────────────────────────────────────────────────────
+  // ─── Download: branded reel with burned-in overlay ───────────────────────────
+  //
+  // Strategy:
+  //   1. Load the video as a blob (via proxy) into a hidden <video> element.
+  //   2. Create an offscreen <canvas> the same size as the video.
+  //   3. Each animation frame: draw the current video frame, then draw the
+  //      overlay (logo + semi-transparent backdrop + title / meta / description)
+  //      on top — exactly mirroring the PostCard Reel overlay.
+  //   4. Capture the canvas stream with MediaRecorder → WebM blob → download.
+  //
+  // Note: MediaRecorder produces WebM (VP8/VP9). All modern browsers support it.
+  // Audio is captured from the video element and muxed in via AudioContext.
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -790,43 +802,220 @@ const HomePostCard = ({ post }) => {
     }
 
     try {
-      const video    = videos[0];
-      const mediaUrl = getMediaUrl(video);
-      const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
-      const fileName = `Oweru_${sanitizedTitle}_Reel_${Date.now()}.mp4`;
-
-      // Try direct download first
+      // ── 1. Fetch video blob (proxy for CORS) ──────────────────────────────
+      let videoBlobUrl;
       try {
-        const response = await fetch(mediaUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          const url  = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href     = url;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          setDownloading(false);
-          return;
-        }
-      } catch (directError) {
-        console.warn("Direct download failed, trying proxy:", directError);
+        const dataUrl = await fetchMediaAsDataUrl(videos[0]);
+        const res     = await fetch(dataUrl);
+        const blob    = await res.blob();
+        videoBlobUrl  = URL.createObjectURL(blob);
+      } catch {
+        // Fallback: try the direct URL (works if CORS allows it)
+        videoBlobUrl = getMediaUrl(videos[0]);
       }
 
-      // Fallback to proxy download
-      const proxyUrl = `${BASE_URL}/api/media/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
+      // ── 2. Create hidden video element & load ─────────────────────────────
+      const srcVideo = document.createElement("video");
+      srcVideo.src         = videoBlobUrl;
+      srcVideo.muted       = false;
+      srcVideo.crossOrigin = "anonymous";
+      srcVideo.preload     = "auto";
+      srcVideo.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
+      document.body.appendChild(srcVideo);
+
+      await new Promise((resolve, reject) => {
+        srcVideo.onloadedmetadata = resolve;
+        srcVideo.onerror = reject;
+        srcVideo.load();
+      });
+
+      const VW = srcVideo.videoWidth  || 1080;
+      const VH = srcVideo.videoHeight || 1920;
+
+      // ── 3. Load logo bitmap ───────────────────────────────────────────────
+      const logoBitmap = await loadImage(oweruLogo).catch(() => null);
+
+      // ── 4. Pre-compute overlay layout (relative to VW/VH) ─────────────────
+      // Mirror PostCard Reel overlay exactly:
+      //   • Logo: top-left, bg-white/80 rounded, h-10 (~VH*0.052)
+      //   • Semi-dark scrim in center area
+      //   • Title:       text-lg font-bold   center
+      //   • Meta:        text-xs font-medium center
+      //   • Description: text-sm font-medium center (wrapped)
+
+      const PAD      = VW * 0.035;          // ~px-4 equivalent
+      const LOGO_H   = VH * 0.052;          // h-10 equivalent
+      const LOGO_W   = logoBitmap
+        ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * LOGO_H
+        : LOGO_H * 3;
+      const LOGO_PAD = VW * 0.01;
+
+      // Font sizes proportional to video width (design target: 390px wide screen)
+      const BASE = VW / 390;
+      const TITLE_FS = Math.round(18 * BASE);
+      const META_FS  = Math.round(11 * BASE);
+      const DESC_FS  = Math.round(13 * BASE);
+      const LINE_H   = DESC_FS * 1.6;
+      const OVERLAY_W = Math.min(VW * 0.85, 448 * BASE);
+
+      // Pre-wrap description lines
+      const offCtx = document.createElement("canvas").getContext("2d");
+      offCtx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
+      const descLines = wrapTextLines(offCtx, post.description || "", OVERLAY_W, 5);
+
+      // Total overlay text height: title + gap + meta + gap + desc lines
+      const overlayTextH = TITLE_FS + 12 * BASE + META_FS + 16 * BASE + descLines.length * LINE_H;
+      // Vertical centre of overlay block
+      const overlayCenterY = VH / 2;
+      const overlayTopY    = overlayCenterY - overlayTextH / 2;
+
+      // ── 5. Offscreen canvas ───────────────────────────────────────────────
+      const canvas = document.createElement("canvas");
+      canvas.width  = VW;
+      canvas.height = VH;
+      const ctx = canvas.getContext("2d");
+
+      // ── 6. Overlay draw helper (called every frame) ───────────────────────
+      const drawOverlay = () => {
+        // Semi-transparent dark scrim across full frame
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(0, 0, VW, VH);
+
+        // ── Logo (top-left, white pill background) ──
+        if (logoBitmap) {
+          const lx = PAD;
+          const ly = PAD;
+          const lPad = VW * 0.008;
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
+          roundRect(ctx, lx - lPad, ly - lPad, LOGO_W + lPad * 2, LOGO_H + lPad * 2, VW * 0.012);
+          ctx.fill();
+          ctx.drawImage(logoBitmap, lx, ly, LOGO_W, LOGO_H);
+        }
+
+        // ── Text shadow helper ──
+        const setShadow = (blur, offset) => {
+          ctx.shadowColor   = "rgba(0,0,0,0.92)";
+          ctx.shadowBlur    = blur;
+          ctx.shadowOffsetX = offset;
+          ctx.shadowOffsetY = offset;
+        };
+        const clearShadow = () => {
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur  = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        };
+
+        ctx.textAlign    = "center";
+        ctx.fillStyle    = "#FFFFFF";
+
+        let ty = overlayTopY;
+
+        // ── Title ──
+        ctx.font = `700 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
+        ctx.textBaseline = "top";
+        setShadow(TITLE_FS * 0.5, TITLE_FS * 0.1);
+        ctx.fillText(post.title || "", VW / 2, ty);
+        ty += TITLE_FS + 12 * BASE;
+
+        // ── Meta ──
+        ctx.font = `600 ${META_FS}px 'Segoe UI', Arial, sans-serif`;
+        setShadow(META_FS * 0.5, META_FS * 0.1);
+        const metaStr = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
+        ctx.fillText(metaStr, VW / 2, ty);
+        ty += META_FS + 16 * BASE;
+
+        // ── Description (pre-wrapped) ──
+        ctx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
+        setShadow(DESC_FS * 0.55, DESC_FS * 0.1);
+        descLines.forEach((line) => {
+          ctx.fillText(line, VW / 2, ty);
+          ty += LINE_H;
+        });
+
+        clearShadow();
+      };
+
+      // ── 7. Set up MediaRecorder on the canvas stream ──────────────────────
+      // Capture canvas at the same fps as the source (capped 30fps)
+      const fps = Math.min(srcVideo.playbackRate || 30, 30);
+
+      // Try to also capture audio
+      let combinedStream;
+      try {
+        const audioCtx  = new AudioContext();
+        const srcNode   = audioCtx.createMediaElementSource(srcVideo);
+        const dest      = audioCtx.createMediaStreamDestination();
+        srcNode.connect(dest);
+        srcNode.connect(audioCtx.destination); // so we can hear it while encoding
+        combinedStream = new MediaStream([
+          ...canvas.captureStream(fps).getTracks(),
+          ...dest.stream.getTracks(),
+        ]);
+      } catch {
+        // No audio — video-only fallback
+        combinedStream = canvas.captureStream(fps);
+      }
+
+      // Pick best supported mime type
+      const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+        .find((m) => MediaRecorder.isTypeSupported(m)) || "video/webm";
+
+      const recorder = new MediaRecorder(combinedStream, {
+        mimeType,
+        videoBitsPerSecond: 4_000_000,
+      });
+      const chunks = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+      // ── 8. Frame loop: draw video frame + overlay ─────────────────────────
+      let rafId;
+      const renderFrame = () => {
+        if (srcVideo.paused || srcVideo.ended) return;
+        ctx.drawImage(srcVideo, 0, 0, VW, VH); // raw video frame
+        drawOverlay();                           // burned-in overlay
+        rafId = requestAnimationFrame(renderFrame);
+      };
+
+      // ── 9. Start recording ────────────────────────────────────────────────
+      recorder.start(100); // collect data every 100ms
+      srcVideo.currentTime = 0;
+      await srcVideo.play();
+      renderFrame();
+
+      // Wait for video to finish
+      await new Promise((resolve) => {
+        srcVideo.onended = resolve;
+        // Safety timeout: video duration + 5s
+        setTimeout(resolve, (srcVideo.duration || 60) * 1000 + 5000);
+      });
+
+      cancelAnimationFrame(rafId);
+      recorder.stop();
+
+      // ── 10. Collect blob & trigger download ───────────────────────────────
+      await new Promise((resolve) => { recorder.onstop = resolve; });
+
+      const finalBlob = new Blob(chunks, { type: mimeType });
+      const url  = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
-      link.href     = proxyUrl;
-      link.download = fileName;
-      link.target   = "_blank";
+      const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+      // .webm extension matches the container we produce
+      link.download = `Oweru_${sanitizedTitle}_Branded_Reel_${Date.now()}.webm`;
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+      // Cleanup
+      srcVideo.pause();
+      document.body.removeChild(srcVideo);
+      if (videoBlobUrl.startsWith("blob:")) URL.revokeObjectURL(videoBlobUrl);
+
     } catch (error) {
-      console.error("Video download error:", error);
-      alert("Failed to download video. Please try again.");
+      console.error("Branded reel download error:", error);
+      alert("Failed to generate branded reel. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -1122,7 +1311,7 @@ const HomePostCard = ({ post }) => {
                     {downloading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
-                        Downloading reel...
+                        Encoding branded reel…
                       </>
                     ) : (
                       <>
