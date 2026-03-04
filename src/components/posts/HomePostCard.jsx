@@ -40,7 +40,7 @@ const HomePostCard = ({ post }) => {
   const images = filterValidMedia(post.media, "image");
   const videos = filterValidMedia(post.media, "video");
 
-  // ─── Category styles (matches PostCard exactly) ───────────────────────────
+  // ─── Category styles (unchanged) ───────────────────────────────────────────
   const getCategoryBackground = (category) => {
     switch (category) {
       case "rentals":
@@ -73,35 +73,33 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // Canvas hex equivalents of PostCard Tailwind colors
   const getCategoryHex = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "#C89128"; // bg-[#C89128]
+        return "#C89128";
       case "property_sales":
       case "property_services":
-        return "#D1D5DB"; // bg-gray-300
+        return "#D1D5DB";
       case "construction_property_management":
       case "investment":
-        return "#0F172A"; // bg-slate-900
+        return "#0F172A";
       default:
         return "#0F172A";
     }
   };
 
-  // Text hex equivalents matching getCategoryTextColor
   const getCategoryTextHex = (category) => {
     switch (category) {
       case "rentals":
       case "lands_and_plots":
-        return "#F3F4F6"; // text-gray-100
+        return "#F3F4F6";
       case "property_sales":
       case "property_services":
-        return "#1F2937"; // text-gray-800
+        return "#1F2937";
       case "construction_property_management":
       case "investment":
-        return "#FFFFFF"; // text-white
+        return "#FFFFFF";
       default:
         return "#FFFFFF";
     }
@@ -114,14 +112,10 @@ const HomePostCard = ({ post }) => {
   const getShareText = () =>
     `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
 
-  // ─── Cached image URL function ──────────────────────────────────────────────
+  // ─── Cached image URL ───────────────────────────────────────────────────────
   const getCachedMediaUrl = (media) => {
     const cacheKey = `${media.id}-${media.updated_at || media.created_at}`;
-    
-    if (imageCache.has(cacheKey)) {
-      return imageCache.get(cacheKey);
-    }
-    
+    if (imageCache.has(cacheKey)) return imageCache.get(cacheKey);
     const url = getMediaUrl(media);
     setImageCache(prev => new Map(prev).set(cacheKey, url));
     return url;
@@ -158,16 +152,10 @@ const HomePostCard = ({ post }) => {
 
         const proxyUrl = `${BASE_URL}/api/proxy/media/${relativePath}`;
         try {
-          const response = await fetch(proxyUrl, {
-            mode: "cors",
-            credentials: "omit",
-          });
-          if (!response.ok)
-            throw new Error(`${response.status} ${response.statusText}`);
+          const response = await fetch(proxyUrl, { mode: "cors", credentials: "omit" });
+          if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
           const blob = await response.blob();
-          const fileName = `media_${i}.${
-            media.file_type === "video" ? "mp4" : "jpg"
-          }`;
+          const fileName = `media_${i}.${media.file_type === "video" ? "mp4" : "jpg"}`;
           formData.append(`media[${i}]`, blob, fileName);
           mediaUploaded++;
         } catch (err) {
@@ -175,8 +163,7 @@ const HomePostCard = ({ post }) => {
         }
       }
 
-      if (mediaUploaded === 0)
-        throw new Error("No media files were successfully loaded.");
+      if (mediaUploaded === 0) throw new Error("No media files were successfully loaded.");
 
       const caption = `${post.title}\n\n${post.description}\n\n📍 ${post.category}\n\n#OweruMedia #RealEstate #Property #Tanzania`;
       formData.append("caption", caption);
@@ -209,8 +196,7 @@ const HomePostCard = ({ post }) => {
       console.error("Instagram posting error:", error);
       setInstagramStatus({
         type: "error",
-        message:
-          error.message || "Failed to post to Instagram. Please try again.",
+        message: error.message || "Failed to post to Instagram. Please try again.",
       });
     } finally {
       setPostingToInstagram(false);
@@ -222,10 +208,7 @@ const HomePostCard = ({ post }) => {
     const url = getShareUrl();
     const text = getShareText();
 
-    if (
-      (platform === "native" || platform === "instagram") &&
-      navigator.share
-    ) {
+    if ((platform === "native" || platform === "instagram") && navigator.share) {
       try {
         await navigator.share({ title: post.title, text, url });
         setShowShareMenu(false);
@@ -240,22 +223,13 @@ const HomePostCard = ({ post }) => {
 
     switch (platform) {
       case "whatsapp":
-        window.open(
-          `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
-          "_blank"
-        );
+        window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, "_blank");
         break;
       case "facebook":
-        window.open(
-          `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&e=${encodedText}`,
-          "_blank"
-        );
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&e=${encodedText}`, "_blank");
         break;
       case "twitter":
-        window.open(
-          `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
-          "_blank"
-        );
+        window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, "_blank");
         break;
       case "instagram":
       case "copy":
@@ -339,17 +313,11 @@ const HomePostCard = ({ post }) => {
       }
     });
 
-  /**
-   * Wrap text and return array of line objects. Trims to maxLines if provided.
-   */
   const wrapTextLines = (ctx, text, maxWidth, maxLines = null) => {
     const paragraphs = text.split("\n");
     const lines = [];
     for (const para of paragraphs) {
-      if (para.trim() === "") {
-        lines.push("");
-        continue;
-      }
+      if (para.trim() === "") { lines.push(""); continue; }
       const words = para.split(" ");
       let line = "";
       for (const word of words) {
@@ -365,7 +333,6 @@ const HomePostCard = ({ post }) => {
     }
     if (maxLines && lines.length > maxLines) {
       const trimmed = lines.slice(0, maxLines);
-      // Add ellipsis to last line if truncated
       const last = trimmed[trimmed.length - 1];
       trimmed[trimmed.length - 1] = last.replace(/\s+\S*$/, "") + "…";
       return trimmed;
@@ -373,9 +340,6 @@ const HomePostCard = ({ post }) => {
     return lines;
   };
 
-  /**
-   * Draw a rounded rectangle path.
-   */
   const roundRect = (ctx, x, y, w, h, r) => {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -390,46 +354,30 @@ const HomePostCard = ({ post }) => {
     ctx.closePath();
   };
 
-  // ─── Download: Branded Post Image (matches PostCard layout) ──────────────────
+  // ─── Download: Branded Post Image ────────────────────────────────────────────
   const handleDownloadPostAsImage = async () => {
     setDownloading(true);
     setShowShareMenu(false);
 
     try {
-      // ── Dimensions (mirror PostCard's h-[700px] at 600px wide, @2x) ──
       const SCALE   = 2;
-      const W       = 600 * SCALE;   // card width
-      const H       = 700 * SCALE;   // card total height  (matches h-[700px])
-      const PAD     = 16 * SCALE;    // px-4
-      const PAD_X   = 24 * SCALE;    // px-6 for footer
-      const RADIUS  = 8 * SCALE;     // rounded-lg
+      const W       = 600 * SCALE;
+      const H       = 700 * SCALE;
+      const PAD     = 16 * SCALE;
+      const PAD_X   = 24 * SCALE;
+      const RADIUS  = 8 * SCALE;
 
-      // PostCard layout (non-Reel):
-      //  ┌─────────────────────────┐
-      //  │  Media  h-64 = 256px    │  ← h-64
-      //  ├─────────────────────────┤
-      //  │  Category bg section    │  ← flex-col (title + meta + desc + logo)
-      //  ├─────────────────────────┤
-      //  │  White footer (contacts)│  ← bg-white py-3
-      //  ├─────────────────────────┤
-      //  │  Category accent h-10   │  ← h-10 = 40px
-      //  └─────────────────────────┘
-
-      const MEDIA_H    = 256 * SCALE;  // h-64
-      const ACCENT_H   =  40 * SCALE;  // h-10
-      const FOOTER_H   =  48 * SCALE;  // bg-white footer (~py-3 + one text line)
-      // Everything between media and footer/accent is the content section
+      const MEDIA_H    = 256 * SCALE;
+      const ACCENT_H   =  40 * SCALE;
+      const FOOTER_H   =  48 * SCALE;
       const CONTENT_H  = H - MEDIA_H - FOOTER_H - ACCENT_H;
 
       const isReel     = post.post_type === "Reel" && videos.length > 0;
       const isCarousel = post.post_type === "Carousel" && images.length > 0;
       const primaryMedia = isReel
         ? videos[0]
-        : isCarousel
-          ? images[carouselIndex]
-          : (images[0] ?? null);
+        : isCarousel ? images[carouselIndex] : (images[0] ?? null);
 
-      // ── Load assets ──
       const logoBitmap = await loadImage(oweruLogo).catch(() => null);
 
       let mediaBitmap = null;
@@ -466,13 +414,11 @@ const HomePostCard = ({ post }) => {
         }
       }
 
-      // ── Create canvas ──
       const canvas = document.createElement("canvas");
       canvas.width  = W;
       canvas.height = H;
       const ctx = canvas.getContext("2d");
 
-      // ── 1. Card rounded background (white base) ──
       ctx.fillStyle = "#FFFFFF";
       roundRect(ctx, 0, 0, W, H, RADIUS);
       ctx.fill();
@@ -482,18 +428,16 @@ const HomePostCard = ({ post }) => {
 
       let cursorY = 0;
 
-      // ── 2. Media section (h-64 = MEDIA_H) ──
-      // Background: black (like the wrapping div in PostCard)
+      // ── Media ──
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, cursorY, W, MEDIA_H);
 
       if (mediaBitmap) {
-        // object-cover: fill area, crop center
         const bW = mediaBitmap.naturalWidth  || mediaBitmap.width  || 1;
         const bH = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
         const scaleX = W / bW;
         const scaleY = MEDIA_H / bH;
-        const s = Math.max(scaleX, scaleY); // cover
+        const s = Math.max(scaleX, scaleY);
         const dW = bW * s;
         const dH = bH * s;
         const dX = (W - dW) / 2;
@@ -504,103 +448,109 @@ const HomePostCard = ({ post }) => {
         ctx.clip();
         ctx.drawImage(mediaBitmap, dX, dY, dW, dH);
         ctx.restore();
-      } else {
-        ctx.fillStyle = "#374151";
-        ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("No media available", W / 2, cursorY + MEDIA_H / 2);
       }
 
-      // Reel overlay text on top of media (mimics PostCard Reel content overlay)
+      // Reel overlay on static thumbnail
       if (isReel) {
-        // semi-transparent overlay backdrop
-        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        // Bottom gradient scrim
+        const scrim = ctx.createLinearGradient(0, cursorY, 0, cursorY + MEDIA_H);
+        scrim.addColorStop(0,   "rgba(0,0,0,0)");
+        scrim.addColorStop(0.45,"rgba(0,0,0,0.15)");
+        scrim.addColorStop(1,   "rgba(0,0,0,0.82)");
+        ctx.fillStyle = scrim;
         ctx.fillRect(0, cursorY, W, MEDIA_H);
 
-        // Logo top-left (same as PostCard: bg-white/80 rounded p-1, h-10)
+        // Logo pill — top left
         if (logoBitmap) {
-          const lH = 40 * SCALE;
-          const lW = logoBitmap.naturalWidth
-            ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
-            : lH * 3;
-          const lPad = 4 * SCALE;
-          ctx.fillStyle = "rgba(255,255,255,0.8)";
-          roundRect(ctx, PAD - lPad, cursorY + PAD - lPad, lW + lPad * 2, lH + lPad * 2, 4 * SCALE);
+          const lH = 36 * SCALE;
+          const lW = (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH;
+          const lPad = 6 * SCALE;
+          const lx = PAD, ly = cursorY + PAD;
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          roundRect(ctx, lx - lPad, ly - lPad * 0.6, lW + lPad * 2, lH + lPad * 1.2, 20 * SCALE);
           ctx.fill();
-          ctx.drawImage(logoBitmap, PAD, cursorY + PAD, lW, lH);
+          ctx.drawImage(logoBitmap, lx, ly, lW, lH);
         }
 
-        // Center text overlay (title, meta, description) — matches PostCard Reel overlay
-        const overlayW = Math.min(448 * SCALE, W - PAD * 4);
-        const overlayX = (W - overlayW) / 2;
-        const centerY  = cursorY + MEDIA_H / 2;
-
-        // Title
+        // "REEL" badge — top right
+        const badgeText = "● REEL";
+        const badgeFontSize = 11 * SCALE;
+        ctx.font = `700 ${badgeFontSize}px 'Segoe UI', Arial, sans-serif`;
+        const badgeW = ctx.measureText(badgeText).width + 20 * SCALE;
+        const badgeH = badgeFontSize + 14 * SCALE;
+        const bx = W - PAD - badgeW, by = cursorY + PAD;
+        ctx.fillStyle = "rgba(220,38,38,0.9)";
+        roundRect(ctx, bx, by, badgeW, badgeH, badgeH / 2);
+        ctx.fill();
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = `700 ${18 * SCALE}px 'Segoe UI', Arial, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        ctx.fillText(badgeText, bx + badgeW / 2, by + badgeH / 2);
+
+        // Title — large, bottom of media area
+        const titleFontSize = 22 * SCALE;
+        ctx.font = `800 ${titleFontSize}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
         ctx.shadowColor = "rgba(0,0,0,0.9)";
-        ctx.shadowBlur  = 10 * SCALE;
-        ctx.shadowOffsetX = 2 * SCALE;
-        ctx.shadowOffsetY = 2 * SCALE;
-        ctx.fillText(post.title || "", W / 2, centerY - 40 * SCALE);
-
-        // Meta
-        ctx.font = `600 ${11 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.shadowBlur = 6 * SCALE;
-        const metaText = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
-        ctx.fillText(metaText, W / 2, centerY - 14 * SCALE);
-
-        // Description (wrapped, up to 4 lines)
-        ctx.font = `500 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.shadowBlur = 8 * SCALE;
-        const descLines = wrapTextLines(ctx, post.description || "", overlayW, 4);
-        const descLineH = 18 * SCALE;
-        descLines.forEach((line, i) => {
-          ctx.fillText(line, W / 2, centerY + 10 * SCALE + i * descLineH);
-        });
-        ctx.shadowColor = "transparent";
-        ctx.shadowBlur  = 0;
+        ctx.shadowBlur  = 14 * SCALE;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        ctx.shadowOffsetY = 3 * SCALE;
+        const titleLines = wrapTextLines(ctx, post.title || "", W - PAD * 4, 2);
+        const titleLineH = titleFontSize * 1.25;
+        const titleBottomY = cursorY + MEDIA_H - 36 * SCALE;
+        titleLines.slice().reverse().forEach((line, i) => {
+          ctx.fillText(line, W / 2, titleBottomY - i * titleLineH);
+        });
+
+        // Meta chip just above title block
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+        const metaFontSize = 10 * SCALE;
+        ctx.font = `600 ${metaFontSize}px 'Segoe UI', Arial, sans-serif`;
+        const metaStr = `${post.category.replace(/_/g, " ").toUpperCase()}  •  ${new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+        const metaW = ctx.measureText(metaStr).width + 24 * SCALE;
+        const metaH = metaFontSize + 12 * SCALE;
+        const metaX = (W - metaW) / 2;
+        const metaY = titleBottomY - titleLines.length * titleLineH - metaH - 10 * SCALE;
+        ctx.fillStyle = `${categoryHex}CC`; // category color at ~80% opacity
+        roundRect(ctx, metaX, metaY, metaW, metaH, metaH / 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(metaStr, W / 2, metaY + metaH / 2);
       }
 
       cursorY += MEDIA_H;
 
-      // ── 3. Content section (category background) ──
+      // ── Content section ──
       ctx.fillStyle = categoryHex;
       ctx.fillRect(0, cursorY, W, CONTENT_H);
 
       const contentStartY = cursorY;
-
-      // px-4 pt-4 pb-3  →  title block
       const titleAreaTop = contentStartY + PAD;
 
-      // Title pill: bg-gray-100 rounded-lg p-2 text-gray-900 font-semibold
-      // Matches: <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg">
-      const TITLE_PAD_X  = 8  * SCALE;  // p-2
+      const TITLE_PAD_X  = 8  * SCALE;
       const TITLE_PAD_Y  = 8  * SCALE;
-      const TITLE_FONT_SIZE = 18 * SCALE; // text-lg
+      const TITLE_FONT_SIZE = 18 * SCALE;
       ctx.font = `600 ${TITLE_FONT_SIZE}px 'Segoe UI', Arial, sans-serif`;
 
       const titleText  = post.title || "Untitled Post";
       const titleW     = Math.min(ctx.measureText(titleText).width + TITLE_PAD_X * 2, W - PAD * 2);
       const titleH     = TITLE_FONT_SIZE + TITLE_PAD_Y * 2;
 
-      // bg-gray-100 pill
       ctx.fillStyle = "#F3F4F6";
       roundRect(ctx, PAD, titleAreaTop, titleW, titleH, 8 * SCALE);
       ctx.fill();
 
-      // title text
-      ctx.fillStyle    = "#111827"; // text-gray-900
+      ctx.fillStyle    = "#111827";
       ctx.textAlign    = "left";
       ctx.textBaseline = "top";
+      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
       ctx.fillText(titleText, PAD + TITLE_PAD_X, titleAreaTop + TITLE_PAD_Y);
 
-      // Meta line: text-xs text-category  (pt-2 below title)
       const metaTop = titleAreaTop + titleH + 8 * SCALE;
       ctx.fillStyle = categoryTextHex;
       ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
@@ -608,10 +558,8 @@ const HomePostCard = ({ post }) => {
       const metaStr = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
       ctx.fillText(metaStr, PAD, metaTop);
 
-      // ── Description block: px-4 py-4 h-32 ──
-      // h-32 = 128px
       const DESC_AREA_H = 128 * SCALE;
-      const descTop = metaTop + 12 * SCALE + PAD; // meta height + py-4
+      const descTop = metaTop + 12 * SCALE + PAD;
       ctx.fillStyle    = categoryTextHex;
       ctx.font         = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
       ctx.textBaseline = "top";
@@ -624,30 +572,26 @@ const HomePostCard = ({ post }) => {
         ctx.fillText(line, PAD, descTop + i * descLineH);
       });
 
-      // ── Logo: px-4 pb-3 flex justify-end — h-12 = 48px ──
       const logoAreaTop = descTop + DESC_AREA_H;
       if (logoBitmap) {
-        const lH = 48 * SCALE; // h-12
+        const lH = 48 * SCALE;
         const lW = logoBitmap.naturalWidth
           ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
           : lH * 3;
-        // justify-end → right-align inside PAD
         ctx.drawImage(logoBitmap, W - PAD - lW, logoAreaTop, lW, lH);
       }
 
       cursorY = contentStartY + CONTENT_H;
 
-      // ── 4. White contact footer (bg-white px-6 py-3) ──
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, cursorY, W, FOOTER_H);
 
-      ctx.fillStyle    = "#030712"; // text-gray-950
+      ctx.fillStyle    = "#030712";
       ctx.font         = `400 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
       ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
       const footerMidY = cursorY + FOOTER_H / 2;
 
-      // Three contact items spaced evenly (whitespace-nowrap)
       const contacts = ["info@oweru.com", "+255 711 890 764", "www.oweru.com"];
       const colW = W / 3;
       contacts.forEach((c, i) => {
@@ -656,13 +600,11 @@ const HomePostCard = ({ post }) => {
 
       cursorY += FOOTER_H;
 
-      // ── 5. Bottom accent strip (category bg, h-10) ──
       ctx.fillStyle = categoryHex;
       ctx.fillRect(0, cursorY, W, ACCENT_H);
 
-      ctx.restore(); // end rounded clip
+      ctx.restore();
 
-      // ── Export ──
       canvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -690,7 +632,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: html2canvas screenshot of the live card ───────────────────────
+  // ─── Download: html2canvas screenshot ────────────────────────────────────────
   const handleDownloadAsImage = async () => {
     if (!cardRef.current) return;
     setDownloading(true);
@@ -698,8 +640,7 @@ const HomePostCard = ({ post }) => {
     try {
       const shareBtn = cardRef.current.querySelector(".share-button-container");
       if (shareBtn) shareBtn.style.display = "none";
-      if (videoRef.current && !videoRef.current.paused)
-        videoRef.current.pause();
+      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
 
       const canvas = await html2canvas(cardRef.current, {
         useCORS: true,
@@ -752,12 +693,9 @@ const HomePostCard = ({ post }) => {
 
       for (let i = 0; i < mediaToDownload.length; i++) {
         const media = mediaToDownload[i];
-        const ext =
-          media.file_type === "video"
-            ? "mp4"
-            : getMediaUrl(media).endsWith(".png")
-            ? "png"
-            : "jpg";
+        const ext = media.file_type === "video"
+          ? "mp4"
+          : getMediaUrl(media).endsWith(".png") ? "png" : "jpg";
         const sanitizedTitle = post.title.replace(/[^a-z0-9]/gi, "_").substring(0, 30);
         const fileName = `Oweru_${sanitizedTitle}_${i + 1}_${Date.now()}.${ext}`;
 
@@ -792,7 +730,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  
+  // ─── Download: Branded Reel Video ────────────────────────────────────────────
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -804,7 +742,7 @@ const HomePostCard = ({ post }) => {
     }
 
     try {
-      // ── 1. Fetch video blob (proxy for CORS) ──────────────────────────────
+      // Fetch video blob
       let videoBlobUrl;
       try {
         const dataUrl = await fetchMediaAsDataUrl(videos[0]);
@@ -812,11 +750,10 @@ const HomePostCard = ({ post }) => {
         const blob    = await res.blob();
         videoBlobUrl  = URL.createObjectURL(blob);
       } catch {
-        // Fallback: try the direct URL (works if CORS allows it)
         videoBlobUrl = getMediaUrl(videos[0]);
       }
 
-      // ── 2. Create hidden video element & load ─────────────────────────────
+      // Hidden video element
       const srcVideo = document.createElement("video");
       srcVideo.src         = videoBlobUrl;
       srcVideo.muted       = false;
@@ -834,132 +771,165 @@ const HomePostCard = ({ post }) => {
       const VW = srcVideo.videoWidth  || 1080;
       const VH = srcVideo.videoHeight || 1920;
 
-      // ── 3. Load logo bitmap ───────────────────────────────────────────────
       const logoBitmap = await loadImage(oweruLogo).catch(() => null);
 
-      // ── 4. Pre-compute overlay layout (relative to VW/VH) ─────────────────
-      // Mirror PostCard Reel overlay exactly:
-      //   • Logo: top-left, bg-white/80 rounded, h-10 (~VH*0.052)
-      //   • Semi-dark scrim in center area
-      //   • Title:       text-lg font-bold   center
-      //   • Meta:        text-xs font-medium center
-      //   • Description: text-sm font-medium center (wrapped)
+      // ── Layout constants (proportional to video dimensions) ──
+      const PAD_V   = VW * 0.04;
+      const BASE    = VW / 390;
 
-      const PAD      = VW * 0.035;          // ~px-4 equivalent
-      const LOGO_H   = VH * 0.052;          // h-10 equivalent
-      const LOGO_W   = logoBitmap
+      // Logo
+      const LOGO_H  = VH * 0.048;
+      const LOGO_W  = logoBitmap
         ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * LOGO_H
         : LOGO_H * 3;
-      const LOGO_PAD = VW * 0.01;
+      const LOGO_PAD = VW * 0.012;
 
-      // Font sizes proportional to video width (design target: 390px wide screen)
-      const BASE = VW / 390;
-      const TITLE_FS = Math.round(18 * BASE);
-      const META_FS  = Math.round(11 * BASE);
-      const DESC_FS  = Math.round(13 * BASE);
-      const LINE_H   = DESC_FS * 1.6;
-      const OVERLAY_W = Math.min(VW * 0.85, 448 * BASE);
+      // Fonts
+      const TITLE_FS   = Math.round(24 * BASE);
+      const META_FS    = Math.round(11 * BASE);
+      const DESC_FS    = Math.round(14 * BASE);
+      const LINE_H     = DESC_FS * 1.65;
+      const OVERLAY_W  = Math.min(VW * 0.82, 420 * BASE);
 
-      // Pre-wrap description lines
+      // Pre-wrap description
       const offCtx = document.createElement("canvas").getContext("2d");
       offCtx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
-      const descLines = wrapTextLines(offCtx, post.description || "", OVERLAY_W, 5);
+      const descLines = wrapTextLines(offCtx, post.description || "", OVERLAY_W, 4);
 
-      // Total overlay text height: title + gap + meta + gap + desc lines
-      const overlayTextH = TITLE_FS + 12 * BASE + META_FS + 16 * BASE + descLines.length * LINE_H;
-      // Vertical centre of overlay block
-      const overlayCenterY = VH / 2;
-      const overlayTopY    = overlayCenterY - overlayTextH / 2;
+      // Bottom block heights
+      const BLOCK_PAD     = 20 * BASE;
+      const TITLE_LINE_H  = TITLE_FS * 1.25;
+      const titleLines    = wrapTextLines(offCtx, post.title || "", OVERLAY_W, 2);
 
-      // ── 5. Offscreen canvas ───────────────────────────────────────────────
+      // Heights of each block
+      const metaBadgeH    = META_FS + 14 * BASE;
+      const titleBlockH   = titleLines.length * TITLE_LINE_H;
+      const descBoxPadY   = 14 * BASE;
+      const descBoxPadX   = 18 * BASE;
+      const descBoxH      = descLines.length * LINE_H + descBoxPadY * 2;
+      const totalH = metaBadgeH + BLOCK_PAD * 0.5 + titleBlockH + BLOCK_PAD + descBoxH;
+      const blockBottomY  = VH - PAD_V * 2; // bottom margin
+      const blockTopY     = blockBottomY - totalH;
+
+      // Offscreen canvas
       const canvas = document.createElement("canvas");
       canvas.width  = VW;
       canvas.height = VH;
       const ctx = canvas.getContext("2d");
 
-      // ── 6. Overlay draw helper (called every frame) ───────────────────────
+      // ── Overlay draw (every frame) ──────────────────────────────────────────
       const drawOverlay = () => {
-        // Category background across full frame
-        ctx.fillStyle = categoryHex;
+        // Bottom gradient scrim — tall, cinematic
+        const scrim = ctx.createLinearGradient(0, VH * 0.3, 0, VH);
+        scrim.addColorStop(0,    "rgba(0,0,0,0)");
+        scrim.addColorStop(0.35, "rgba(0,0,0,0.18)");
+        scrim.addColorStop(0.7,  "rgba(0,0,0,0.6)");
+        scrim.addColorStop(1,    "rgba(0,0,0,0.88)");
+        ctx.fillStyle = scrim;
         ctx.fillRect(0, 0, VW, VH);
 
-        // ── Logo (top-left, white pill background) ──
+        // ── Logo pill — top left ──
         if (logoBitmap) {
-          const lx = PAD;
-          const ly = PAD;
-          const lPad = VW * 0.008;
-          ctx.fillStyle = "rgba(255,255,255,0.85)";
-          roundRect(ctx, lx - lPad, ly - lPad, LOGO_W + lPad * 2, LOGO_H + lPad * 2, VW * 0.012);
+          const lx = PAD_V, ly = PAD_V;
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          roundRect(ctx, lx - LOGO_PAD, ly - LOGO_PAD * 0.6,
+            LOGO_W + LOGO_PAD * 2, LOGO_H + LOGO_PAD * 1.2, 24 * BASE);
           ctx.fill();
           ctx.drawImage(logoBitmap, lx, ly, LOGO_W, LOGO_H);
         }
 
-        // ── Text shadow helper ──
-        const setShadow = (blur, offset) => {
-          ctx.shadowColor   = "rgba(0,0,0,0.92)";
-          ctx.shadowBlur    = blur;
-          ctx.shadowOffsetX = offset;
-          ctx.shadowOffsetY = offset;
-        };
-        const clearShadow = () => {
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur  = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        };
+        // ── REEL badge — top right ──
+        const badgeFS = Math.round(10 * BASE);
+        ctx.font = `700 ${badgeFS}px 'Segoe UI', Arial, sans-serif`;
+        const badgeLabel = "● REEL";
+        const badgeW = ctx.measureText(badgeLabel).width + 20 * BASE;
+        const badgeH = badgeFS + 14 * BASE;
+        const bx = VW - PAD_V - badgeW;
+        const by = PAD_V;
+        ctx.fillStyle = "rgba(220,38,38,0.88)";
+        roundRect(ctx, bx, by, badgeW, badgeH, badgeH / 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(badgeLabel, bx + badgeW / 2, by + badgeH / 2);
 
-        ctx.textAlign    = "center";
-        ctx.fillStyle    = "#FFFFFF";
-
-        let ty = overlayTopY;
-
-        // ── Title ──
-        ctx.font = `700 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textBaseline = "top";
-        setShadow(TITLE_FS * 0.5, TITLE_FS * 0.1);
-        ctx.fillText(post.title || "", VW / 2, ty);
-        ty += TITLE_FS + 12 * BASE;
-
-        // ── Meta ──
+        // ── Meta badge ──
+        let curY = blockTopY;
+        const metaStr = `${post.category.replace(/_/g, " ").toUpperCase()}  •  ${new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
         ctx.font = `600 ${META_FS}px 'Segoe UI', Arial, sans-serif`;
-        setShadow(META_FS * 0.5, META_FS * 0.1);
-        const metaStr = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
-        ctx.fillText(metaStr, VW / 2, ty);
-        ty += META_FS + 16 * BASE;
+        const metaBW = ctx.measureText(metaStr).width + 24 * BASE;
+        const metaBH = META_FS + 14 * BASE;
+        const metaBX = (VW - metaBW) / 2;
+        ctx.fillStyle = `${categoryHex}DD`;
+        roundRect(ctx, metaBX, curY, metaBW, metaBH, metaBH / 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+        ctx.fillText(metaStr, VW / 2, curY + metaBH / 2);
 
-        // ── Description (pre-wrapped) ──
-        ctx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
-        setShadow(DESC_FS * 0.55, DESC_FS * 0.1);
-        descLines.forEach((line) => {
-          ctx.fillText(line, VW / 2, ty);
-          ty += LINE_H;
+        curY += metaBH + BLOCK_PAD * 0.5;
+
+        // ── Title lines ──
+        ctx.font = `800 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.shadowColor   = "rgba(0,0,0,0.85)";
+        ctx.shadowBlur    = TITLE_FS * 0.5;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = TITLE_FS * 0.06;
+        titleLines.forEach((line, i) => {
+          ctx.fillText(line, VW / 2, curY + i * TITLE_LINE_H);
+        });
+        curY += titleLines.length * TITLE_LINE_H + BLOCK_PAD;
+
+        // ── Description frosted card ──
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+        const descBoxX = (VW - OVERLAY_W) / 2 - descBoxPadX;
+        const descBoxW = OVERLAY_W + descBoxPadX * 2;
+        ctx.fillStyle = "rgba(0,0,0,0.42)";
+        roundRect(ctx, descBoxX, curY, descBoxW, descBoxH, 12 * BASE);
+        ctx.fill();
+
+        // frosted border
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth   = 1.5 * BASE;
+        roundRect(ctx, descBoxX, curY, descBoxW, descBoxH, 12 * BASE);
+        ctx.stroke();
+
+        ctx.font = `400 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.shadowColor   = "rgba(0,0,0,0.6)";
+        ctx.shadowBlur    = 6 * BASE;
+        descLines.forEach((line, i) => {
+          ctx.fillText(line, VW / 2, curY + descBoxPadY + i * LINE_H);
         });
 
-        clearShadow();
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
       };
 
-      // ── 7. Set up MediaRecorder on the canvas stream ──────────────────────
-      // Capture canvas at the same fps as the source (capped 30fps)
+      // Set up MediaRecorder
       const fps = Math.min(srcVideo.playbackRate || 30, 30);
-
-      // Try to also capture audio
       let combinedStream;
       try {
         const audioCtx  = new AudioContext();
         const srcNode   = audioCtx.createMediaElementSource(srcVideo);
         const dest      = audioCtx.createMediaStreamDestination();
         srcNode.connect(dest);
-        srcNode.connect(audioCtx.destination); // so we can hear it while encoding
+        srcNode.connect(audioCtx.destination);
         combinedStream = new MediaStream([
           ...canvas.captureStream(fps).getTracks(),
           ...dest.stream.getTracks(),
         ]);
       } catch {
-        // No audio — video-only fallback
         combinedStream = canvas.captureStream(fps);
       }
 
-      // Pick best supported mime type
       const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
         .find((m) => MediaRecorder.isTypeSupported(m)) || "video/webm";
 
@@ -970,39 +940,33 @@ const HomePostCard = ({ post }) => {
       const chunks = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-      // ── 8. Frame loop: draw video frame + overlay ─────────────────────────
       let rafId;
       const renderFrame = () => {
         if (srcVideo.paused || srcVideo.ended) return;
-        ctx.drawImage(srcVideo, 0, 0, VW, VH); // raw video frame
-        drawOverlay();                           // burned-in overlay
+        ctx.drawImage(srcVideo, 0, 0, VW, VH);
+        drawOverlay();
         rafId = requestAnimationFrame(renderFrame);
       };
 
-      // ── 9. Start recording ────────────────────────────────────────────────
-      recorder.start(100); // collect data every 100ms
+      recorder.start(100);
       srcVideo.currentTime = 0;
       await srcVideo.play();
       renderFrame();
 
-      // Wait for video to finish
       await new Promise((resolve) => {
         srcVideo.onended = resolve;
-        // Safety timeout: video duration + 5s
         setTimeout(resolve, (srcVideo.duration || 60) * 1000 + 5000);
       });
 
       cancelAnimationFrame(rafId);
       recorder.stop();
 
-      // ── 10. Collect blob & trigger download ───────────────────────────────
       await new Promise((resolve) => { recorder.onstop = resolve; });
 
       const finalBlob = new Blob(chunks, { type: mimeType });
       const url  = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
       const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
-      // .webm extension matches the container we produce
       link.download = `Oweru_${sanitizedTitle}_Branded_Reel_${Date.now()}.webm`;
       link.href = url;
       document.body.appendChild(link);
@@ -1010,7 +974,6 @@ const HomePostCard = ({ post }) => {
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
-      // Cleanup
       srcVideo.pause();
       document.body.removeChild(srcVideo);
       if (videoBlobUrl.startsWith("blob:")) URL.revokeObjectURL(videoBlobUrl);
@@ -1057,13 +1020,13 @@ const HomePostCard = ({ post }) => {
         </div>
       )}
 
-      {/* Card — matches PostCard structure exactly */}
+      {/* Card */}
       <div
         ref={cardRef}
         className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}
       >
         {/* ── Media Section ── */}
-        <div className={`w-full h-64 flex-shrink-0`}>
+        <div className="w-full h-64 flex-shrink-0">
 
           {/* Static */}
           {post.post_type === "Static" && (
@@ -1101,15 +1064,11 @@ const HomePostCard = ({ post }) => {
                       <button
                         onClick={() => setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)}
                         className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                      >
-                        ‹
-                      </button>
+                      >‹</button>
                       <button
                         onClick={() => setCarouselIndex((prev) => (prev + 1) % images.length)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                      >
-                        ›
-                      </button>
+                      >›</button>
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                         {carouselIndex + 1} / {images.length}
                       </div>
@@ -1143,7 +1102,7 @@ const HomePostCard = ({ post }) => {
             )
           )}
 
-          {/* Reel */}
+          {/* ── REEL — polished cinematic overlay ── */}
           {post.post_type === "Reel" && (
             videos.length > 0 ? (
               <div className={`relative w-full h-full ${getCategoryBackground(post.category)}`}>
@@ -1172,48 +1131,71 @@ const HomePostCard = ({ post }) => {
                   <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border border-red-200 text-sm z-20">
                     <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
                     <p className="text-red-600 text-xs mb-2 break-all">URL: {getMediaUrl(videos[0])}</p>
-                    <a
-                      href={getMediaUrl(videos[0])}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline text-xs"
-                    >
+                    <a href={getMediaUrl(videos[0])} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">
                       Open video directly
                     </a>
                   </div>
                 )}
 
-                {/* Logo top-left */}
-                <div className="absolute top-2 left-2 z-10">
-                  <img
-                    src={oweruLogo}
-                    alt="Oweru logo"
-                    className="h-10 w-auto shadow-lg bg-white bg-opacity-80 rounded p-1"
-                  />
+                {/* Bottom gradient scrim */}
+                <div
+                  className="absolute inset-0 pointer-events-none z-[5]"
+                  style={{
+                    background: "linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.72) 100%)",
+                  }}
+                />
+
+                {/* Logo — top left, white pill */}
+                <div className="absolute top-3 left-3 z-10 flex items-center">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-lg flex items-center">
+                    <img
+                      src={oweruLogo}
+                      alt="Oweru logo"
+                      className="h-7 w-auto"
+                    />
+                  </div>
                 </div>
 
-                {/* Content overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
-                  <div
-                    className="rounded-lg p-4 max-w-md w-full pointer-events-auto backdrop-blur-sm"
-                    style={{ textShadow: '2px 2px 4px rgba(146,131,131,0.8), -1px -1px 2px rgba(0,0,0,0.8)' }}
+                {/* REEL badge — top right */}
+                <div className="absolute top-3 right-3 z-10">
+                  <span className="inline-flex items-center gap-1.5 bg-red-600/90 backdrop-blur-sm text-white text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
+                    REEL
+                  </span>
+                </div>
+
+                {/* Bottom content block — title, meta badge, description */}
+                <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-4 pointer-events-none">
+                  {/* Meta chip */}
+                  <div className="flex justify-center mb-2">
+                    <span
+                      className="inline-block text-white text-[10px] font-semibold tracking-widest uppercase px-3 py-1 rounded-full"
+                      style={{ backgroundColor: `${categoryHex}CC` }}
+                    >
+                      {post.category.replace(/_/g, " ")} &nbsp;•&nbsp; {new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h3
+                    className="text-white text-xl font-extrabold text-center leading-tight mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]"
+                    style={{ WebkitTextStroke: "0.3px rgba(0,0,0,0.4)" }}
                   >
-                    <h3
-                      className="text-lg font-bold text-white mb-2 text-center"
-                      style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)', WebkitTextStroke: '0.5px rgba(0,0,0,0.5)' }}
-                    >
-                      {post.title}
-                    </h3>
-                    <p
-                      className="text-xs font-medium text-white mb-3 text-center"
-                      style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)', WebkitTextStroke: '0.3px rgba(0,0,0,0.4)' }}
-                    >
-                      {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
-                    </p>
-                    <p
-                      className="text-white text-sm text-center whitespace-pre-wrap leading-relaxed font-medium"
-                      style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)', WebkitTextStroke: '0.4px rgba(0,0,0,0.5)' }}
-                    >
+                    {post.title}
+                  </h3>
+
+                  {/* Description — frosted card */}
+                  <div
+                    className="rounded-xl px-4 py-3 text-white/90 text-xs text-center leading-relaxed"
+                    style={{
+                      background: "rgba(0,0,0,0.42)",
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    <p className="line-clamp-3 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
                       {post.description}
                     </p>
                   </div>
@@ -1227,7 +1209,7 @@ const HomePostCard = ({ post }) => {
           )}
         </div>
 
-        {/* ── Content Section (hidden for Reel) — matches PostCard exactly ── */}
+        {/* ── Content Section (hidden for Reel) ── */}
         {post.post_type !== "Reel" && (
           <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
             <div className="px-4 pt-4 pb-3">
@@ -1249,39 +1231,30 @@ const HomePostCard = ({ post }) => {
               </p>
             </div>
 
-            {/* Logo */}
             <div className="px-4 pb-3 flex justify-end items-center">
               <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg" />
             </div>
           </div>
         )}
 
-        {/* ── Contact footer — matches PostCard exactly ── */}
+        {/* ── Contact footer ── */}
         <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
-            <div className="text-center text-gray-800">
-              <div className="text-sm whitespace-nowrap">
-                <span className="inline-block">
-                  <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
-                    info@oweru.com
-                  </a>
-                </span>{" "}
-                &nbsp;
-                <span className="inline-block">
-                  <a href="tel:+255711890764" className="text-gray-950 hover:underline">
-                    +255 711 890 764
-                  </a>
-                </span>{" "}
-                &nbsp;
-                <span className="inline-block">
-                  <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="text-gray-950 hover:underline">
-                    www.oweru.com
-                  </a>
-                </span>
-              </div>
+          <div className="text-center text-gray-800">
+            <div className="text-sm whitespace-nowrap">
+              <span className="inline-block">
+                <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">info@oweru.com</a>
+              </span>{" "}&nbsp;
+              <span className="inline-block">
+                <a href="tel:+255711890764" className="text-gray-950 hover:underline">+255 711 890 764</a>
+              </span>{" "}&nbsp;
+              <span className="inline-block">
+                <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="text-gray-950 hover:underline">www.oweru.com</a>
+              </span>
             </div>
           </div>
+        </div>
 
-        {/* ── Bottom accent strip — matches PostCard exactly ── */}
+        {/* ── Bottom accent strip ── */}
         <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`} />
 
         {/* ── Share button ── */}
