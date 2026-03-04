@@ -1227,8 +1227,9 @@ const HomePostCard = ({ post }) => {
           )}
         </div>
 
-        {/* ── Content Section — matches PostCard exactly ── */}
-        <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
+        {/* ── Content Section (hidden for Reel) — matches PostCard exactly ── */}
+        {post.post_type !== "Reel" && (
+          <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
             <div className="px-4 pt-4 pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -1253,6 +1254,7 @@ const HomePostCard = ({ post }) => {
               <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg" />
             </div>
           </div>
+        )}
 
         {/* ── Contact footer — matches PostCard exactly ── */}
         <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
