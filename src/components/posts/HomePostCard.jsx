@@ -329,17 +329,17 @@ const HomePostCard = ({ post }) => {
       document.body.appendChild(vid);
       await new Promise((res,rej) => { vid.onloadedmetadata=res; vid.onerror=rej; vid.load(); });
 
-      const duration   = vid.duration;
-      const FPS        = 30;
-      const INTERVAL   = 1 / FPS;
+      const duration    = vid.duration;
+      const FPS         = 30;
+      const INTERVAL    = 1 / FPS;
       const totalFrames = Math.ceil(duration * FPS);
       const VW = vid.videoWidth  || 1080;
       const VH = vid.videoHeight || 1920;
 
       // 3. Prepare overlay assets & layout
-      const logo   = await loadImage(oweruLogo).catch(() => null);
-      const BASE   = VW / 390;
-      const PAD_V  = VW * 0.045;
+      const logo  = await loadImage(oweruLogo).catch(() => null);
+      const BASE  = VW / 390;
+      const PAD_V = VW * 0.045;
 
       const LOGO_H = VH * 0.05;
       const LOGO_W = logo ? (logo.naturalWidth / logo.naturalHeight) * LOGO_H : LOGO_H * 3;
@@ -356,21 +356,101 @@ const HomePostCard = ({ post }) => {
       offCtx.font  = `400 ${DESC_FS}px Georgia,serif`;
       const descLines  = wrapTextLines(offCtx, post.description || "", OW, 4);
 
-      const TITLE_LH  = TITLE_FS * 1.3;
-      const META_H    = META_FS + 12 * BASE;
-      const DESC_H    = descLines.length * DESC_LH + 28 * BASE;
-      const TITLE_H   = titleLines.length * TITLE_LH;
-      const GAP       = 16 * BASE;
+      const TITLE_LH = TITLE_FS * 1.3;
+      const META_H   = META_FS + 12 * BASE;
+      const DESC_H   = descLines.length * DESC_LH + 28 * BASE;
+      const TITLE_H  = titleLines.length * TITLE_LH;
+      const GAP      = 16 * BASE;
+
+      // ── Bottom branded section dimensions (mirrors the card UI) ──
+      // category bg section: title pill + meta + description rows + logo
+      const CONT_PAD    = Math.round(20 * BASE);          // px-4 equivalent
+      const TITLE_PIL_H = Math.round(18 * BASE) + 14 * BASE; // title pill height
+      const META_ROW_H  = Math.round(11 * BASE) + 8 * BASE;
+      const DESC_ROWS   = wrapTextLines(offCtx, post.description || "", VW - CONT_PAD * 2, 6);
+      offCtx.font       = `400 ${Math.round(13 * BASE)}px Georgia,serif`;
+      const DESC_ROW_H  = Math.round(13 * BASE) * 1.6;
+      const LOGO_SEC_H  = Math.round(48 * BASE) + CONT_PAD; // h-12 logo + padding
+      const CONTENT_H   = CONT_PAD + TITLE_PIL_H + META_ROW_H + CONT_PAD
+                        + DESC_ROWS.length * DESC_ROW_H + CONT_PAD
+                        + LOGO_SEC_H;
+      const FOOTER_H    = Math.round(52 * BASE);           // white contact bar
+      const ACCENT_H    = Math.round(40 * BASE);           // h-10 accent strip
+
+      // Total canvas height = video + branded bottom
+      const BRANDED_H = Math.round(CONTENT_H + FOOTER_H + ACCENT_H);
+      const CH        = VH + BRANDED_H;                   // full canvas height
+
+      // Overlay content block positions (video area only)
       const BLOCK_BOT = VH - PAD_V * 2.5;
       const BLOCK_TOP = BLOCK_BOT - (META_H + GAP * 0.5 + TITLE_H + GAP + DESC_H);
 
-      // 4. Capture canvas + draw overlay function
+      // 4. Canvas spans full branded height
       const canvas = document.createElement("canvas");
-      canvas.width = VW; canvas.height = VH;
+      canvas.width  = VW;
+      canvas.height = CH;
       const ctx = canvas.getContext("2d");
 
+      // ── Pre-draw the static branded bottom section (drawn once, reused every frame) ──
+      const drawBrandedBottom = () => {
+        let cy = VH;
+
+        // ── Category content section ──
+        ctx.fillStyle = categoryHex;
+        ctx.fillRect(0, cy, VW, CONTENT_H);
+
+        const TITLE_FS2 = Math.round(18 * BASE);
+        ctx.font = `600 ${TITLE_FS2}px Georgia,serif`;
+        const tTxt = post.title || "Untitled";
+        const tW   = Math.min(ctx.measureText(tTxt).width + 14 * BASE, VW - CONT_PAD * 2);
+        const tH   = TITLE_FS2 + 14 * BASE;
+        ctx.fillStyle = "#F9FAFB";
+        roundRect(ctx, CONT_PAD, cy + CONT_PAD, tW, tH, 6 * BASE); ctx.fill();
+        ctx.fillStyle = "#111827"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+        ctx.fillText(tTxt, CONT_PAD + 7 * BASE, cy + CONT_PAD + tH / 2);
+
+        const mY = cy + CONT_PAD + tH + 7 * BASE;
+        ctx.fillStyle = categoryTextHex;
+        ctx.font = `400 ${Math.round(10 * BASE)}px Georgia,serif`;
+        ctx.textBaseline = "top";
+        ctx.fillText(
+          `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`,
+          CONT_PAD, mY
+        );
+
+        const dY = mY + Math.round(10 * BASE) + CONT_PAD;
+        ctx.font = `400 ${Math.round(13 * BASE)}px Georgia,serif`;
+        ctx.fillStyle = categoryTextHex;
+        DESC_ROWS.forEach((l, i) => ctx.fillText(l, CONT_PAD, dY + i * DESC_ROW_H));
+
+        // Logo — bottom right of content section
+        if (logo) {
+          const lH = Math.round(44 * BASE);
+          const lW = (logo.naturalWidth / logo.naturalHeight) * lH;
+          ctx.drawImage(logo, VW - CONT_PAD - lW, cy + CONTENT_H - CONT_PAD - lH, lW, lH);
+        }
+        cy += CONTENT_H;
+
+        // ── White contact footer ──
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, cy, VW, FOOTER_H);
+        ctx.fillStyle = "#030712";
+        ctx.font = `400 ${Math.round(12 * BASE)}px Georgia,serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const fMid = cy + FOOTER_H / 2, colW = VW / 3;
+        ["info@oweru.com", "+255 711 890 764", "www.oweru.com"].forEach((t, i) =>
+          ctx.fillText(t, colW * i + colW / 2, fMid)
+        );
+        cy += FOOTER_H;
+
+        // ── Category accent strip ──
+        ctx.fillStyle = categoryHex;
+        ctx.fillRect(0, cy, VW, ACCENT_H);
+      };
+
       const drawOverlay = () => {
-        // Cinematic scrim
+        // Cinematic scrim (video area only)
         const scrim = ctx.createLinearGradient(0, VH * 0.2, 0, VH);
         scrim.addColorStop(0,    "rgba(0,0,0,0)");
         scrim.addColorStop(0.3,  "rgba(0,0,0,0.1)");
@@ -378,7 +458,7 @@ const HomePostCard = ({ post }) => {
         scrim.addColorStop(1,    "rgba(0,0,0,0.92)");
         ctx.fillStyle = scrim; ctx.fillRect(0, 0, VW, VH);
 
-        // Logo pill
+        // Logo pill — top left
         if (logo) {
           const LP = VW * 0.014;
           ctx.fillStyle = "rgba(255,255,255,0.95)";
@@ -386,14 +466,14 @@ const HomePostCard = ({ post }) => {
           ctx.drawImage(logo, PAD_V, PAD_V, LOGO_W, LOGO_H);
         }
 
-        // REEL badge
+        // REEL badge — top right
         const BFS = Math.round(9*BASE); ctx.font = `700 ${BFS}px Georgia,serif`;
         const BW = ctx.measureText("REEL").width + 18*BASE, BH = BFS + 14*BASE, BX = VW - PAD_V - BW;
         ctx.fillStyle = "#DC2626"; roundRect(ctx, BX, PAD_V, BW, BH, BH/2); ctx.fill();
         ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText("REEL", BX+BW/2, PAD_V+BH/2);
 
-        // Bottom block
+        // Bottom overlay block (inside video area)
         let CY = BLOCK_TOP;
 
         // Category meta chip
@@ -425,11 +505,14 @@ const HomePostCard = ({ post }) => {
         ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 4*BASE;
         descLines.forEach((l,i) => ctx.fillText(l, VW/2, CY + 14*BASE + i*DESC_LH));
 
-        // Gold rule
+        // Decorative rule at bottom of video area
         ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
         const ry = VH - PAD_V * 0.9;
         ctx.strokeStyle = `${categoryHex}88`; ctx.lineWidth = 1.5*BASE;
         ctx.beginPath(); ctx.moveTo(PAD_V*2, ry); ctx.lineTo(VW-PAD_V*2, ry); ctx.stroke();
+
+        // Draw static branded bottom every frame
+        drawBrandedBottom();
       };
 
       // 5. Seek-and-capture each frame (no live playback — avoids all stutter)
@@ -459,7 +542,7 @@ const HomePostCard = ({ post }) => {
       // 6. Playback captured frames into a recording canvas at exact FPS
       //    This produces a clean, smooth video with no seeking artifacts
       const recCanvas = document.createElement("canvas");
-      recCanvas.width = VW; recCanvas.height = VH;
+      recCanvas.width = VW; recCanvas.height = CH;
       const recCtx    = recCanvas.getContext("2d");
       const stream    = recCanvas.captureStream(FPS);
 

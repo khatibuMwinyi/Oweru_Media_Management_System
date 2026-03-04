@@ -224,20 +224,19 @@ export default function GetInTouch() {
               icon={<Phone />}
               title="Call Us"
               lines={["+255 714 859 934", "Mon–Fri, 8AM–5PM"]}
-              clickable
             />
 
             <Info
               icon={<Mail />}
               title="Email Us"
               lines={["info@oweru.com", "director@oweru.com"]}
-              clickable
+              highlight
             />
             <Info
               icon={<Globe />}
               title="Visit Our Websites"
               lines={["www.mjengochallenge.com", "www.oweru.com"]}
-              clickable
+              highlight
             />
           </div>
         </div>
@@ -271,7 +270,7 @@ function Input({ label, name, type = "text", value, onChange, error, required })
   );
 }
 
-function Info({ icon, title, lines, clickable }) {
+function Info({ icon, title, lines, highlight }) {
   return (
     <div className="flex gap-4">
       <div className="w-11 h-11 rounded-md bg-blue-700 flex items-center justify-center text-white">
@@ -288,18 +287,7 @@ function Info({ icon, title, lines, clickable }) {
               highlight ? "text-blue-400 text-sm" : "text-slate-300 text-sm"
             }
           >
-            {clickable ? (
-              <a
-                href={line.startsWith('http') ? line : `mailto:${line}`}
-                className="hover:underline"
-                target={line.startsWith('http') ? '_blank' : undefined}
-                rel={line.startsWith('http') ? 'noopener noreferrer' : undefined}
-              >
-                {line}
-              </a>
-            ) : (
-              <>{line}</>
-            )}
+            {line}
           </p>
         ))}
       </div>
