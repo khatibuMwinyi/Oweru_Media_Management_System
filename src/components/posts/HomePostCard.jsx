@@ -1063,7 +1063,7 @@ const HomePostCard = ({ post }) => {
         className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}
       >
         {/* ── Media Section ── */}
-        <div className={`w-full ${post.post_type === "Reel" ? "h-full" : "h-64 flex-shrink-0"}`}>
+        <div className={`w-full h-64 flex-shrink-0`}>
 
           {/* Static */}
           {post.post_type === "Static" && (
@@ -1146,12 +1146,14 @@ const HomePostCard = ({ post }) => {
           {/* Reel */}
           {post.post_type === "Reel" && (
             videos.length > 0 ? (
-              <div className="relative w-full h-full bg-white/50">
+              <div className={`relative w-full h-full ${getCategoryBackground(post.category)}`}>
                 <video
                   ref={videoRef}
                   controls
                   preload="metadata"
                   playsInline
+                  muted={false}
+                  crossOrigin="anonymous"
                   className="w-full h-full object-cover"
                   onError={() => {
                     setVideoError(true);
@@ -1225,9 +1227,8 @@ const HomePostCard = ({ post }) => {
           )}
         </div>
 
-        {/* ── Content Section (hidden for Reel) — matches PostCard exactly ── */}
-        {post.post_type !== "Reel" && (
-          <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
+        {/* ── Content Section — matches PostCard exactly ── */}
+        <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
             <div className="px-4 pt-4 pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -1252,11 +1253,9 @@ const HomePostCard = ({ post }) => {
               <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg" />
             </div>
           </div>
-        )}
 
-        {/* ── Contact footer (hidden for Reel) — matches PostCard exactly ── */}
-        {post.post_type !== "Reel" && (
-          <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
+        {/* ── Contact footer — matches PostCard exactly ── */}
+        <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
             <div className="text-center text-gray-800">
               <div className="text-sm whitespace-nowrap">
                 <span className="inline-block">
@@ -1279,12 +1278,9 @@ const HomePostCard = ({ post }) => {
               </div>
             </div>
           </div>
-        )}
 
-        {/* ── Bottom accent strip (hidden for Reel) ── */}
-        {post.post_type !== "Reel" && (
-          <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`} />
-        )}
+        {/* ── Bottom accent strip — matches PostCard exactly ── */}
+        <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`} />
 
         {/* ── Share button ── */}
         <div className="share-button-container absolute top-3 right-3 z-10">
