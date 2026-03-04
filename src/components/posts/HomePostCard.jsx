@@ -1,17 +1,5 @@
 import { useState, useRef, memo } from "react";
-import {
-  Send,
-  MessageCircle,
-  Copy,
-  Check,
-  Share2,
-  Mail,
-  Phone,
-  Globe,
-  Download,
-  Instagram,
-  X,
-} from "lucide-react";
+import { Copy, Check, Share2, Download, X } from "lucide-react";
 import oweruLogo from "../../assets/oweru_logo.png";
 import html2canvas from "html2canvas";
 import {
@@ -22,17 +10,15 @@ import {
 
 const HomePostCard = ({ post }) => {
   const videoRef = useRef(null);
-  const cardRef = useRef(null);
-  const downloadCardRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  const [showShareMenu, setShowShareMenu] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [postingToInstagram, setPostingToInstagram] = useState(false);
-  const [instagramStatus, setInstagramStatus] = useState(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [imageCache, setImageCache] = useState(new Map());
+  const cardRef  = useRef(null);
+  const [videoError,       setVideoError]       = useState(false);
+  const [showShareMenu,    setShowShareMenu]     = useState(false);
+  const [copied,           setCopied]            = useState(false);
+  const [downloading,      setDownloading]       = useState(false);
+  const [downloadProgress, setDownloadProgress]  = useState(0);
+  const [instagramStatus,  setInstagramStatus]   = useState(null);
+  const [carouselIndex,    setCarouselIndex]     = useState(0);
+  const [imageCache,       setImageCache]        = useState(new Map());
 
   const BASE_URL =
     import.meta.env.VITE_API_URL?.replace("/api", "") || "http://31.97.176.48:8081";
@@ -40,336 +26,104 @@ const HomePostCard = ({ post }) => {
   const images = filterValidMedia(post.media, "image");
   const videos = filterValidMedia(post.media, "video");
 
-  // ─── Category styles ────────────────────────────────────────────────────
-  const getCategoryBackground = (category) => {
-    switch (category) {
-      case "rentals":
-      case "lands_and_plots":
-        return "bg-[#C89128]";
-      case "property_sales":
-      case "property_services":
-        return "bg-gray-300";
-      case "construction_property_management":
-      case "investment":
-        return "bg-slate-900";
-      default:
-        return "bg-slate-900";
+  // ─── Category styles (UNCHANGED) ───────────────────────────────────────────
+  const getCategoryBackground = (c) => {
+    switch (c) {
+      case "rentals": case "lands_and_plots":                        return "bg-[#C89128]";
+      case "property_sales": case "property_services":               return "bg-gray-300";
+      case "construction_property_management": case "investment":    return "bg-slate-900";
+      default:                                                       return "bg-slate-900";
+    }
+  };
+  const getCategoryTextColor = (c) => {
+    switch (c) {
+      case "rentals": case "lands_and_plots":                        return "text-gray-100";
+      case "property_sales": case "property_services":               return "text-gray-800";
+      case "construction_property_management": case "investment":    return "text-white";
+      default:                                                       return "text-white";
+    }
+  };
+  const getCategoryHex = (c) => {
+    switch (c) {
+      case "rentals": case "lands_and_plots":                        return "#C89128";
+      case "property_sales": case "property_services":               return "#D1D5DB";
+      case "construction_property_management": case "investment":    return "#0F172A";
+      default:                                                       return "#0F172A";
+    }
+  };
+  const getCategoryTextHex = (c) => {
+    switch (c) {
+      case "rentals": case "lands_and_plots":                        return "#F3F4F6";
+      case "property_sales": case "property_services":               return "#1F2937";
+      case "construction_property_management": case "investment":    return "#FFFFFF";
+      default:                                                       return "#FFFFFF";
     }
   };
 
-  const getCategoryTextColor = (category) => {
-    switch (category) {
-      case "rentals":
-      case "lands_and_plots":
-        return "text-gray-100";
-      case "property_sales":
-      case "property_services":
-        return "text-gray-800";
-      case "construction_property_management":
-      case "investment":
-        return "text-white";
-      default:
-        return "text-white";
-    }
-  };
-
-  const getCategoryHex = (category) => {
-    switch (category) {
-      case "rentals":
-      case "lands_and_plots":
-        return "#C89128";
-      case "property_sales":
-      case "property_services":
-        return "#D1D5DB";
-      case "construction_property_management":
-      case "investment":
-        return "#0F172A";
-      default:
-        return "#0F172A";
-    }
-  };
-
-  const getCategoryTextHex = (category) => {
-    switch (category) {
-      case "rentals":
-      case "lands_and_plots":
-        return "#F3F4F6";
-      case "property_sales":
-      case "property_services":
-        return "#1F2937";
-      case "construction_property_management":
-      case "investment":
-        return "#FFFFFF";
-      default:
-        return "#FFFFFF";
-    }
-  };
-
-  const categoryHex = getCategoryHex(post.category);
+  const categoryHex     = getCategoryHex(post.category);
   const categoryTextHex = getCategoryTextHex(post.category);
 
-  const getShareUrl = () => `${window.location.origin}/post/${post.id}`;
+  // ─── Utility helpers ─────────────────────────────────────────────────────────
+  const getShareUrl  = () => `${window.location.origin}/post/${post.id}`;
   const getShareText = () =>
     `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
 
   const getCachedMediaUrl = (media) => {
-    const cacheKey = `${media.id}-${media.updated_at || media.created_at}`;
-
-    if (imageCache.has(cacheKey)) {
-      return imageCache.get(cacheKey);
-    }
-
+    const key = `${media.id}-${media.updated_at || media.created_at}`;
+    if (imageCache.has(key)) return imageCache.get(key);
     const url = getMediaUrl(media);
-    setImageCache((prev) => new Map(prev).set(cacheKey, url));
+    setImageCache(prev => new Map(prev).set(key, url));
     return url;
   };
 
-  // ─── Instagram ──────────────────────────────────────────────────────────
-  const handlePostToInstagram = async () => {
-    setPostingToInstagram(true);
-    setInstagramStatus(null);
-    setShowShareMenu(false);
-    try {
-      const formData = new FormData();
-      let instagramPostType = "feed";
-      if (post.post_type === "Carousel") instagramPostType = "carousel";
-      else if (post.post_type === "Reel" && videos.length > 0)
-        instagramPostType = "reel";
-
-      const mediaToPost = instagramPostType === "reel" ? videos : images;
-      let mediaUploaded = 0;
-
-      for (let i = 0; i < mediaToPost.length; i++) {
-        const media = mediaToPost[i];
-        let relativePath;
-        if (media.url) {
-          relativePath = media.url.replace(/^https?:\/\/[^/]+\/storage\//, "");
-        } else if (media.file_path) {
-          relativePath = media.file_path.startsWith("/")
-            ? media.file_path.substring(1)
-            : media.file_path;
-        } else {
-          console.error("Media has no url or file_path:", media);
-          continue;
-        }
-
-        const proxyUrl = `${BASE_URL}/api/proxy/media/${relativePath}`;
-        try {
-          const response = await fetch(proxyUrl, {
-            mode: "cors",
-            credentials: "omit",
-          });
-          if (!response.ok)
-            throw new Error(`${response.status} ${response.statusText}`);
-          const blob = await response.blob();
-          const fileName = `media_${i}.${
-            media.file_type === "video" ? "mp4" : "jpg"
-          }`;
-          formData.append(`media[${i}]`, blob, fileName);
-          mediaUploaded++;
-        } catch (err) {
-          console.error(`Failed to fetch media ${i}:`, err);
-        }
-      }
-
-      if (mediaUploaded === 0)
-        throw new Error("No media files were successfully loaded.");
-
-      const caption = `${post.title}\n\n${post.description}\n\n📍 ${post.category}\n\n#OweruMedia #RealEstate #Property #Tanzania`;
-      formData.append("caption", caption);
-      formData.append("post_type", instagramPostType);
-      formData.append("post_id", post.id);
-
-      const response = await fetch(`${BASE_URL}/api/instagram/post`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const contentType = response.headers.get("content-type");
-      if (!contentType?.includes("application/json")) {
-        const text = await response.text();
-        console.error("Non-JSON response:", text);
-        throw new Error("Server returned non-JSON response.");
-      }
-
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setInstagramStatus({
-          type: "success",
-          message: data.message || "Successfully posted to Instagram!",
-          permalink: data.permalink,
-        });
-      } else {
-        throw new Error(data.message || "Failed to post to Instagram");
-      }
-    } catch (error) {
-      console.error("Instagram posting error:", error);
-      setInstagramStatus({
-        type: "error",
-        message:
-          error.message || "Failed to post to Instagram. Please try again.",
-      });
-    } finally {
-      setPostingToInstagram(false);
-    }
-  };
-
-  // ─── Share ──────────────────────────────────────────────────────────────
-  const handleShare = async (platform) => {
-    const url = getShareUrl();
-    const text = getShareText();
-
-    if (
-      (platform === "native" || platform === "instagram") &&
-      navigator.share
-    ) {
-      try {
-        await navigator.share({ title: post.title, text, url });
-        setShowShareMenu(false);
-        return;
-      } catch (err) {
-        if (err.name !== "AbortError") console.error("Web Share failed:", err);
-      }
-    }
-
-    const encodedText = encodeURIComponent(text);
-    const encodedUrl = encodeURIComponent(url);
-
-    switch (platform) {
-      case "whatsapp":
-        window.open(
-          `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
-          "_blank"
-        );
-        break;
-      case "facebook":
-        window.open(
-          `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&e=${encodedText}`,
-          "_blank"
-        );
-        break;
-      case "twitter":
-        window.open(
-          `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
-          "_blank"
-        );
-        break;
-      case "instagram":
-      case "copy":
-        handleCopyLink();
-        return;
-      default:
-        break;
-    }
-    setShowShareMenu(false);
-  };
-
-  const handleCopyLink = async () => {
-    const fullText = `${getShareText()}\n\n${getShareUrl()}`;
-    try {
-      await navigator.clipboard.writeText(fullText);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = fullText;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    setShowShareMenu(false);
-  };
-
-  // ─── Helpers ────────────────────────────────────────────────────────────
   const fetchMediaAsDataUrl = async (media) => {
-    let relativePath;
-    if (media.url) {
-      relativePath = media.url.replace(/^https?:\/\/[^/]+\/storage\//, "");
-    } else if (media.file_path) {
-      relativePath = media.file_path.startsWith("/")
-        ? media.file_path.substring(1)
-        : media.file_path;
-    } else {
-      throw new Error("Media has no url or file_path");
-    }
-    const proxyUrl = `${BASE_URL}/api/proxy/media/${relativePath}`;
-    const res = await fetch(proxyUrl, { mode: "cors", credentials: "omit" });
+    let p = media.url
+      ? media.url.replace(/^https?:\/\/[^/]+\/storage\//, "")
+      : media.file_path?.startsWith("/") ? media.file_path.substring(1) : media.file_path;
+    if (!p) throw new Error("Media has no url or file_path");
+    const res = await fetch(`${BASE_URL}/api/proxy/media/${p}`, { mode: "cors", credentials: "omit" });
     if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
     const blob = await res.blob();
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+      const r = new FileReader();
+      r.onload  = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
     });
   };
 
   const loadImage = (src) =>
-    new Promise((resolve) => {
+    new Promise(resolve => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      img.crossOrigin = "anonymous";
+      img.onload  = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = src;
     });
 
-  const captureVideoFrame = (videoEl) =>
-    new Promise((resolve) => {
-      const attempt = () => {
-        try {
-          const tmpCanvas = document.createElement("canvas");
-          tmpCanvas.width = videoEl.videoWidth || 640;
-          tmpCanvas.height = videoEl.videoHeight || 360;
-          tmpCanvas.getContext("2d").drawImage(videoEl, 0, 0, tmpCanvas.width, tmpCanvas.height);
-          resolve(tmpCanvas.toDataURL("image/jpeg", 0.95));
-        } catch {
-          resolve(null);
-        }
-      };
-
-      if (videoEl.readyState >= 2) {
-        attempt();
-      } else {
-        videoEl.addEventListener("loadeddata", attempt, { once: true });
-        videoEl.addEventListener("error", () => resolve(null), { once: true });
-        videoEl.currentTime = 0.1;
-      }
-    });
-
   const wrapTextLines = (ctx, text, maxWidth, maxLines = null) => {
-    const paragraphs = text.split("\n");
     const lines = [];
-    for (const para of paragraphs) {
-      if (para.trim() === "") {
-        lines.push("");
-        continue;
-      }
-      const words = para.split(" ");
+    for (const para of text.split("\n")) {
+      if (!para.trim()) { lines.push(""); continue; }
       let line = "";
-      for (const word of words) {
+      for (const word of para.split(" ")) {
         const test = line ? `${line} ${word}` : word;
-        if (ctx.measureText(test).width > maxWidth && line) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = test;
-        }
+        if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = word; }
+        else line = test;
       }
       if (line) lines.push(line);
     }
     if (maxLines && lines.length > maxLines) {
-      const trimmed = lines.slice(0, maxLines);
-      const last = trimmed[trimmed.length - 1];
-      trimmed[trimmed.length - 1] = last.replace(/\s+\S*$/, "") + "…";
-      return trimmed;
+      const t = lines.slice(0, maxLines);
+      t[t.length - 1] = t[t.length - 1].replace(/\s+\S*$/, "") + "…";
+      return t;
     }
     return lines;
   };
 
   const roundRect = (ctx, x, y, w, h, r) => {
     ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
     ctx.quadraticCurveTo(x + w, y, x + w, y + r);
     ctx.lineTo(x + w, y + h - r);
     ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
@@ -380,1014 +134,666 @@ const HomePostCard = ({ post }) => {
     ctx.closePath();
   };
 
-  // ─── Download: Branded Post Image ───────────────────────────────────────
-  const handleDownloadPostAsImage = async () => {
-    setDownloading(true);
+  // ─── Share / Copy ────────────────────────────────────────────────────────────
+  const handleCopyLink = async () => {
+    const txt = `${getShareText()}\n\n${getShareUrl()}`;
+    try { await navigator.clipboard.writeText(txt); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+    }
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
     setShowShareMenu(false);
+  };
 
+  // ─── Instagram ──────────────────────────────────────────────────────────────
+  const handlePostToInstagram = async () => {
+    setInstagramStatus(null); setShowShareMenu(false);
     try {
-      const SCALE = 2;
-      const W = 600 * SCALE;
-      const H = 700 * SCALE;
-      const PAD = 16 * SCALE;
-      const PAD_X = 24 * SCALE;
-      const RADIUS = 8 * SCALE;
+      const fd = new FormData();
+      const type = post.post_type === "Carousel" ? "carousel"
+        : post.post_type === "Reel" && videos.length ? "reel" : "feed";
+      const media = type === "reel" ? videos : images;
+      let uploaded = 0;
+      for (let i = 0; i < media.length; i++) {
+        const m = media[i];
+        const p2 = m.url
+          ? m.url.replace(/^https?:\/\/[^/]+\/storage\//, "")
+          : m.file_path?.startsWith("/") ? m.file_path.substring(1) : m.file_path;
+        if (!p2) continue;
+        try {
+          const r = await fetch(`${BASE_URL}/api/proxy/media/${p2}`, { mode: "cors", credentials: "omit" });
+          if (!r.ok) throw new Error(r.status);
+          fd.append(`media[${i}]`, await r.blob(), `media_${i}.${m.file_type === "video" ? "mp4" : "jpg"}`);
+          uploaded++;
+        } catch (e) { console.error(e); }
+      }
+      if (!uploaded) throw new Error("No media loaded.");
+      fd.append("caption", `${post.title}\n\n${post.description}\n\n📍 ${post.category}\n\n#OweruMedia #RealEstate #Property #Tanzania`);
+      fd.append("post_type", type); fd.append("post_id", post.id);
+      const r2 = await fetch(`${BASE_URL}/api/instagram/post`, { method: "POST", body: fd });
+      if (!r2.headers.get("content-type")?.includes("application/json")) throw new Error("Non-JSON response.");
+      const d = await r2.json();
+      if (r2.ok && d.success) setInstagramStatus({ type: "success", message: d.message || "Posted!", permalink: d.permalink });
+      else throw new Error(d.message || "Failed.");
+    } catch (e) { setInstagramStatus({ type: "error", message: e.message }); }
+  };
 
-      const MEDIA_H = 256 * SCALE;
-      const ACCENT_H = 40 * SCALE;
-      const FOOTER_H = 48 * SCALE;
-      const CONTENT_H = H - MEDIA_H - FOOTER_H - ACCENT_H;
-
+  // ─── Download: Static branded post image ────────────────────────────────────
+  const handleDownloadPostAsImage = async () => {
+    setDownloading(true); setShowShareMenu(false);
+    try {
+      const S = 2, W = 600*S, H = 700*S, PAD = 16*S, R = 8*S;
+      const MH = 256*S, AH = 40*S, FH = 48*S, CH = H - MH - FH - AH;
       const isReel = post.post_type === "Reel" && videos.length > 0;
-      const isCarousel = post.post_type === "Carousel" && images.length > 0;
-      const primaryMedia = isReel
-        ? videos[0]
-        : isCarousel
-        ? images[carouselIndex]
-        : images[0] ?? null;
-
-      const logoBitmap = await loadImage(oweruLogo).catch(() => null);
-
-      let mediaBitmap = null;
-      if (primaryMedia) {
-        if (primaryMedia.file_type === "video") {
-          if (videoRef.current) {
-            const fd = await captureVideoFrame(videoRef.current);
-            if (fd) mediaBitmap = await loadImage(fd);
-          }
-          if (!mediaBitmap) {
-            try {
-              const dataUrl = await fetchMediaAsDataUrl(primaryMedia);
-              const tmpVideo = document.createElement("video");
-              tmpVideo.muted = true;
-              tmpVideo.src = dataUrl;
-              tmpVideo.style.cssText =
-                "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
-              document.body.appendChild(tmpVideo);
-              tmpVideo.currentTime = 0.5;
-              const fd = await captureVideoFrame(tmpVideo);
-              document.body.removeChild(tmpVideo);
-              if (fd) mediaBitmap = await loadImage(fd);
-            } catch (e) {
-              console.warn("Video frame fallback failed:", e);
-            }
-          }
+      const isCarousel = post.post_type === "Carousel";
+      const pMedia = isReel ? videos[0] : isCarousel ? images[carouselIndex] : images[0] ?? null;
+      const logo = await loadImage(oweruLogo).catch(() => null);
+      let img = null;
+      if (pMedia) {
+        if (pMedia.file_type === "video" && videoRef.current) {
+          const tmp = document.createElement("canvas");
+          tmp.width = videoRef.current.videoWidth || 640;
+          tmp.height = videoRef.current.videoHeight || 360;
+          try { tmp.getContext("2d").drawImage(videoRef.current,0,0); img = await loadImage(tmp.toDataURL("image/jpeg",.9)); } catch {}
         } else {
-          try {
-            const dataUrl = await fetchMediaAsDataUrl(primaryMedia);
-            mediaBitmap = await loadImage(dataUrl);
-          } catch (e) {
-            console.warn("Proxy image fetch failed, trying direct URL:", e);
-            mediaBitmap = await loadImage(getMediaUrl(primaryMedia));
-          }
+          try { img = await loadImage(await fetchMediaAsDataUrl(pMedia)); }
+          catch { img = await loadImage(getMediaUrl(pMedia)); }
         }
       }
 
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d");
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#FFF"; roundRect(ctx,0,0,W,H,R); ctx.fill();
+      ctx.save(); roundRect(ctx,0,0,W,H,R); ctx.clip();
 
-      ctx.fillStyle = "#FFFFFF";
-      roundRect(ctx, 0, 0, W, H, RADIUS);
-      ctx.fill();
-      ctx.save();
-      roundRect(ctx, 0, 0, W, H, RADIUS);
-      ctx.clip();
-
-      let cursorY = 0;
-
+      let cy = 0;
       // Media
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, cursorY, W, MEDIA_H);
-
-      if (mediaBitmap) {
-        const bW = mediaBitmap.naturalWidth || mediaBitmap.width || 1;
-        const bH = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
-        const scaleX = W / bW;
-        const scaleY = MEDIA_H / bH;
-        const s = Math.max(scaleX, scaleY);
-        const dW = bW * s;
-        const dH = bH * s;
-        const dX = (W - dW) / 2;
-        const dY = cursorY + (MEDIA_H - dH) / 2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, cursorY, W, MEDIA_H);
-        ctx.clip();
-        ctx.drawImage(mediaBitmap, dX, dY, dW, dH);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = "#374151";
-        ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("No media available", W / 2, cursorY + MEDIA_H / 2);
+      ctx.fillStyle = "#111"; ctx.fillRect(0,cy,W,MH);
+      if (img) {
+        const bw = img.naturalWidth||1, bh = img.naturalHeight||1;
+        const s2 = Math.max(W/bw, MH/bh), dw = bw*s2, dh = bh*s2;
+        ctx.save(); ctx.beginPath(); ctx.rect(0,cy,W,MH); ctx.clip();
+        ctx.drawImage(img,(W-dw)/2,cy+(MH-dh)/2,dw,dh); ctx.restore();
       }
-
       if (isReel) {
-        ctx.fillStyle = "rgba(0,0,0,0.35)";
-        ctx.fillRect(0, cursorY, W, MEDIA_H);
-
-        if (logoBitmap) {
-          const lH = 40 * SCALE;
-          const lW = logoBitmap.naturalWidth
-            ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
-            : lH * 3;
-          const lPad = 4 * SCALE;
-          ctx.fillStyle = "rgba(255,255,255,0.8)";
-          roundRect(
-            ctx,
-            PAD - lPad,
-            cursorY + PAD - lPad,
-            lW + lPad * 2,
-            lH + lPad * 2,
-            4 * SCALE
-          );
-          ctx.fill();
-          ctx.drawImage(logoBitmap, PAD, cursorY + PAD, lW, lH);
+        const scrim = ctx.createLinearGradient(0,cy,0,cy+MH);
+        scrim.addColorStop(0,"rgba(0,0,0,0)"); scrim.addColorStop(.5,"rgba(0,0,0,.25)"); scrim.addColorStop(1,"rgba(0,0,0,.88)");
+        ctx.fillStyle = scrim; ctx.fillRect(0,cy,W,MH);
+        // Logo pill
+        if (logo) {
+          const lH=30*S, lW=(logo.naturalWidth/logo.naturalHeight)*lH, lp=7*S;
+          ctx.fillStyle="rgba(255,255,255,.95)"; roundRect(ctx,PAD-lp,cy+PAD-lp*.5,lW+lp*2,lH+lp,36*S); ctx.fill();
+          ctx.drawImage(logo,PAD,cy+PAD,lW,lH);
         }
-
-        const overlayW = Math.min(448 * SCALE, W - PAD * 4);
-        const overlayX = (W - overlayW) / 2;
-        const centerY = cursorY + MEDIA_H / 2;
-
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = `700 ${18 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = "rgba(0,0,0,0.9)";
-        ctx.shadowBlur = 10 * SCALE;
-        ctx.shadowOffsetX = 2 * SCALE;
-        ctx.shadowOffsetY = 2 * SCALE;
-        ctx.fillText(post.title || "", W / 2, centerY - 40 * SCALE);
-
-        ctx.font = `600 ${11 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.shadowBlur = 6 * SCALE;
-        const metaText = `${post.post_type} • ${post.category} • ${new Date(
-          post.created_at
-        ).toLocaleDateString()}`;
-        ctx.fillText(metaText, W / 2, centerY - 14 * SCALE);
-
-        ctx.font = `500 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-        ctx.shadowBlur = 8 * SCALE;
-        const descLines = wrapTextLines(ctx, post.description || "", overlayW, 4);
-        const descLineH = 18 * SCALE;
-        descLines.forEach((line, i) => {
-          ctx.fillText(line, W / 2, centerY + 10 * SCALE + i * descLineH);
-        });
-        ctx.shadowColor = "transparent";
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // REEL badge
+        const bfs=9*S; ctx.font=`700 ${bfs}px Georgia,serif`;
+        const bl="REEL", bw2=ctx.measureText(bl).width+18*S, bh2=bfs+12*S, bx2=W-PAD-bw2, by2=cy+PAD;
+        ctx.fillStyle="#DC2626"; roundRect(ctx,bx2,by2,bw2,bh2,bh2/2); ctx.fill();
+        ctx.fillStyle="#FFF"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(bl,bx2+bw2/2,by2+bh2/2);
+        // Title
+        const tfs=19*S; ctx.font=`700 ${tfs}px Georgia,serif`;
+        ctx.fillStyle="#FFF"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+        ctx.shadowColor="rgba(0,0,0,.95)"; ctx.shadowBlur=12*S; ctx.shadowOffsetY=2*S;
+        const tl=wrapTextLines(ctx,post.title||"",W-PAD*4,2), tlh=tfs*1.3, tbot=cy+MH-24*S;
+        [...tl].reverse().forEach((l,i)=>ctx.fillText(l,W/2,tbot-i*tlh));
+        // Category chip
+        ctx.shadowColor="transparent"; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+        const cfs=9*S; ctx.font=`600 ${cfs}px Georgia,serif`;
+        const cl=post.category.replace(/_/g," ").toUpperCase(), cw2=ctx.measureText(cl).width+18*S, ch2=cfs+10*S;
+        const cx3=(W-cw2)/2, cy3=tbot-tl.length*tlh-ch2-8*S;
+        ctx.fillStyle=`${categoryHex}E0`; roundRect(ctx,cx3,cy3,cw2,ch2,ch2/2); ctx.fill();
+        ctx.fillStyle="#FFF"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cl,cx3+cw2/2,cy3+ch2/2);
       }
-
-      cursorY += MEDIA_H;
+      cy += MH;
 
       // Content section
-      ctx.fillStyle = categoryHex;
-      ctx.fillRect(0, cursorY, W, CONTENT_H);
-
-      const contentStartY = cursorY;
-      const titleAreaTop = contentStartY + PAD;
-
-      const TITLE_PAD_X = 8 * SCALE;
-      const TITLE_PAD_Y = 8 * SCALE;
-      const TITLE_FONT_SIZE = 18 * SCALE;
-      ctx.font = `600 ${TITLE_FONT_SIZE}px 'Segoe UI', Arial, sans-serif`;
-
-      const titleText = post.title || "Untitled Post";
-      const titleW =
-        Math.min(ctx.measureText(titleText).width + TITLE_PAD_X * 2, W - PAD * 2);
-      const titleH = TITLE_FONT_SIZE + TITLE_PAD_Y * 2;
-
-      ctx.fillStyle = "#F3F4F6";
-      roundRect(ctx, PAD, titleAreaTop, titleW, titleH, 8 * SCALE);
-      ctx.fill();
-
-      ctx.fillStyle = "#111827";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText(titleText, PAD + TITLE_PAD_X, titleAreaTop + TITLE_PAD_Y);
-
-      const metaTop = titleAreaTop + titleH + 8 * SCALE;
-      ctx.fillStyle = categoryTextHex;
-      ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textBaseline = "top";
-      const metaStr = `${post.post_type} • ${post.category} • ${new Date(
-        post.created_at
-      ).toLocaleDateString()}`;
-      ctx.fillText(metaStr, PAD, metaTop);
-
-      const DESC_AREA_H = 128 * SCALE;
-      const descTop = metaTop + 12 * SCALE + PAD;
-      ctx.fillStyle = categoryTextHex;
-      ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-
-      const maxDescLines = Math.floor(DESC_AREA_H / (14 * SCALE * 1.6));
-      const descLines = wrapTextLines(
-        ctx,
-        post.description || "No description available.",
-        W - PAD * 2,
-        maxDescLines
-      );
-      const descLineH = 14 * SCALE * 1.6;
-      descLines.forEach((line, i) => {
-        ctx.fillText(line, PAD, descTop + i * descLineH);
-      });
-
-      const logoAreaTop = descTop + DESC_AREA_H;
-      if (logoBitmap) {
-        const lH = 48 * SCALE;
-        const lW = logoBitmap.naturalWidth
-          ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
-          : lH * 3;
-        ctx.drawImage(logoBitmap, W - PAD - lW, logoAreaTop, lW, lH);
+      ctx.fillStyle = categoryHex; ctx.fillRect(0,cy,W,CH);
+      const tfs2=17*S; ctx.font=`600 ${tfs2}px Georgia,serif`;
+      const ttxt=post.title||"Untitled", tw=Math.min(ctx.measureText(ttxt).width+14*S,W-PAD*2), th=tfs2+14*S;
+      ctx.fillStyle="#F9FAFB"; roundRect(ctx,PAD,cy+PAD,tw,th,5*S); ctx.fill();
+      ctx.fillStyle="#111"; ctx.textAlign="left"; ctx.textBaseline="middle";
+      ctx.shadowColor="transparent"; ctx.shadowBlur=0;
+      ctx.fillText(ttxt,PAD+7*S,cy+PAD+th/2);
+      const my2=cy+PAD+th+7*S;
+      ctx.fillStyle=categoryTextHex; ctx.font=`400 ${10*S}px Georgia,serif`; ctx.textBaseline="top";
+      ctx.fillText(`${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`,PAD,my2);
+      const dy=my2+14*S+PAD;
+      ctx.font=`400 ${12*S}px Georgia,serif`;
+      const dl=wrapTextLines(ctx,post.description||"",W-PAD*2,Math.floor(120*S/(12*S*1.6)));
+      dl.forEach((l,i)=>ctx.fillText(l,PAD,dy+i*12*S*1.6));
+      if (logo) {
+        const lH2=42*S, lW2=(logo.naturalWidth/logo.naturalHeight)*lH2;
+        ctx.drawImage(logo,W-PAD-lW2,cy+CH-PAD-lH2,lW2,lH2);
       }
-
-      cursorY = contentStartY + CONTENT_H;
+      cy += CH;
 
       // Footer
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, cursorY, W, FOOTER_H);
-
-      ctx.fillStyle = "#030712";
-      ctx.font = `400 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const footerMidY = cursorY + FOOTER_H / 2;
-
-      const contacts = ["info@oweru.com", "+255 711 890 764", "www.oweru.com"];
-      const colW = W / 3;
-      contacts.forEach((c, i) => {
-        ctx.fillText(c, colW * i + colW / 2, footerMidY);
-      });
-
-      cursorY += FOOTER_H;
-
-      // Accent
-      ctx.fillStyle = categoryHex;
-      ctx.fillRect(0, cursorY, W, ACCENT_H);
-
+      ctx.fillStyle="#FFF"; ctx.fillRect(0,cy,W,FH);
+      ctx.fillStyle="#111"; ctx.font=`400 ${11*S}px Georgia,serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
+      const fm=cy+FH/2, fw=W/3;
+      ["info@oweru.com","+255 711 890 764","www.oweru.com"].forEach((t,i)=>ctx.fillText(t,fw*i+fw/2,fm));
+      cy += FH;
+      ctx.fillStyle=categoryHex; ctx.fillRect(0,cy,W,AH);
       ctx.restore();
 
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            alert("Failed to generate image. Please try again.");
-            setDownloading(false);
-            return;
-          }
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          const slug = (post.title || "post")
-            .replace(/[^a-z0-9]/gi, "_")
-            .substring(0, 30);
-          const suffix = isCarousel ? `_slide${carouselIndex + 1}` : "";
-          link.download = `Oweru_${slug}${suffix}_Post_${Date.now()}.jpg`;
-          link.href = url;
-          link.click();
-          URL.revokeObjectURL(url);
-          setDownloading(false);
-        },
-        "image/jpeg",
-        0.95
-      );
-    } catch (error) {
-      console.error("Error generating branded post image:", error);
-      alert("Failed to download post image. Please try again.");
-      setDownloading(false);
-    }
+      c.toBlob(blob => {
+        if (!blob) { alert("Failed."); setDownloading(false); return; }
+        const u=URL.createObjectURL(blob), a=document.createElement("a");
+        a.download=`Oweru_${(post.title||"post").replace(/[^a-z0-9]/gi,"_").substring(0,30)}_Post_${Date.now()}.jpg`;
+        a.href=u; a.click(); URL.revokeObjectURL(u); setDownloading(false);
+      },"image/jpeg",.95);
+    } catch(e) { console.error(e); alert("Failed to download."); setDownloading(false); }
   };
 
-  // ─── Download: html2canvas screenshot ───────────────────────────────────
-  const handleDownloadAsImage = async () => {
-    if (!cardRef.current) return;
-    setDownloading(true);
-    setShowShareMenu(false);
-    try {
-      const shareBtn = cardRef.current.querySelector(".share-button-container");
-      if (shareBtn) shareBtn.style.display = "none";
-      if (videoRef.current && !videoRef.current.paused)
-        videoRef.current.pause();
-
-      const canvas = await html2canvas(cardRef.current, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        scale: 3,
-        logging: false,
-        width: cardRef.current.scrollWidth,
-        height: cardRef.current.scrollHeight,
-      });
-
-      if (shareBtn) shareBtn.style.display = "block";
-
-      canvas.toBlob(
-        (blob) => {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          const sanitizedTitle = post.title
-            .replace(/[^a-z0-9]/gi, "_")
-            .substring(0, 30);
-          link.download = `Oweru_${sanitizedTitle}_${Date.now()}.png`;
-          link.href = url;
-          link.click();
-          URL.revokeObjectURL(url);
-          setDownloading(false);
-        },
-        "image/png",
-        0.95
-      );
-    } catch (error) {
-      console.error("Error generating image:", error);
-      alert("Failed to download image. Please try again.");
-      setDownloading(false);
-      const shareBtn = cardRef.current?.querySelector(".share-button-container");
-      if (shareBtn) shareBtn.style.display = "block";
-    }
-  };
-
-  // ─── Download: raw media files ──────────────────────────────────────────
   const handleDownloadMedia = async () => {
-    setDownloading(true);
-    setShowShareMenu(false);
+    setDownloading(true); setShowShareMenu(false);
     try {
-      const mediaToDownload =
-        post.post_type === "Reel" && videos.length > 0 ? videos : images;
-
-      if (mediaToDownload.length === 0) {
-        alert("No media files available to download.");
-        setDownloading(false);
-        return;
-      }
-
-      for (let i = 0; i < mediaToDownload.length; i++) {
-        const media = mediaToDownload[i];
-        const ext =
-          media.file_type === "video"
-            ? "mp4"
-            : getMediaUrl(media).endsWith(".png")
-            ? "png"
-            : "jpg";
-        const sanitizedTitle = post.title
-          .replace(/[^a-z0-9]/gi, "_")
-          .substring(0, 30);
-        const fileName = `Oweru_${sanitizedTitle}_${i + 1}_${Date.now()}.${ext}`;
-
+      const items = post.post_type==="Reel"&&videos.length ? videos : images;
+      if (!items.length) { alert("No media available."); return; }
+      for (let i=0;i<items.length;i++) {
+        const m=items[i], ext=m.file_type==="video"?"mp4":getMediaUrl(m).endsWith(".png")?"png":"jpg";
         try {
-          const dataUrl = await fetchMediaAsDataUrl(media);
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
-          const mimeType =
-            media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
-          const typedBlob = new Blob([blob], { type: mimeType });
-          const objectUrl = URL.createObjectURL(typedBlob);
-          const link = document.createElement("a");
-          link.href = objectUrl;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-        } catch (itemErr) {
-          console.error(`Failed to download media item ${i}:`, itemErr);
-          alert(`Failed to download file ${i + 1}. Please try again.`);
-        }
-
-        if (i < mediaToDownload.length - 1) {
-          await new Promise((r) => setTimeout(r, 800));
-        }
+          const blob=await(await fetch(await fetchMediaAsDataUrl(m))).blob();
+          const obj=URL.createObjectURL(new Blob([blob],{type:m.file_type==="video"?"video/mp4":blob.type||"image/jpeg"}));
+          const a=document.createElement("a"); a.href=obj;
+          a.download=`Oweru_${(post.title||"").replace(/[^a-z0-9]/gi,"_").substring(0,30)}_${i+1}.${ext}`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(()=>URL.revokeObjectURL(obj),10000);
+        } catch(e){console.error(e); alert(`Failed to download file ${i+1}.`);}
+        if (i<items.length-1) await new Promise(r=>setTimeout(r,800));
       }
-    } catch (error) {
-      console.error("Download error:", error);
-      alert("Failed to download media files. Please try again.");
-    } finally {
-      setDownloading(false);
-    }
+    } catch(e){console.error(e); alert("Failed.");}
+    finally { setDownloading(false); }
   };
 
-  // ─── Improved Branded Reel Download ─────────────────────────────────────
+  // ─── Download: Branded Reel — seek-and-capture (smooth, no real-time playback) ─
   const handleDownloadVideo = async () => {
-    setDownloading(true);
-    setShowShareMenu(false);
-
-    if (videos.length === 0) {
-      alert("No video available to download.");
-      setDownloading(false);
-      return;
-    }
+    setDownloading(true); setDownloadProgress(1); setShowShareMenu(false);
+    if (!videos.length) { alert("No video available."); setDownloading(false); return; }
 
     try {
-      let videoBlobUrl;
+      // 1. Fetch video blob for accurate seeking
+      let blobUrl;
       try {
         const dataUrl = await fetchMediaAsDataUrl(videos[0]);
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        videoBlobUrl = URL.createObjectURL(blob);
-      } catch {
-        videoBlobUrl = getMediaUrl(videos[0]);
-      }
+        const blob    = await (await fetch(dataUrl)).blob();
+        blobUrl = URL.createObjectURL(blob);
+      } catch { blobUrl = getMediaUrl(videos[0]); }
 
-      const srcVideo = document.createElement("video");
-      srcVideo.src = videoBlobUrl;
-      srcVideo.muted = false;
-      srcVideo.crossOrigin = "anonymous";
-      srcVideo.preload = "auto";
-      srcVideo.style.cssText =
-        "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
-      document.body.appendChild(srcVideo);
+      // 2. Load video, get metadata
+      const vid = document.createElement("video");
+      vid.src = blobUrl; vid.muted = true; vid.preload = "auto"; vid.crossOrigin = "anonymous";
+      vid.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
+      document.body.appendChild(vid);
+      await new Promise((res,rej) => { vid.onloadedmetadata=res; vid.onerror=rej; vid.load(); });
 
-      await new Promise((resolve, reject) => {
-        srcVideo.onloadedmetadata = resolve;
-        srcVideo.onerror = reject;
-        srcVideo.load();
-      });
+      const duration   = vid.duration;
+      const FPS        = 30;
+      const INTERVAL   = 1 / FPS;
+      const totalFrames = Math.ceil(duration * FPS);
+      const VW = vid.videoWidth  || 1080;
+      const VH = vid.videoHeight || 1920;
 
-      const VW = srcVideo.videoWidth || 1080;
-      const VH = srcVideo.videoHeight || 1920;
-      const BASE = VW / 390;
+      // 3. Prepare overlay assets & layout
+      const logo   = await loadImage(oweruLogo).catch(() => null);
+      const BASE   = VW / 390;
+      const PAD_V  = VW * 0.045;
 
-      const logoBitmap = await loadImage(oweruLogo).catch(() => null);
+      const LOGO_H = VH * 0.05;
+      const LOGO_W = logo ? (logo.naturalWidth / logo.naturalHeight) * LOGO_H : LOGO_H * 3;
 
-      const PAD = VW * 0.035;
-      const LOGO_H = VH * 0.052;
-      const LOGO_W = logoBitmap
-        ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * LOGO_H
-        : LOGO_H * 3;
-
-      const TITLE_FS = Math.round(20 * BASE);
-      const META_FS = Math.round(13 * BASE);
-      const DESC_FS = Math.round(15 * BASE);
-      const LINE_H = DESC_FS * 1.55;
+      const TITLE_FS = Math.round(22 * BASE);
+      const META_FS  = Math.round(10 * BASE);
+      const DESC_FS  = Math.round(13 * BASE);
+      const DESC_LH  = DESC_FS * 1.65;
+      const OW       = Math.min(VW * 0.84, 420 * BASE);
 
       const offCtx = document.createElement("canvas").getContext("2d");
-      offCtx.font = `500 ${DESC_FS}px system-ui, sans-serif`;
-      const descLines = wrapTextLines(offCtx, post.description || "", VW * 0.78, 6);
+      offCtx.font  = `700 ${TITLE_FS}px Georgia,serif`;
+      const titleLines = wrapTextLines(offCtx, post.title || "", OW, 2);
+      offCtx.font  = `400 ${DESC_FS}px Georgia,serif`;
+      const descLines  = wrapTextLines(offCtx, post.description || "", OW, 4);
 
-      const overlayTextH =
-        TITLE_FS * 1.2 + META_FS * 2.2 + descLines.length * LINE_H + 80 * BASE;
+      const TITLE_LH  = TITLE_FS * 1.3;
+      const META_H    = META_FS + 12 * BASE;
+      const DESC_H    = descLines.length * DESC_LH + 28 * BASE;
+      const TITLE_H   = titleLines.length * TITLE_LH;
+      const GAP       = 16 * BASE;
+      const BLOCK_BOT = VH - PAD_V * 2.5;
+      const BLOCK_TOP = BLOCK_BOT - (META_H + GAP * 0.5 + TITLE_H + GAP + DESC_H);
 
+      // 4. Capture canvas + draw overlay function
       const canvas = document.createElement("canvas");
-      canvas.width = VW;
-      canvas.height = VH;
+      canvas.width = VW; canvas.height = VH;
       const ctx = canvas.getContext("2d");
 
       const drawOverlay = () => {
-        ctx.fillStyle = categoryHex;
-        ctx.fillRect(0, 0, VW, VH);
+        // Cinematic scrim
+        const scrim = ctx.createLinearGradient(0, VH * 0.2, 0, VH);
+        scrim.addColorStop(0,    "rgba(0,0,0,0)");
+        scrim.addColorStop(0.3,  "rgba(0,0,0,0.1)");
+        scrim.addColorStop(0.65, "rgba(0,0,0,0.55)");
+        scrim.addColorStop(1,    "rgba(0,0,0,0.92)");
+        ctx.fillStyle = scrim; ctx.fillRect(0, 0, VW, VH);
 
-        if (logoBitmap) {
-          const lx = PAD;
-          const ly = PAD;
-          const lPad = VW * 0.014;
-          ctx.fillStyle = "rgba(255,255,255,0.92)";
-          roundRect(
-            ctx,
-            lx - lPad,
-            ly - lPad,
-            LOGO_W + lPad * 2,
-            LOGO_H + lPad * 2,
-            VW * 0.022
-          );
-          ctx.fill();
-          ctx.drawImage(logoBitmap, lx, ly, LOGO_W, LOGO_H);
+        // Logo pill
+        if (logo) {
+          const LP = VW * 0.014;
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          roundRect(ctx, PAD_V-LP, PAD_V-LP*.6, LOGO_W+LP*2, LOGO_H+LP*1.2, 40*BASE); ctx.fill();
+          ctx.drawImage(logo, PAD_V, PAD_V, LOGO_W, LOGO_H);
         }
 
-        const panelW = Math.min(VW * 0.82, 540 * BASE);
-        const panelX = (VW - panelW) / 2;
-        const panelPadY = 45 * BASE;
-        const panelPadX = 50 * BASE;
-        const panelH = overlayTextH + panelPadY * 2;
+        // REEL badge
+        const BFS = Math.round(9*BASE); ctx.font = `700 ${BFS}px Georgia,serif`;
+        const BW = ctx.measureText("REEL").width + 18*BASE, BH = BFS + 14*BASE, BX = VW - PAD_V - BW;
+        ctx.fillStyle = "#DC2626"; roundRect(ctx, BX, PAD_V, BW, BH, BH/2); ctx.fill();
+        ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("REEL", BX+BW/2, PAD_V+BH/2);
 
-        const panelY = (VH - panelH) / 2;
+        // Bottom block
+        let CY = BLOCK_TOP;
 
-        ctx.fillStyle = "rgba(0,0,0,0.42)";
-        roundRect(ctx, panelX, panelY, panelW, panelH, 28 * BASE);
-        ctx.fill();
+        // Category meta chip
+        ctx.font = `600 ${META_FS}px Georgia,serif`;
+        const ML = post.category.replace(/_/g," ").toUpperCase() + "  •  "
+          + new Date(post.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+        const MW = ctx.measureText(ML).width + 22*BASE, MH2 = META_FS + 12*BASE, MX = (VW-MW)/2;
+        ctx.fillStyle = `${categoryHex}E6`; roundRect(ctx, MX, CY, MW, MH2, MH2/2); ctx.fill();
+        ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+        ctx.fillText(ML, VW/2, CY + MH2/2);
+        CY += MH2 + GAP*0.5;
 
-        ctx.strokeStyle = "rgba(255,255,255,0.18)";
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
+        // Title
+        ctx.font = `700 ${TITLE_FS}px Georgia,serif`;
+        ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.shadowColor = "rgba(0,0,0,.92)"; ctx.shadowBlur = TITLE_FS*.4; ctx.shadowOffsetY = TITLE_FS*.05;
+        titleLines.forEach((l,i) => ctx.fillText(l, VW/2, CY + i*TITLE_LH));
+        CY += TITLE_H + GAP;
 
-        const setShadow = (blur, ox = 2.5 * BASE, oy = 2.5 * BASE) => {
-          ctx.shadowColor = "rgba(0,0,0,0.88)";
-          ctx.shadowBlur = blur;
-          ctx.shadowOffsetX = ox;
-          ctx.shadowOffsetY = oy;
-        };
-        const clearShadow = () => {
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        };
+        // Frosted description box
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        const DBX = (VW-OW)/2 - 16*BASE, DBW = OW + 32*BASE;
+        ctx.fillStyle = "rgba(0,0,0,0.5)"; roundRect(ctx, DBX, CY, DBW, DESC_H, 14*BASE); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.09)"; ctx.lineWidth = 1.5*BASE;
+        roundRect(ctx, DBX, CY, DBW, DESC_H, 14*BASE); ctx.stroke();
+        ctx.font = `400 ${DESC_FS}px Georgia,serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 4*BASE;
+        descLines.forEach((l,i) => ctx.fillText(l, VW/2, CY + 14*BASE + i*DESC_LH));
 
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#ffffff";
-        let ty = panelY + panelPadY + TITLE_FS * 0.4;
+        // Gold rule
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+        const ry = VH - PAD_V * 0.9;
+        ctx.strokeStyle = `${categoryHex}88`; ctx.lineWidth = 1.5*BASE;
+        ctx.beginPath(); ctx.moveTo(PAD_V*2, ry); ctx.lineTo(VW-PAD_V*2, ry); ctx.stroke();
+      };
 
-        ctx.font = `700 ${TITLE_FS}px system-ui, -apple-system, sans-serif`;
-        setShadow(12 * BASE);
-        ctx.fillText(post.title || "Untitled Property", VW / 2, ty);
-        ty += TITLE_FS * 1.45;
+      // 5. Seek-and-capture each frame (no live playback — avoids all stutter)
+      const frames = [];
+      setDownloadProgress(3);
 
-        ctx.font = `600 ${META_FS}px system-ui, -apple-system, sans-serif`;
-        setShadow(7 * BASE);
-        const metaStr = `${post.post_type} • ${post.category} • ${new Date(
-          post.created_at
-        ).toLocaleDateString()}`;
-        ctx.fillText(metaStr, VW / 2, ty);
-        ty += META_FS * 2.3;
-
-        ctx.font = `500 ${DESC_FS}px system-ui, -apple-system, sans-serif`;
-        setShadow(8 * BASE);
-        descLines.forEach((line) => {
-          ctx.fillText(line, VW / 2, ty);
-          ty += LINE_H;
+      for (let f = 0; f < totalFrames; f++) {
+        // Seek to target timestamp
+        await new Promise(res => {
+          const done = () => { vid.removeEventListener("seeked", done); res(); };
+          vid.addEventListener("seeked", done, { once: true });
+          vid.currentTime = Math.min(f * INTERVAL, duration - 0.001);
         });
 
-        clearShadow();
-      };
+        // Composite: video frame + overlay
+        ctx.drawImage(vid, 0, 0, VW, VH);
+        drawOverlay();
 
-      const fps = Math.min(srcVideo.playbackRate || 30, 30);
-      let combinedStream;
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const srcNode = audioCtx.createMediaElementSource(srcVideo);
-        const dest = audioCtx.createMediaStreamDestination();
-        srcNode.connect(dest);
-        combinedStream = new MediaStream([
-          ...canvas.captureStream(fps).getTracks(),
-          ...dest.stream.getTracks(),
-        ]);
-      } catch {
-        combinedStream = canvas.captureStream(fps);
+        // Snapshot as ImageBitmap (fast, no encoding overhead)
+        frames.push(await createImageBitmap(canvas));
+
+        if (f % 8 === 0) setDownloadProgress(3 + Math.round((f / totalFrames) * 72));
       }
 
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-        ? "video/webm;codecs=vp9,opus"
-        : "video/webm";
+      setDownloadProgress(76);
 
-      const recorder = new MediaRecorder(combinedStream, {
-        mimeType,
-        videoBitsPerSecond: 5000000,
-      });
+      // 6. Playback captured frames into a recording canvas at exact FPS
+      //    This produces a clean, smooth video with no seeking artifacts
+      const recCanvas = document.createElement("canvas");
+      recCanvas.width = VW; recCanvas.height = VH;
+      const recCtx    = recCanvas.getContext("2d");
+      const stream    = recCanvas.captureStream(FPS);
 
-      const chunks = [];
-      recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+      const mime = ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
+        .find(m => MediaRecorder.isTypeSupported(m)) || "video/webm";
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+      const chunks   = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.start();
 
-      let rafId;
-      const renderFrame = () => {
-        if (srcVideo.paused || srcVideo.ended) return;
-        ctx.drawImage(srcVideo, 0, 0, VW, VH);
-        drawOverlay();
-        rafId = requestAnimationFrame(renderFrame);
-      };
+      const MS = 1000 / FPS;
+      for (let f = 0; f < frames.length; f++) {
+        recCtx.drawImage(frames[f], 0, 0);
+        await new Promise(r => setTimeout(r, MS));
+        if (f % 10 === 0) setDownloadProgress(76 + Math.round((f / frames.length) * 20));
+      }
 
-      recorder.start(100);
-      srcVideo.currentTime = 0;
-      await srcVideo.play();
-      renderFrame();
-
-      await new Promise((resolve) => {
-        srcVideo.onended = resolve;
-        setTimeout(resolve, (srcVideo.duration || 60) * 1000 + 6000);
-      });
-
-      cancelAnimationFrame(rafId);
       recorder.stop();
+      await new Promise(r => { recorder.onstop = r; });
 
-      await new Promise((r) => (recorder.onstop = r));
+      setDownloadProgress(98);
 
-      const finalBlob = new Blob(chunks, { type: mimeType });
-      const url = URL.createObjectURL(finalBlob);
+      // Release bitmaps
+      frames.forEach(b => b.close());
+
+      // 7. Trigger download
+      const finalBlob = new Blob(chunks, { type: mime });
+      const url  = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
-      const sanitizedTitle = (post.title || "reel")
-        .replace(/[^a-z0-9]/gi, "_")
-        .substring(0, 30);
-      link.download = `Oweru_${sanitizedTitle}_Branded_Reel_${Date.now()}.webm`;
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 12000);
+      link.download = `Oweru_${(post.title||"reel").replace(/[^a-z0-9]/gi,"_").substring(0,30)}_Branded_${Date.now()}.webm`;
+      link.href = url; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
 
-      srcVideo.pause();
-      document.body.removeChild(srcVideo);
-      if (videoBlobUrl.startsWith("blob:")) URL.revokeObjectURL(videoBlobUrl);
-    } catch (error) {
-      console.error("Branded reel download error:", error);
+      // Cleanup
+      vid.pause(); try { document.body.removeChild(vid); } catch {}
+      if (blobUrl.startsWith("blob:")) URL.revokeObjectURL(blobUrl);
+
+      setDownloadProgress(100);
+      setTimeout(() => setDownloadProgress(0), 1500);
+
+    } catch (err) {
+      console.error("Branded reel error:", err);
       alert("Failed to generate branded reel. Please try again.");
-    } finally {
-      setDownloading(false);
-    }
+    } finally { setDownloading(false); }
   };
 
   const isReelPost = post.post_type === "Reel" && videos.length > 0;
 
-  // ─── Render ─────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
+      {/* Instagram toast */}
       {instagramStatus && (
-        <div
-          className={`fixed top-4 right-4 z-50 max-w-sm rounded-xl shadow-2xl p-4 flex items-start gap-3 text-white ${
-            instagramStatus.type === "success" ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
-          <div className="flex-shrink-0 mt-0.5">
-            {instagramStatus.type === "success" ? <Check size={18} /> : <X size={18} />}
-          </div>
+        <div className={`fixed top-4 right-4 z-50 max-w-sm rounded-xl shadow-2xl p-4 flex items-start gap-3 text-white ${instagramStatus.type==="success"?"bg-green-600":"bg-red-600"}`}>
+          <div className="flex-shrink-0 mt-0.5">{instagramStatus.type==="success"?<Check size={18}/>:<X size={18}/>}</div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">{instagramStatus.message}</p>
-            {instagramStatus.permalink && (
-              <a
-                href={instagramStatus.permalink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs underline mt-1 block hover:text-white/80"
-              >
-                View on Instagram →
-              </a>
-            )}
+            {instagramStatus.permalink && <a href={instagramStatus.permalink} target="_blank" rel="noopener noreferrer" className="text-xs underline mt-1 block">View on Instagram →</a>}
           </div>
-          <button
-            onClick={() => setInstagramStatus(null)}
-            className="text-white hover:text-gray-200 flex-shrink-0"
-          >
-            <X size={16} />
-          </button>
+          <button onClick={()=>setInstagramStatus(null)}><X size={16}/></button>
         </div>
       )}
 
+      {/* Card */}
       <div
         ref={cardRef}
-        className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(
-          post.category
-        )} rounded-lg flex flex-col relative h-[700px]`}
+        className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}
       >
+        {/* ── Media ── */}
         <div className="w-full h-64 flex-shrink-0">
+
+          {/* Static */}
           {post.post_type === "Static" && (
-            <div className="w-full h-full flex items-center justify-center bg-black">
-              {images.length > 0 ? (
-                <img
-                  src={getCachedMediaUrl(images[0])}
-                  alt={post.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.target.src = PLACEHOLDER_IMAGE;
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                  <p className="text-white text-center px-4">No valid image available</p>
-                </div>
-              )}
+            <div className="w-full h-full bg-black">
+              {images.length > 0
+                ? <img src={getCachedMediaUrl(images[0])} alt={post.title} className="w-full h-full object-cover" loading="lazy" onError={e=>e.target.src=PLACEHOLDER_IMAGE}/>
+                : <div className="w-full h-full flex items-center justify-center bg-gray-800"><p className="text-white px-4 text-center">No valid image available</p></div>
+              }
             </div>
           )}
 
+          {/* Carousel */}
           {post.post_type === "Carousel" && (
             images.length > 0 ? (
               <div className="w-full h-full flex flex-col">
                 <div className="relative w-full h-full">
-                  <img
-                    src={getCachedMediaUrl(images[carouselIndex])}
-                    alt={`${post.title} - Image ${carouselIndex + 1}`}
-                    className="w-full h-full object-cover bg-black"
-                    loading="lazy"
-                    onError={(e) => {
-                      e.target.src = PLACEHOLDER_IMAGE;
-                    }}
-                  />
-                  {images.length > 1 && (
-                    <>
-                      <button
-                        onClick={() =>
-                          setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
-                        }
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        onClick={() => setCarouselIndex((prev) => (prev + 1) % images.length)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                      >
-                        ›
-                      </button>
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                        {carouselIndex + 1} / {images.length}
-                      </div>
-                    </>
-                  )}
+                  <img src={getCachedMediaUrl(images[carouselIndex])} alt={`${post.title} - ${carouselIndex+1}`} className="w-full h-full object-cover bg-black" loading="lazy" onError={e=>e.target.src=PLACEHOLDER_IMAGE}/>
+                  {images.length > 1 && <>
+                    <button onClick={()=>setCarouselIndex(p=>(p-1+images.length)%images.length)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded-full">‹</button>
+                    <button onClick={()=>setCarouselIndex(p=>(p+1)%images.length)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded-full">›</button>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 py-1 rounded text-xs">{carouselIndex+1} / {images.length}</div>
+                  </>}
                 </div>
                 {images.length > 1 && (
-                  <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-2 overflow-x-auto bg-black bg-opacity-50">
-                    {images.map((img, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCarouselIndex(idx)}
-                        className={`shrink-0 ${idx === carouselIndex ? "ring-2 ring-white" : ""}`}
-                      >
-                        <img
-                          src={getCachedMediaUrl(img)}
-                          alt={`Thumbnail ${idx + 1}`}
-                          className="w-10 h-10 object-cover rounded"
-                          loading="lazy"
-                          onError={(e) => {
-                            e.target.src = PLACEHOLDER_IMAGE;
-                          }}
-                        />
+                  <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-2 overflow-x-auto bg-black/50">
+                    {images.map((img,idx)=>(
+                      <button key={idx} onClick={()=>setCarouselIndex(idx)} className={`shrink-0 ${idx===carouselIndex?"ring-2 ring-white":""}`}>
+                        <img src={getCachedMediaUrl(img)} alt={`Thumb ${idx+1}`} className="w-10 h-10 object-cover rounded" loading="lazy" onError={e=>e.target.src=PLACEHOLDER_IMAGE}/>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                <p className="text-white text-center px-4">No valid images available</p>
-              </div>
+              <div className="w-full h-full flex items-center justify-center bg-gray-800"><p className="text-white px-4 text-center">No valid images available</p></div>
             )
           )}
 
+          {/* ════════════════════════════════════════════════════════
+              REEL — Professional luxury real-estate cinematic layout
+          ════════════════════════════════════════════════════════ */}
           {post.post_type === "Reel" && (
             videos.length > 0 ? (
-              <div
-                className={`relative w-full h-full overflow-hidden ${getCategoryBackground(
-                  post.category
-                )}`}
-              >
+              <div className={`relative w-full h-full overflow-hidden ${getCategoryBackground(post.category)}`}>
+
+                {/* Video player */}
                 <video
                   ref={videoRef}
                   controls
                   preload="metadata"
                   playsInline
-                  muted={false}
                   crossOrigin="anonymous"
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover z-[1]"
                   onError={() => setVideoError(true)}
-                  onLoadedData={() => setVideoError(false)}
+                  onLoadStart={() => setVideoError(false)}
                 >
-                  <source
-                    src={getMediaUrl(videos[0])}
-                    type={videos[0].mime_type || "video/mp4"}
-                  />
-                  Your browser does not support the video tag.
+                  <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || "video/mp4"}/>
                 </video>
 
+                {/* Video error */}
                 {videoError && (
-                  <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border border-red-200 text-sm z-20">
-                    <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
-                    <p className="text-red-600 text-xs mb-2 break-all">
-                      URL: {getMediaUrl(videos[0])}
-                    </p>
-                    <a
-                      href={getMediaUrl(videos[0])}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline text-xs"
-                    >
-                      Open video directly
-                    </a>
+                  <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border-b border-red-200 z-30">
+                    <p className="text-red-700 font-semibold text-xs">Video failed to load</p>
+                    <a href={getMediaUrl(videos[0])} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">Open directly →</a>
                   </div>
                 )}
 
-                <div className="absolute top-4 left-4 z-20">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-1.5 shadow-lg">
-                    <img
-                      src={oweruLogo}
-                      alt="Oweru logo"
-                      className="h-11 w-auto drop-shadow-md"
-                    />
+                {/* Cinematic bottom scrim — layered for depth */}
+                <div className="absolute inset-0 z-[5] pointer-events-none"
+                  style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.52) 68%, rgba(0,0,0,0.88) 100%)" }}
+                />
+
+                {/* ── Top bar: Logo + REEL badge ── */}
+                <div className="absolute top-0 left-0 right-0 z-[15] flex items-start justify-between px-3 pt-3 pointer-events-none">
+                  {/* Logo pill — crisp white, no opacity loss */}
+                  <div
+                    className="flex items-center bg-white rounded-full px-3 py-1.5"
+                    style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)" }}
+                  >
+                    <img src={oweruLogo} alt="Oweru" className="h-6 w-auto"/>
+                  </div>
+
+                  {/* REEL badge — red pill with live dot */}
+                  <div
+                    className="flex items-center gap-1.5 bg-red-600 text-white rounded-full px-2.5 py-1"
+                    style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", boxShadow: "0 2px 8px rgba(220,38,38,0.5)" }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse flex-shrink-0"/>
+                    REEL
                   </div>
                 </div>
 
-                <div className="absolute inset-0 z-10 flex items-center justify-center px-5 sm:px-8 pointer-events-none">
+                {/* ── Bottom content: category chip + title + description ── */}
+                <div className="absolute bottom-0 left-0 right-0 z-[15] px-3 pb-3 flex flex-col items-center gap-1.5 pointer-events-none">
+
+                  {/* Category + date chip */}
                   <div
-                    className="
-                      bg-black/38 backdrop-blur-[6px] rounded-2xl 
-                      px-6 py-6 sm:px-9 sm:py-8 max-w-lg w-full
-                      border border-white/10 shadow-2xl
-                      pointer-events-auto
-                    "
+                    className="inline-flex items-center text-white rounded-full px-3 py-1"
+                    style={{
+                      backgroundColor: `${categoryHex}E6`,
+                      fontSize: "9px", fontWeight: 600, letterSpacing: "0.1em",
+                      boxShadow: `0 2px 10px ${categoryHex}44`,
+                    }}
                   >
-                    <h3
-                      className="
-                        text-xl sm:text-2xl font-bold text-white leading-tight
-                        text-center mb-3 tracking-tight
-                        drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]
-                      "
-                    >
-                      {post.title}
-                    </h3>
+                    <span className="uppercase">{post.category.replace(/_/g, " ")}</span>
+                    <span className="mx-1.5 opacity-50">•</span>
+                    <span className="opacity-80">{new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                  </div>
 
-                    <p
-                      className="
-                        text-xs sm:text-sm font-medium text-white/90 mb-4 text-center
-                        tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]
-                      "
-                    >
-                      {post.post_type} • {post.category} •{" "}
-                      {new Date(post.created_at).toLocaleDateString()}
-                    </p>
+                  {/* Title */}
+                  <h3
+                    className="text-white text-center font-bold leading-snug w-full"
+                    style={{
+                      fontSize: "clamp(15px, 4vw, 19px)",
+                      fontFamily: "Georgia, 'Times New Roman', serif",
+                      textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 1px 6px rgba(0,0,0,0.85)",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {post.title}
+                  </h3>
 
+                  {/* Description — frosted glass */}
+                  <div
+                    className="w-full rounded-2xl px-3.5 py-2.5"
+                    style={{
+                      background: "rgba(0,0,0,0.48)",
+                      backdropFilter: "blur(14px)",
+                      WebkitBackdropFilter: "blur(14px)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
+                    }}
+                  >
                     <p
-                      className="
-                        text-sm sm:text-base text-white/95 text-center leading-relaxed
-                        font-medium max-h-[38vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/30
-                        drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]
-                      "
+                      className="text-center leading-relaxed line-clamp-3"
+                      style={{
+                        fontSize: "clamp(10px, 2.7vw, 11.5px)",
+                        color: "rgba(255,255,255,0.82)",
+                        fontFamily: "Georgia, 'Times New Roman', serif",
+                        textShadow: "0 1px 8px rgba(0,0,0,0.7)",
+                      }}
                     >
                       {post.description}
                     </p>
+                  </div>
+
+                  {/* Decorative rule with category color */}
+                  <div className="flex items-center gap-2 w-full px-3 mt-0.5">
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${categoryHex}70, transparent)` }}/>
+                    <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: `${categoryHex}90` }}/>
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${categoryHex}70, transparent)` }}/>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                <p className="text-white text-center px-4">No valid video available</p>
+                <p className="text-white px-4 text-center">No valid video available</p>
               </div>
             )
           )}
         </div>
 
+        {/* ── Content section (non-Reel) — UNCHANGED ── */}
         {post.post_type !== "Reel" && (
           <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
             <div className="px-4 pt-4 pb-3">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">
-                    {post.title}
-                  </h3>
-                  <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
-                    {post.post_type} • {post.category} •{" "}
-                    {new Date(post.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
-              <p
-                className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}
-              >
-                {post.description}
+              <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">{post.title}</h3>
+              <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
+                {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
               </p>
             </div>
-
-            <div className="px-4 pb-3 flex justify-end items-center">
-              <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg" />
+            <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
+              <p className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}>{post.description}</p>
+            </div>
+            <div className="px-4 pb-3 flex justify-end">
+              <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg"/>
             </div>
           </div>
         )}
 
+        {/* ── Contact footer — UNCHANGED ── */}
         <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
-          <div className="text-center text-gray-800">
-            <div className="text-sm whitespace-nowrap">
-              <span className="inline-block">
-                <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
-                  info@oweru.com
-                </a>
-              </span>{" "}
-               {" "}
-              <span className="inline-block">
-                <a href="tel:+255711890764" className="text-gray-950 hover:underline">
-                  +255 711 890 764
-                </a>
-              </span>{" "}
-               {" "}
-              <span className="inline-block">
-                <a
-                  href="https://www.oweru.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-950 hover:underline"
-                >
-                  www.oweru.com
-                </a>
-              </span>
-            </div>
+          <div className="text-sm text-center whitespace-nowrap text-gray-950">
+            <a href="mailto:info@oweru.com" className="hover:underline">info@oweru.com</a>{" "}&nbsp;
+            <a href="tel:+255711890764" className="hover:underline">+255 711 890 764</a>{" "}&nbsp;
+            <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="hover:underline">www.oweru.com</a>
           </div>
         </div>
 
-        <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`} />
+        {/* ── Bottom accent strip — UNCHANGED ── */}
+        <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`}/>
 
-        <div className="share-button-container absolute top-3 right-3 z-10">
+        {/* ── Share button ── */}
+        <div className="share-button-container absolute top-3 right-3 z-20">
           <button
             onClick={() => setShowShareMenu(!showShareMenu)}
             disabled={downloading}
-            className="bg-white hover:bg-gray-50 text-gray-900 p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center border-2 border-gray-200 hover:border-[#C89128]"
+            className="bg-white hover:bg-gray-50 text-gray-900 p-2.5 rounded-full shadow-xl border-2 border-gray-200 hover:border-[#C89128] transition-all duration-200"
             aria-label="Share post"
           >
-            {downloading ? (
-              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Share2 size={18} />
-            )}
+            {downloading
+              ? <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"/>
+              : <Share2 size={18}/>
+            }
           </button>
 
-          {showShareMenu && (
+          {/* Progress indicator */}
+          {downloading && downloadProgress > 0 && (
+            <div className="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-30">
+              <p className="text-xs text-gray-600 mb-1.5 font-medium flex justify-between">
+                <span>
+                  {downloadProgress < 75 ? "Capturing frames…"
+                  : downloadProgress < 95 ? "Encoding video…"
+                  : "Finalising…"}
+                </span>
+                <span className="font-bold text-[#C89128]">{downloadProgress}%</span>
+              </p>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${downloadProgress}%`, backgroundColor: "#C89128" }}
+                />
+              </div>
+            </div>
+          )}
+
+          {showShareMenu && !downloading && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
-              <div className="absolute top-14 right-0 z-20 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden min-w-[220px]">
-                <div className="border-t border-gray-100" />
+              <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)}/>
+              <div className="absolute top-12 right-0 z-20 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden min-w-[230px]">
 
                 {isReelPost && (
-                  <button
-                    onClick={handleDownloadVideo}
-                    disabled={downloading}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
-                  >
-                    {downloading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
-                        Encoding branded reel…
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#C89128"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
-                          <line x1="7" y1="2" x2="7" y2="22" />
-                          <line x1="17" y1="2" x2="17" y2="22" />
-                          <line x1="2" y1="12" x2="22" y2="12" />
-                          <line x1="2" y1="7" x2="7" y2="7" />
-                          <line x1="2" y1="17" x2="7" y2="17" />
-                          <line x1="17" y1="17" x2="22" y2="17" />
-                          <line x1="17" y1="7" x2="22" y2="7" />
-                        </svg>
-                        Download Branded Reel (video)
-                      </>
-                    )}
+                  <button onClick={handleDownloadVideo} disabled={downloading}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50 border-b border-gray-50">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C89128" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>
+                      <line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/>
+                      <line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>
+                    </svg>
+                    Download Branded Reel
                   </button>
                 )}
 
-                <button
-                  onClick={handleDownloadPostAsImage}
-                  disabled={downloading}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
-                >
-                  {downloading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-[#C89128] border-t-transparent rounded-full animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={16} className="text-[#C89128]" />
-                      {isReelPost ? "Download Branded Post (image)" : "Download Branded Post"}
-                    </>
-                  )}
+                <button onClick={handleDownloadPostAsImage} disabled={downloading}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50">
+                  <Download size={16} className="text-[#C89128]"/>
+                  {isReelPost ? "Download as Image" : "Download Branded Post"}
                 </button>
 
                 {!isReelPost && (
-                  <button
-                    onClick={handleDownloadMedia}
-                    disabled={downloading}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50"
-                  >
-                    {downloading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                        Downloading...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={16} className="text-slate-700" />
-                        Download Media Files
-                      </>
-                    )}
+                  <button onClick={handleDownloadMedia} disabled={downloading}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50">
+                    <Download size={16} className="text-slate-600"/>
+                    Download Media Files
                   </button>
                 )}
 
-                <div className="border-t border-gray-100" />
-
-                <button
-                  onClick={handleCopyLink}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium"
-                >
-                  {copied ? (
-                    <>
-                      <Check size={16} className="text-green-500" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} className="text-gray-400" />
-                      Copy Link
-                    </>
-                  )}
+                <div className="border-t border-gray-100"/>
+                <button onClick={handleCopyLink}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium">
+                  {copied
+                    ? <><Check size={16} className="text-green-500"/>Copied!</>
+                    : <><Copy size={16} className="text-gray-400"/>Copy Link</>
+                  }
                 </button>
               </div>
             </>

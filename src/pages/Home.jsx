@@ -384,7 +384,7 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar />
+      <Navbar onCategoryClick={(categoryId) => setSelectedCategory(categoryIdMap[categoryId] || categoryId)} />
 
       {/* Hero - kept mostly same */}
       <section className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20">
