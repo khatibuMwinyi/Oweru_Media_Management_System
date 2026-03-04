@@ -24,10 +24,10 @@ export default function Footer() {
 
           {/* Social icons */}
           <div className="flex gap-4 mt-6">
-            <SocialIcon icon={<Facebook />} />
-            <SocialIcon icon={<Twitter />} />
-            <SocialIcon icon={<Instagram />} />
-            <SocialIcon icon={<Linkedin />} />
+            <SocialIcon icon={<Facebook />} href="https://facebook.com" />
+            <SocialIcon icon={<Twitter />} href="https://twitter.com" />
+            <SocialIcon icon={<Instagram />} href="https://instagram.com" />
+            <SocialIcon icon={<Linkedin />} href="https://linkedin.com" />
           </div>
         </div>
 
@@ -41,30 +41,37 @@ export default function Footer() {
 
         {/* Contact Info */}
         <div>
-          <h4 className="text-lg font-semibold text-white mb-4">
-            Contact Info
-          </h4>
+          <h4 className="text-lg font-semibold text-white mb-4">Contact Info</h4>
+
           <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-slate-400" />
-            <p className="text-sm">
-              Tancot House Posta-Dar es Salaam, Tanzania
-            </p>
+            <MapPin className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm">Tancot House Posta — Dar es Salaam, Tanzania</p>
           </div>
-          <div className="flex items-center gap-3 mt-2">
-            <Phone className="w-5 h-5 text-slate-400" />
-            <p className="text-sm">+255 714 859 934</p>
+
+          <div className="flex items-center gap-3 mt-3">
+            <Phone className="w-5 h-5 text-slate-400 flex-shrink-0" />
+            <a
+              href="tel:+255714859934"
+              className="text-sm text-slate-300 hover:text-blue-400 transition-colors hover:underline underline-offset-2"
+            >
+              +255 714 859 934
+            </a>
           </div>
-          <div className="flex items-center gap-3 mt-2">
-            <Mail className="w-5 h-5 text-slate-400" />
-            <p className="text-sm">info@oweru.com</p>
+
+          <div className="flex items-center gap-3 mt-3">
+            <Mail className="w-5 h-5 text-slate-400 flex-shrink-0" />
+            <a
+              href="mailto:info@oweru.com"
+              className="text-sm text-slate-300 hover:text-blue-400 transition-colors hover:underline underline-offset-2"
+            >
+              info@oweru.com
+            </a>
           </div>
         </div>
 
-        {/* Newsletter (optional) */}
+        {/* Newsletter */}
         <div>
-          <h4 className="text-lg font-semibold text-white mb-4">
-            Stay Updated
-          </h4>
+          <h4 className="text-lg font-semibold text-white mb-4">Stay Updated</h4>
           <p className="text-sm text-slate-400">
             Subscribe to receive the latest real estate updates.
           </p>
@@ -74,7 +81,7 @@ export default function Footer() {
               placeholder="Your email"
               className="w-full px-3 py-2 rounded-md bg-[#0f172a] border border-slate-700 text-white placeholder-slate-500 focus:outline-none"
             />
-            <button className="bg-blue-700 hover:bg-blue-600 text-white px-4 rounded-md">
+            <button className="bg-blue-700 hover:bg-blue-600 text-white px-4 rounded-md transition-colors">
               Subscribe
             </button>
           </div>
@@ -100,10 +107,15 @@ function FooterLink({ href, children }) {
   );
 }
 
-function SocialIcon({ icon }) {
+function SocialIcon({ icon, href }) {
   return (
-    <div className="w-9 h-9 flex items-center justify-center bg-[#0f172a] hover:bg-blue-700 transition text-white rounded-full">
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-9 h-9 flex items-center justify-center bg-[#0f172a] hover:bg-blue-700 transition text-white rounded-full"
+    >
       {icon}
-    </div>
+    </a>
   );
 }

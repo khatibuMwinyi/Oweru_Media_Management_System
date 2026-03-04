@@ -803,5 +803,4 @@ const HomePostCard = ({ post }) => {
     </>
   );
 };
-
 export default memo(HomePostCard);
