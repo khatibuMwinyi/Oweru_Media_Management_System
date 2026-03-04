@@ -40,7 +40,7 @@ const HomePostCard = ({ post }) => {
   const images = filterValidMedia(post.media, "image");
   const videos = filterValidMedia(post.media, "video");
 
-  // ─── Category styles (unchanged) ───────────────────────────────────────────
+  // ─── Category styles ────────────────────────────────────────────────────
   const getCategoryBackground = (category) => {
     switch (category) {
       case "rentals":
@@ -112,16 +112,19 @@ const HomePostCard = ({ post }) => {
   const getShareText = () =>
     `${post.title}\n\n${post.description}\n\nCheck out this ${post.category} property on Oweru Media!`;
 
-  // ─── Cached image URL ───────────────────────────────────────────────────────
   const getCachedMediaUrl = (media) => {
     const cacheKey = `${media.id}-${media.updated_at || media.created_at}`;
-    if (imageCache.has(cacheKey)) return imageCache.get(cacheKey);
+
+    if (imageCache.has(cacheKey)) {
+      return imageCache.get(cacheKey);
+    }
+
     const url = getMediaUrl(media);
-    setImageCache(prev => new Map(prev).set(cacheKey, url));
+    setImageCache((prev) => new Map(prev).set(cacheKey, url));
     return url;
   };
 
-  // ─── Instagram ──────────────────────────────────────────────────────────────
+  // ─── Instagram ──────────────────────────────────────────────────────────
   const handlePostToInstagram = async () => {
     setPostingToInstagram(true);
     setInstagramStatus(null);
@@ -152,10 +155,16 @@ const HomePostCard = ({ post }) => {
 
         const proxyUrl = `${BASE_URL}/api/proxy/media/${relativePath}`;
         try {
-          const response = await fetch(proxyUrl, { mode: "cors", credentials: "omit" });
-          if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+          const response = await fetch(proxyUrl, {
+            mode: "cors",
+            credentials: "omit",
+          });
+          if (!response.ok)
+            throw new Error(`${response.status} ${response.statusText}`);
           const blob = await response.blob();
-          const fileName = `media_${i}.${media.file_type === "video" ? "mp4" : "jpg"}`;
+          const fileName = `media_${i}.${
+            media.file_type === "video" ? "mp4" : "jpg"
+          }`;
           formData.append(`media[${i}]`, blob, fileName);
           mediaUploaded++;
         } catch (err) {
@@ -163,7 +172,8 @@ const HomePostCard = ({ post }) => {
         }
       }
 
-      if (mediaUploaded === 0) throw new Error("No media files were successfully loaded.");
+      if (mediaUploaded === 0)
+        throw new Error("No media files were successfully loaded.");
 
       const caption = `${post.title}\n\n${post.description}\n\n📍 ${post.category}\n\n#OweruMedia #RealEstate #Property #Tanzania`;
       formData.append("caption", caption);
@@ -196,19 +206,23 @@ const HomePostCard = ({ post }) => {
       console.error("Instagram posting error:", error);
       setInstagramStatus({
         type: "error",
-        message: error.message || "Failed to post to Instagram. Please try again.",
+        message:
+          error.message || "Failed to post to Instagram. Please try again.",
       });
     } finally {
       setPostingToInstagram(false);
     }
   };
 
-  // ─── Share ───────────────────────────────────────────────────────────────────
+  // ─── Share ──────────────────────────────────────────────────────────────
   const handleShare = async (platform) => {
     const url = getShareUrl();
     const text = getShareText();
 
-    if ((platform === "native" || platform === "instagram") && navigator.share) {
+    if (
+      (platform === "native" || platform === "instagram") &&
+      navigator.share
+    ) {
       try {
         await navigator.share({ title: post.title, text, url });
         setShowShareMenu(false);
@@ -223,13 +237,22 @@ const HomePostCard = ({ post }) => {
 
     switch (platform) {
       case "whatsapp":
-        window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, "_blank");
+        window.open(
+          `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
+          "_blank"
+        );
         break;
       case "facebook":
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&e=${encodedText}`, "_blank");
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&e=${encodedText}`,
+          "_blank"
+        );
         break;
       case "twitter":
-        window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, "_blank");
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+          "_blank"
+        );
         break;
       case "instagram":
       case "copy":
@@ -258,7 +281,7 @@ const HomePostCard = ({ post }) => {
     setShowShareMenu(false);
   };
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  // ─── Helpers ────────────────────────────────────────────────────────────
   const fetchMediaAsDataUrl = async (media) => {
     let relativePath;
     if (media.url) {
@@ -317,7 +340,10 @@ const HomePostCard = ({ post }) => {
     const paragraphs = text.split("\n");
     const lines = [];
     for (const para of paragraphs) {
-      if (para.trim() === "") { lines.push(""); continue; }
+      if (para.trim() === "") {
+        lines.push("");
+        continue;
+      }
       const words = para.split(" ");
       let line = "";
       for (const word of words) {
@@ -354,29 +380,31 @@ const HomePostCard = ({ post }) => {
     ctx.closePath();
   };
 
-  // ─── Download: Branded Post Image ────────────────────────────────────────────
+  // ─── Download: Branded Post Image ───────────────────────────────────────
   const handleDownloadPostAsImage = async () => {
     setDownloading(true);
     setShowShareMenu(false);
 
     try {
-      const SCALE   = 2;
-      const W       = 600 * SCALE;
-      const H       = 700 * SCALE;
-      const PAD     = 16 * SCALE;
-      const PAD_X   = 24 * SCALE;
-      const RADIUS  = 8 * SCALE;
+      const SCALE = 2;
+      const W = 600 * SCALE;
+      const H = 700 * SCALE;
+      const PAD = 16 * SCALE;
+      const PAD_X = 24 * SCALE;
+      const RADIUS = 8 * SCALE;
 
-      const MEDIA_H    = 256 * SCALE;
-      const ACCENT_H   =  40 * SCALE;
-      const FOOTER_H   =  48 * SCALE;
-      const CONTENT_H  = H - MEDIA_H - FOOTER_H - ACCENT_H;
+      const MEDIA_H = 256 * SCALE;
+      const ACCENT_H = 40 * SCALE;
+      const FOOTER_H = 48 * SCALE;
+      const CONTENT_H = H - MEDIA_H - FOOTER_H - ACCENT_H;
 
-      const isReel     = post.post_type === "Reel" && videos.length > 0;
+      const isReel = post.post_type === "Reel" && videos.length > 0;
       const isCarousel = post.post_type === "Carousel" && images.length > 0;
       const primaryMedia = isReel
         ? videos[0]
-        : isCarousel ? images[carouselIndex] : (images[0] ?? null);
+        : isCarousel
+        ? images[carouselIndex]
+        : images[0] ?? null;
 
       const logoBitmap = await loadImage(oweruLogo).catch(() => null);
 
@@ -393,7 +421,8 @@ const HomePostCard = ({ post }) => {
               const tmpVideo = document.createElement("video");
               tmpVideo.muted = true;
               tmpVideo.src = dataUrl;
-              tmpVideo.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
+              tmpVideo.style.cssText =
+                "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
               document.body.appendChild(tmpVideo);
               tmpVideo.currentTime = 0.5;
               const fd = await captureVideoFrame(tmpVideo);
@@ -415,7 +444,7 @@ const HomePostCard = ({ post }) => {
       }
 
       const canvas = document.createElement("canvas");
-      canvas.width  = W;
+      canvas.width = W;
       canvas.height = H;
       const ctx = canvas.getContext("2d");
 
@@ -428,12 +457,12 @@ const HomePostCard = ({ post }) => {
 
       let cursorY = 0;
 
-      // ── Media ──
+      // Media
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, cursorY, W, MEDIA_H);
 
       if (mediaBitmap) {
-        const bW = mediaBitmap.naturalWidth  || mediaBitmap.width  || 1;
+        const bW = mediaBitmap.naturalWidth || mediaBitmap.width || 1;
         const bH = mediaBitmap.naturalHeight || mediaBitmap.height || 1;
         const scaleX = W / bW;
         const scaleY = MEDIA_H / bH;
@@ -448,125 +477,122 @@ const HomePostCard = ({ post }) => {
         ctx.clip();
         ctx.drawImage(mediaBitmap, dX, dY, dW, dH);
         ctx.restore();
+      } else {
+        ctx.fillStyle = "#374151";
+        ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("No media available", W / 2, cursorY + MEDIA_H / 2);
       }
 
-      // Reel overlay on static thumbnail
       if (isReel) {
-        // Bottom gradient scrim
-        const scrim = ctx.createLinearGradient(0, cursorY, 0, cursorY + MEDIA_H);
-        scrim.addColorStop(0,   "rgba(0,0,0,0)");
-        scrim.addColorStop(0.45,"rgba(0,0,0,0.15)");
-        scrim.addColorStop(1,   "rgba(0,0,0,0.82)");
-        ctx.fillStyle = scrim;
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
         ctx.fillRect(0, cursorY, W, MEDIA_H);
 
-        // Logo pill — top left
         if (logoBitmap) {
-          const lH = 36 * SCALE;
-          const lW = (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH;
-          const lPad = 6 * SCALE;
-          const lx = PAD, ly = cursorY + PAD;
-          ctx.fillStyle = "rgba(255,255,255,0.92)";
-          roundRect(ctx, lx - lPad, ly - lPad * 0.6, lW + lPad * 2, lH + lPad * 1.2, 20 * SCALE);
+          const lH = 40 * SCALE;
+          const lW = logoBitmap.naturalWidth
+            ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * lH
+            : lH * 3;
+          const lPad = 4 * SCALE;
+          ctx.fillStyle = "rgba(255,255,255,0.8)";
+          roundRect(
+            ctx,
+            PAD - lPad,
+            cursorY + PAD - lPad,
+            lW + lPad * 2,
+            lH + lPad * 2,
+            4 * SCALE
+          );
           ctx.fill();
-          ctx.drawImage(logoBitmap, lx, ly, lW, lH);
+          ctx.drawImage(logoBitmap, PAD, cursorY + PAD, lW, lH);
         }
 
-        // "REEL" badge — top right
-        const badgeText = "● REEL";
-        const badgeFontSize = 11 * SCALE;
-        ctx.font = `700 ${badgeFontSize}px 'Segoe UI', Arial, sans-serif`;
-        const badgeW = ctx.measureText(badgeText).width + 20 * SCALE;
-        const badgeH = badgeFontSize + 14 * SCALE;
-        const bx = W - PAD - badgeW, by = cursorY + PAD;
-        ctx.fillStyle = "rgba(220,38,38,0.9)";
-        roundRect(ctx, bx, by, badgeW, badgeH, badgeH / 2);
-        ctx.fill();
+        const overlayW = Math.min(448 * SCALE, W - PAD * 4);
+        const overlayX = (W - overlayW) / 2;
+        const centerY = cursorY + MEDIA_H / 2;
+
         ctx.fillStyle = "#FFFFFF";
+        ctx.font = `700 ${18 * SCALE}px 'Segoe UI', Arial, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(badgeText, bx + badgeW / 2, by + badgeH / 2);
-
-        // Title — large, bottom of media area
-        const titleFontSize = 22 * SCALE;
-        ctx.font = `800 ${titleFontSize}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
         ctx.shadowColor = "rgba(0,0,0,0.9)";
-        ctx.shadowBlur  = 14 * SCALE;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 3 * SCALE;
-        const titleLines = wrapTextLines(ctx, post.title || "", W - PAD * 4, 2);
-        const titleLineH = titleFontSize * 1.25;
-        const titleBottomY = cursorY + MEDIA_H - 36 * SCALE;
-        titleLines.slice().reverse().forEach((line, i) => {
-          ctx.fillText(line, W / 2, titleBottomY - i * titleLineH);
-        });
+        ctx.shadowBlur = 10 * SCALE;
+        ctx.shadowOffsetX = 2 * SCALE;
+        ctx.shadowOffsetY = 2 * SCALE;
+        ctx.fillText(post.title || "", W / 2, centerY - 40 * SCALE);
 
-        // Meta chip just above title block
-        ctx.shadowBlur = 0;
+        ctx.font = `600 ${11 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.shadowBlur = 6 * SCALE;
+        const metaText = `${post.post_type} • ${post.category} • ${new Date(
+          post.created_at
+        ).toLocaleDateString()}`;
+        ctx.fillText(metaText, W / 2, centerY - 14 * SCALE);
+
+        ctx.font = `500 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+        ctx.shadowBlur = 8 * SCALE;
+        const descLines = wrapTextLines(ctx, post.description || "", overlayW, 4);
+        const descLineH = 18 * SCALE;
+        descLines.forEach((line, i) => {
+          ctx.fillText(line, W / 2, centerY + 10 * SCALE + i * descLineH);
+        });
         ctx.shadowColor = "transparent";
-        const metaFontSize = 10 * SCALE;
-        ctx.font = `600 ${metaFontSize}px 'Segoe UI', Arial, sans-serif`;
-        const metaStr = `${post.category.replace(/_/g, " ").toUpperCase()}  •  ${new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
-        const metaW = ctx.measureText(metaStr).width + 24 * SCALE;
-        const metaH = metaFontSize + 12 * SCALE;
-        const metaX = (W - metaW) / 2;
-        const metaY = titleBottomY - titleLines.length * titleLineH - metaH - 10 * SCALE;
-        ctx.fillStyle = `${categoryHex}CC`; // category color at ~80% opacity
-        roundRect(ctx, metaX, metaY, metaW, metaH, metaH / 2);
-        ctx.fill();
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(metaStr, W / 2, metaY + metaH / 2);
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
       }
 
       cursorY += MEDIA_H;
 
-      // ── Content section ──
+      // Content section
       ctx.fillStyle = categoryHex;
       ctx.fillRect(0, cursorY, W, CONTENT_H);
 
       const contentStartY = cursorY;
       const titleAreaTop = contentStartY + PAD;
 
-      const TITLE_PAD_X  = 8  * SCALE;
-      const TITLE_PAD_Y  = 8  * SCALE;
+      const TITLE_PAD_X = 8 * SCALE;
+      const TITLE_PAD_Y = 8 * SCALE;
       const TITLE_FONT_SIZE = 18 * SCALE;
       ctx.font = `600 ${TITLE_FONT_SIZE}px 'Segoe UI', Arial, sans-serif`;
 
-      const titleText  = post.title || "Untitled Post";
-      const titleW     = Math.min(ctx.measureText(titleText).width + TITLE_PAD_X * 2, W - PAD * 2);
-      const titleH     = TITLE_FONT_SIZE + TITLE_PAD_Y * 2;
+      const titleText = post.title || "Untitled Post";
+      const titleW =
+        Math.min(ctx.measureText(titleText).width + TITLE_PAD_X * 2, W - PAD * 2);
+      const titleH = TITLE_FONT_SIZE + TITLE_PAD_Y * 2;
 
       ctx.fillStyle = "#F3F4F6";
       roundRect(ctx, PAD, titleAreaTop, titleW, titleH, 8 * SCALE);
       ctx.fill();
 
-      ctx.fillStyle    = "#111827";
-      ctx.textAlign    = "left";
+      ctx.fillStyle = "#111827";
+      ctx.textAlign = "left";
       ctx.textBaseline = "top";
-      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
       ctx.fillText(titleText, PAD + TITLE_PAD_X, titleAreaTop + TITLE_PAD_Y);
 
       const metaTop = titleAreaTop + titleH + 8 * SCALE;
       ctx.fillStyle = categoryTextHex;
       ctx.font = `400 ${12 * SCALE}px 'Segoe UI', Arial, sans-serif`;
       ctx.textBaseline = "top";
-      const metaStr = `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`;
+      const metaStr = `${post.post_type} • ${post.category} • ${new Date(
+        post.created_at
+      ).toLocaleDateString()}`;
       ctx.fillText(metaStr, PAD, metaTop);
 
       const DESC_AREA_H = 128 * SCALE;
       const descTop = metaTop + 12 * SCALE + PAD;
-      ctx.fillStyle    = categoryTextHex;
-      ctx.font         = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.fillStyle = categoryTextHex;
+      ctx.font = `400 ${14 * SCALE}px 'Segoe UI', Arial, sans-serif`;
       ctx.textBaseline = "top";
-      ctx.textAlign    = "left";
+      ctx.textAlign = "left";
 
       const maxDescLines = Math.floor(DESC_AREA_H / (14 * SCALE * 1.6));
-      const descLines = wrapTextLines(ctx, post.description || "No description available.", W - PAD * 2, maxDescLines);
+      const descLines = wrapTextLines(
+        ctx,
+        post.description || "No description available.",
+        W - PAD * 2,
+        maxDescLines
+      );
       const descLineH = 14 * SCALE * 1.6;
       descLines.forEach((line, i) => {
         ctx.fillText(line, PAD, descTop + i * descLineH);
@@ -583,12 +609,13 @@ const HomePostCard = ({ post }) => {
 
       cursorY = contentStartY + CONTENT_H;
 
+      // Footer
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, cursorY, W, FOOTER_H);
 
-      ctx.fillStyle    = "#030712";
-      ctx.font         = `400 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
-      ctx.textAlign    = "center";
+      ctx.fillStyle = "#030712";
+      ctx.font = `400 ${13 * SCALE}px 'Segoe UI', Arial, sans-serif`;
+      ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const footerMidY = cursorY + FOOTER_H / 2;
 
@@ -600,6 +627,7 @@ const HomePostCard = ({ post }) => {
 
       cursorY += FOOTER_H;
 
+      // Accent
       ctx.fillStyle = categoryHex;
       ctx.fillRect(0, cursorY, W, ACCENT_H);
 
@@ -612,9 +640,11 @@ const HomePostCard = ({ post }) => {
             setDownloading(false);
             return;
           }
-          const url  = URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
-          const slug   = (post.title || "post").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+          const slug = (post.title || "post")
+            .replace(/[^a-z0-9]/gi, "_")
+            .substring(0, 30);
           const suffix = isCarousel ? `_slide${carouselIndex + 1}` : "";
           link.download = `Oweru_${slug}${suffix}_Post_${Date.now()}.jpg`;
           link.href = url;
@@ -632,7 +662,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: html2canvas screenshot ────────────────────────────────────────
+  // ─── Download: html2canvas screenshot ───────────────────────────────────
   const handleDownloadAsImage = async () => {
     if (!cardRef.current) return;
     setDownloading(true);
@@ -640,7 +670,8 @@ const HomePostCard = ({ post }) => {
     try {
       const shareBtn = cardRef.current.querySelector(".share-button-container");
       if (shareBtn) shareBtn.style.display = "none";
-      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
+      if (videoRef.current && !videoRef.current.paused)
+        videoRef.current.pause();
 
       const canvas = await html2canvas(cardRef.current, {
         useCORS: true,
@@ -656,9 +687,11 @@ const HomePostCard = ({ post }) => {
 
       canvas.toBlob(
         (blob) => {
-          const url  = URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
-          const sanitizedTitle = post.title.replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+          const sanitizedTitle = post.title
+            .replace(/[^a-z0-9]/gi, "_")
+            .substring(0, 30);
           link.download = `Oweru_${sanitizedTitle}_${Date.now()}.png`;
           link.href = url;
           link.click();
@@ -677,7 +710,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: raw media files ────────────────────────────────────────────────
+  // ─── Download: raw media files ──────────────────────────────────────────
   const handleDownloadMedia = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -693,21 +726,27 @@ const HomePostCard = ({ post }) => {
 
       for (let i = 0; i < mediaToDownload.length; i++) {
         const media = mediaToDownload[i];
-        const ext = media.file_type === "video"
-          ? "mp4"
-          : getMediaUrl(media).endsWith(".png") ? "png" : "jpg";
-        const sanitizedTitle = post.title.replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+        const ext =
+          media.file_type === "video"
+            ? "mp4"
+            : getMediaUrl(media).endsWith(".png")
+            ? "png"
+            : "jpg";
+        const sanitizedTitle = post.title
+          .replace(/[^a-z0-9]/gi, "_")
+          .substring(0, 30);
         const fileName = `Oweru_${sanitizedTitle}_${i + 1}_${Date.now()}.${ext}`;
 
         try {
-          const dataUrl  = await fetchMediaAsDataUrl(media);
-          const res      = await fetch(dataUrl);
-          const blob     = await res.blob();
-          const mimeType = media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
-          const typedBlob  = new Blob([blob], { type: mimeType });
-          const objectUrl  = URL.createObjectURL(typedBlob);
+          const dataUrl = await fetchMediaAsDataUrl(media);
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const mimeType =
+            media.file_type === "video" ? "video/mp4" : blob.type || "image/jpeg";
+          const typedBlob = new Blob([blob], { type: mimeType });
+          const objectUrl = URL.createObjectURL(typedBlob);
           const link = document.createElement("a");
-          link.href     = objectUrl;
+          link.href = objectUrl;
           link.download = fileName;
           document.body.appendChild(link);
           link.click();
@@ -730,7 +769,7 @@ const HomePostCard = ({ post }) => {
     }
   };
 
-  // ─── Download: Branded Reel Video ────────────────────────────────────────────
+  // ─── Improved Branded Reel Download ─────────────────────────────────────
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setShowShareMenu(false);
@@ -742,24 +781,23 @@ const HomePostCard = ({ post }) => {
     }
 
     try {
-      // Fetch video blob
       let videoBlobUrl;
       try {
         const dataUrl = await fetchMediaAsDataUrl(videos[0]);
-        const res     = await fetch(dataUrl);
-        const blob    = await res.blob();
-        videoBlobUrl  = URL.createObjectURL(blob);
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        videoBlobUrl = URL.createObjectURL(blob);
       } catch {
         videoBlobUrl = getMediaUrl(videos[0]);
       }
 
-      // Hidden video element
       const srcVideo = document.createElement("video");
-      srcVideo.src         = videoBlobUrl;
-      srcVideo.muted       = false;
+      srcVideo.src = videoBlobUrl;
+      srcVideo.muted = false;
       srcVideo.crossOrigin = "anonymous";
-      srcVideo.preload     = "auto";
-      srcVideo.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
+      srcVideo.preload = "auto";
+      srcVideo.style.cssText =
+        "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
       document.body.appendChild(srcVideo);
 
       await new Promise((resolve, reject) => {
@@ -768,160 +806,119 @@ const HomePostCard = ({ post }) => {
         srcVideo.load();
       });
 
-      const VW = srcVideo.videoWidth  || 1080;
+      const VW = srcVideo.videoWidth || 1080;
       const VH = srcVideo.videoHeight || 1920;
+      const BASE = VW / 390;
 
       const logoBitmap = await loadImage(oweruLogo).catch(() => null);
 
-      // ── Layout constants (proportional to video dimensions) ──
-      const PAD_V   = VW * 0.04;
-      const BASE    = VW / 390;
-
-      // Logo
-      const LOGO_H  = VH * 0.048;
-      const LOGO_W  = logoBitmap
+      const PAD = VW * 0.035;
+      const LOGO_H = VH * 0.052;
+      const LOGO_W = logoBitmap
         ? (logoBitmap.naturalWidth / logoBitmap.naturalHeight) * LOGO_H
         : LOGO_H * 3;
-      const LOGO_PAD = VW * 0.012;
 
-      // Fonts
-      const TITLE_FS   = Math.round(24 * BASE);
-      const META_FS    = Math.round(11 * BASE);
-      const DESC_FS    = Math.round(14 * BASE);
-      const LINE_H     = DESC_FS * 1.65;
-      const OVERLAY_W  = Math.min(VW * 0.82, 420 * BASE);
+      const TITLE_FS = Math.round(20 * BASE);
+      const META_FS = Math.round(13 * BASE);
+      const DESC_FS = Math.round(15 * BASE);
+      const LINE_H = DESC_FS * 1.55;
 
-      // Pre-wrap description
       const offCtx = document.createElement("canvas").getContext("2d");
-      offCtx.font = `500 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
-      const descLines = wrapTextLines(offCtx, post.description || "", OVERLAY_W, 4);
+      offCtx.font = `500 ${DESC_FS}px system-ui, sans-serif`;
+      const descLines = wrapTextLines(offCtx, post.description || "", VW * 0.78, 6);
 
-      // Bottom block heights
-      const BLOCK_PAD     = 20 * BASE;
-      const TITLE_LINE_H  = TITLE_FS * 1.25;
-      const titleLines    = wrapTextLines(offCtx, post.title || "", OVERLAY_W, 2);
+      const overlayTextH =
+        TITLE_FS * 1.2 + META_FS * 2.2 + descLines.length * LINE_H + 80 * BASE;
 
-      // Heights of each block
-      const metaBadgeH    = META_FS + 14 * BASE;
-      const titleBlockH   = titleLines.length * TITLE_LINE_H;
-      const descBoxPadY   = 14 * BASE;
-      const descBoxPadX   = 18 * BASE;
-      const descBoxH      = descLines.length * LINE_H + descBoxPadY * 2;
-      const totalH = metaBadgeH + BLOCK_PAD * 0.5 + titleBlockH + BLOCK_PAD + descBoxH;
-      const blockBottomY  = VH - PAD_V * 2; // bottom margin
-      const blockTopY     = blockBottomY - totalH;
-
-      // Offscreen canvas
       const canvas = document.createElement("canvas");
-      canvas.width  = VW;
+      canvas.width = VW;
       canvas.height = VH;
       const ctx = canvas.getContext("2d");
 
-      // ── Overlay draw (every frame) ──────────────────────────────────────────
       const drawOverlay = () => {
-        // Bottom gradient scrim — tall, cinematic
-        const scrim = ctx.createLinearGradient(0, VH * 0.3, 0, VH);
-        scrim.addColorStop(0,    "rgba(0,0,0,0)");
-        scrim.addColorStop(0.35, "rgba(0,0,0,0.18)");
-        scrim.addColorStop(0.7,  "rgba(0,0,0,0.6)");
-        scrim.addColorStop(1,    "rgba(0,0,0,0.88)");
-        ctx.fillStyle = scrim;
+        ctx.fillStyle = categoryHex;
         ctx.fillRect(0, 0, VW, VH);
 
-        // ── Logo pill — top left ──
         if (logoBitmap) {
-          const lx = PAD_V, ly = PAD_V;
+          const lx = PAD;
+          const ly = PAD;
+          const lPad = VW * 0.014;
           ctx.fillStyle = "rgba(255,255,255,0.92)";
-          roundRect(ctx, lx - LOGO_PAD, ly - LOGO_PAD * 0.6,
-            LOGO_W + LOGO_PAD * 2, LOGO_H + LOGO_PAD * 1.2, 24 * BASE);
+          roundRect(
+            ctx,
+            lx - lPad,
+            ly - lPad,
+            LOGO_W + lPad * 2,
+            LOGO_H + lPad * 2,
+            VW * 0.022
+          );
           ctx.fill();
           ctx.drawImage(logoBitmap, lx, ly, LOGO_W, LOGO_H);
         }
 
-        // ── REEL badge — top right ──
-        const badgeFS = Math.round(10 * BASE);
-        ctx.font = `700 ${badgeFS}px 'Segoe UI', Arial, sans-serif`;
-        const badgeLabel = "● REEL";
-        const badgeW = ctx.measureText(badgeLabel).width + 20 * BASE;
-        const badgeH = badgeFS + 14 * BASE;
-        const bx = VW - PAD_V - badgeW;
-        const by = PAD_V;
-        ctx.fillStyle = "rgba(220,38,38,0.88)";
-        roundRect(ctx, bx, by, badgeW, badgeH, badgeH / 2);
-        ctx.fill();
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(badgeLabel, bx + badgeW / 2, by + badgeH / 2);
+        const panelW = Math.min(VW * 0.82, 540 * BASE);
+        const panelX = (VW - panelW) / 2;
+        const panelPadY = 45 * BASE;
+        const panelPadX = 50 * BASE;
+        const panelH = overlayTextH + panelPadY * 2;
 
-        // ── Meta badge ──
-        let curY = blockTopY;
-        const metaStr = `${post.category.replace(/_/g, " ").toUpperCase()}  •  ${new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
-        ctx.font = `600 ${META_FS}px 'Segoe UI', Arial, sans-serif`;
-        const metaBW = ctx.measureText(metaStr).width + 24 * BASE;
-        const metaBH = META_FS + 14 * BASE;
-        const metaBX = (VW - metaBW) / 2;
-        ctx.fillStyle = `${categoryHex}DD`;
-        roundRect(ctx, metaBX, curY, metaBW, metaBH, metaBH / 2);
-        ctx.fill();
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
-        ctx.fillText(metaStr, VW / 2, curY + metaBH / 2);
+        const panelY = (VH - panelH) / 2;
 
-        curY += metaBH + BLOCK_PAD * 0.5;
-
-        // ── Title lines ──
-        ctx.font = `800 ${TITLE_FS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.shadowColor   = "rgba(0,0,0,0.85)";
-        ctx.shadowBlur    = TITLE_FS * 0.5;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = TITLE_FS * 0.06;
-        titleLines.forEach((line, i) => {
-          ctx.fillText(line, VW / 2, curY + i * TITLE_LINE_H);
-        });
-        curY += titleLines.length * TITLE_LINE_H + BLOCK_PAD;
-
-        // ── Description frosted card ──
-        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
-        const descBoxX = (VW - OVERLAY_W) / 2 - descBoxPadX;
-        const descBoxW = OVERLAY_W + descBoxPadX * 2;
         ctx.fillStyle = "rgba(0,0,0,0.42)";
-        roundRect(ctx, descBoxX, curY, descBoxW, descBoxH, 12 * BASE);
+        roundRect(ctx, panelX, panelY, panelW, panelH, 28 * BASE);
         ctx.fill();
 
-        // frosted border
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
-        ctx.lineWidth   = 1.5 * BASE;
-        roundRect(ctx, descBoxX, curY, descBoxW, descBoxH, 12 * BASE);
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 1.8;
         ctx.stroke();
 
-        ctx.font = `400 ${DESC_FS}px 'Segoe UI', Arial, sans-serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        const setShadow = (blur, ox = 2.5 * BASE, oy = 2.5 * BASE) => {
+          ctx.shadowColor = "rgba(0,0,0,0.88)";
+          ctx.shadowBlur = blur;
+          ctx.shadowOffsetX = ox;
+          ctx.shadowOffsetY = oy;
+        };
+        const clearShadow = () => {
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        };
+
         ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.shadowColor   = "rgba(0,0,0,0.6)";
-        ctx.shadowBlur    = 6 * BASE;
-        descLines.forEach((line, i) => {
-          ctx.fillText(line, VW / 2, curY + descBoxPadY + i * LINE_H);
+        ctx.fillStyle = "#ffffff";
+        let ty = panelY + panelPadY + TITLE_FS * 0.4;
+
+        ctx.font = `700 ${TITLE_FS}px system-ui, -apple-system, sans-serif`;
+        setShadow(12 * BASE);
+        ctx.fillText(post.title || "Untitled Property", VW / 2, ty);
+        ty += TITLE_FS * 1.45;
+
+        ctx.font = `600 ${META_FS}px system-ui, -apple-system, sans-serif`;
+        setShadow(7 * BASE);
+        const metaStr = `${post.post_type} • ${post.category} • ${new Date(
+          post.created_at
+        ).toLocaleDateString()}`;
+        ctx.fillText(metaStr, VW / 2, ty);
+        ty += META_FS * 2.3;
+
+        ctx.font = `500 ${DESC_FS}px system-ui, -apple-system, sans-serif`;
+        setShadow(8 * BASE);
+        descLines.forEach((line) => {
+          ctx.fillText(line, VW / 2, ty);
+          ty += LINE_H;
         });
 
-        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+        clearShadow();
       };
 
-      // Set up MediaRecorder
       const fps = Math.min(srcVideo.playbackRate || 30, 30);
       let combinedStream;
       try {
-        const audioCtx  = new AudioContext();
-        const srcNode   = audioCtx.createMediaElementSource(srcVideo);
-        const dest      = audioCtx.createMediaStreamDestination();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const srcNode = audioCtx.createMediaElementSource(srcVideo);
+        const dest = audioCtx.createMediaStreamDestination();
         srcNode.connect(dest);
-        srcNode.connect(audioCtx.destination);
         combinedStream = new MediaStream([
           ...canvas.captureStream(fps).getTracks(),
           ...dest.stream.getTracks(),
@@ -930,15 +927,17 @@ const HomePostCard = ({ post }) => {
         combinedStream = canvas.captureStream(fps);
       }
 
-      const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
-        .find((m) => MediaRecorder.isTypeSupported(m)) || "video/webm";
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : "video/webm";
 
       const recorder = new MediaRecorder(combinedStream, {
         mimeType,
-        videoBitsPerSecond: 4_000_000,
+        videoBitsPerSecond: 5000000,
       });
+
       const chunks = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
 
       let rafId;
       const renderFrame = () => {
@@ -955,29 +954,30 @@ const HomePostCard = ({ post }) => {
 
       await new Promise((resolve) => {
         srcVideo.onended = resolve;
-        setTimeout(resolve, (srcVideo.duration || 60) * 1000 + 5000);
+        setTimeout(resolve, (srcVideo.duration || 60) * 1000 + 6000);
       });
 
       cancelAnimationFrame(rafId);
       recorder.stop();
 
-      await new Promise((resolve) => { recorder.onstop = resolve; });
+      await new Promise((r) => (recorder.onstop = r));
 
       const finalBlob = new Blob(chunks, { type: mimeType });
-      const url  = URL.createObjectURL(finalBlob);
+      const url = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
-      const sanitizedTitle = (post.title || "reel").replace(/[^a-z0-9]/gi, "_").substring(0, 30);
+      const sanitizedTitle = (post.title || "reel")
+        .replace(/[^a-z0-9]/gi, "_")
+        .substring(0, 30);
       link.download = `Oweru_${sanitizedTitle}_Branded_Reel_${Date.now()}.webm`;
       link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      setTimeout(() => URL.revokeObjectURL(url), 12000);
 
       srcVideo.pause();
       document.body.removeChild(srcVideo);
       if (videoBlobUrl.startsWith("blob:")) URL.revokeObjectURL(videoBlobUrl);
-
     } catch (error) {
       console.error("Branded reel download error:", error);
       alert("Failed to generate branded reel. Please try again.");
@@ -988,10 +988,9 @@ const HomePostCard = ({ post }) => {
 
   const isReelPost = post.post_type === "Reel" && videos.length > 0;
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Instagram status notification */}
       {instagramStatus && (
         <div
           className={`fixed top-4 right-4 z-50 max-w-sm rounded-xl shadow-2xl p-4 flex items-start gap-3 text-white ${
@@ -1014,21 +1013,22 @@ const HomePostCard = ({ post }) => {
               </a>
             )}
           </div>
-          <button onClick={() => setInstagramStatus(null)} className="text-white hover:text-gray-200 flex-shrink-0">
+          <button
+            onClick={() => setInstagramStatus(null)}
+            className="text-white hover:text-gray-200 flex-shrink-0"
+          >
             <X size={16} />
           </button>
         </div>
       )}
 
-      {/* Card */}
       <div
         ref={cardRef}
-        className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(post.category)} rounded-lg flex flex-col relative h-[700px]`}
+        className={`shadow-lg overflow-hidden border border-gray-200 ${getCategoryBackground(
+          post.category
+        )} rounded-lg flex flex-col relative h-[700px]`}
       >
-        {/* ── Media Section ── */}
         <div className="w-full h-64 flex-shrink-0">
-
-          {/* Static */}
           {post.post_type === "Static" && (
             <div className="w-full h-full flex items-center justify-center bg-black">
               {images.length > 0 ? (
@@ -1037,7 +1037,9 @@ const HomePostCard = ({ post }) => {
                   alt={post.title}
                   className="w-full h-full object-cover"
                   loading="lazy"
-                  onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
+                  onError={(e) => {
+                    e.target.src = PLACEHOLDER_IMAGE;
+                  }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
@@ -1047,7 +1049,6 @@ const HomePostCard = ({ post }) => {
             </div>
           )}
 
-          {/* Carousel */}
           {post.post_type === "Carousel" && (
             images.length > 0 ? (
               <div className="w-full h-full flex flex-col">
@@ -1057,18 +1058,26 @@ const HomePostCard = ({ post }) => {
                     alt={`${post.title} - Image ${carouselIndex + 1}`}
                     className="w-full h-full object-cover bg-black"
                     loading="lazy"
-                    onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
+                    onError={(e) => {
+                      e.target.src = PLACEHOLDER_IMAGE;
+                    }}
                   />
                   {images.length > 1 && (
                     <>
                       <button
-                        onClick={() => setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)}
+                        onClick={() =>
+                          setCarouselIndex((prev) => (prev - 1 + images.length) % images.length)
+                        }
                         className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                      >‹</button>
+                      >
+                        ‹
+                      </button>
                       <button
                         onClick={() => setCarouselIndex((prev) => (prev + 1) % images.length)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full hover:bg-opacity-70"
-                      >›</button>
+                      >
+                        ›
+                      </button>
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                         {carouselIndex + 1} / {images.length}
                       </div>
@@ -1088,7 +1097,9 @@ const HomePostCard = ({ post }) => {
                           alt={`Thumbnail ${idx + 1}`}
                           className="w-10 h-10 object-cover rounded"
                           loading="lazy"
-                          onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
+                          onError={(e) => {
+                            e.target.src = PLACEHOLDER_IMAGE;
+                          }}
                         />
                       </button>
                     ))}
@@ -1102,10 +1113,13 @@ const HomePostCard = ({ post }) => {
             )
           )}
 
-          {/* ── REEL — polished cinematic overlay ── */}
           {post.post_type === "Reel" && (
             videos.length > 0 ? (
-              <div className={`relative w-full h-full ${getCategoryBackground(post.category)}`}>
+              <div
+                className={`relative w-full h-full overflow-hidden ${getCategoryBackground(
+                  post.category
+                )}`}
+              >
                 <video
                   ref={videoRef}
                   controls
@@ -1114,11 +1128,8 @@ const HomePostCard = ({ post }) => {
                   muted={false}
                   crossOrigin="anonymous"
                   className="w-full h-full object-cover"
-                  onError={() => {
-                    setVideoError(true);
-                    console.error("Video load error:", getMediaUrl(videos[0]));
-                  }}
-                  onLoadStart={() => setVideoError(false)}
+                  onError={() => setVideoError(true)}
+                  onLoadedData={() => setVideoError(false)}
                 >
                   <source
                     src={getMediaUrl(videos[0])}
@@ -1130,72 +1141,66 @@ const HomePostCard = ({ post }) => {
                 {videoError && (
                   <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border border-red-200 text-sm z-20">
                     <p className="text-red-700 font-semibold mb-1">Video failed to load</p>
-                    <p className="text-red-600 text-xs mb-2 break-all">URL: {getMediaUrl(videos[0])}</p>
-                    <a href={getMediaUrl(videos[0])} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">
+                    <p className="text-red-600 text-xs mb-2 break-all">
+                      URL: {getMediaUrl(videos[0])}
+                    </p>
+                    <a
+                      href={getMediaUrl(videos[0])}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline text-xs"
+                    >
                       Open video directly
                     </a>
                   </div>
                 )}
 
-                {/* Bottom gradient scrim */}
-                <div
-                  className="absolute inset-0 pointer-events-none z-[5]"
-                  style={{
-                    background: "linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.72) 100%)",
-                  }}
-                />
-
-                {/* Logo — top left, white pill */}
-                <div className="absolute top-3 left-3 z-10 flex items-center">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-lg flex items-center">
+                <div className="absolute top-4 left-4 z-20">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-1.5 shadow-lg">
                     <img
                       src={oweruLogo}
                       alt="Oweru logo"
-                      className="h-7 w-auto"
+                      className="h-11 w-auto drop-shadow-md"
                     />
                   </div>
                 </div>
 
-                {/* REEL badge — top right */}
-                <div className="absolute top-3 right-3 z-10">
-                  <span className="inline-flex items-center gap-1.5 bg-red-600/90 backdrop-blur-sm text-white text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
-                    REEL
-                  </span>
-                </div>
-
-                {/* Bottom content block — title, meta badge, description */}
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-4 pointer-events-none">
-                  {/* Meta chip */}
-                  <div className="flex justify-center mb-2">
-                    <span
-                      className="inline-block text-white text-[10px] font-semibold tracking-widest uppercase px-3 py-1 rounded-full"
-                      style={{ backgroundColor: `${categoryHex}CC` }}
-                    >
-                      {post.category.replace(/_/g, " ")} &nbsp;•&nbsp; {new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                  </div>
-
-                  {/* Title */}
-                  <h3
-                    className="text-white text-xl font-extrabold text-center leading-tight mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]"
-                    style={{ WebkitTextStroke: "0.3px rgba(0,0,0,0.4)" }}
-                  >
-                    {post.title}
-                  </h3>
-
-                  {/* Description — frosted card */}
+                <div className="absolute inset-0 z-10 flex items-center justify-center px-5 sm:px-8 pointer-events-none">
                   <div
-                    className="rounded-xl px-4 py-3 text-white/90 text-xs text-center leading-relaxed"
-                    style={{
-                      background: "rgba(0,0,0,0.42)",
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
-                    }}
+                    className="
+                      bg-black/38 backdrop-blur-[6px] rounded-2xl 
+                      px-6 py-6 sm:px-9 sm:py-8 max-w-lg w-full
+                      border border-white/10 shadow-2xl
+                      pointer-events-auto
+                    "
                   >
-                    <p className="line-clamp-3 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                    <h3
+                      className="
+                        text-xl sm:text-2xl font-bold text-white leading-tight
+                        text-center mb-3 tracking-tight
+                        drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]
+                      "
+                    >
+                      {post.title}
+                    </h3>
+
+                    <p
+                      className="
+                        text-xs sm:text-sm font-medium text-white/90 mb-4 text-center
+                        tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]
+                      "
+                    >
+                      {post.post_type} • {post.category} •{" "}
+                      {new Date(post.created_at).toLocaleDateString()}
+                    </p>
+
+                    <p
+                      className="
+                        text-sm sm:text-base text-white/95 text-center leading-relaxed
+                        font-medium max-h-[38vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/30
+                        drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]
+                      "
+                    >
                       {post.description}
                     </p>
                   </div>
@@ -1209,7 +1214,6 @@ const HomePostCard = ({ post }) => {
           )}
         </div>
 
-        {/* ── Content Section (hidden for Reel) ── */}
         {post.post_type !== "Reel" && (
           <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
             <div className="px-4 pt-4 pb-3">
@@ -1219,14 +1223,17 @@ const HomePostCard = ({ post }) => {
                     {post.title}
                   </h3>
                   <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
-                    {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
+                    {post.post_type} • {post.category} •{" "}
+                    {new Date(post.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
-              <p className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}>
+              <p
+                className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}
+              >
                 {post.description}
               </p>
             </div>
@@ -1237,27 +1244,37 @@ const HomePostCard = ({ post }) => {
           </div>
         )}
 
-        {/* ── Contact footer ── */}
         <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
           <div className="text-center text-gray-800">
             <div className="text-sm whitespace-nowrap">
               <span className="inline-block">
-                <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">info@oweru.com</a>
-              </span>{" "}&nbsp;
+                <a href="mailto:info@oweru.com" className="text-gray-950 text-sm hover:underline">
+                  info@oweru.com
+                </a>
+              </span>{" "}
+               {" "}
               <span className="inline-block">
-                <a href="tel:+255711890764" className="text-gray-950 hover:underline">+255 711 890 764</a>
-              </span>{" "}&nbsp;
+                <a href="tel:+255711890764" className="text-gray-950 hover:underline">
+                  +255 711 890 764
+                </a>
+              </span>{" "}
+               {" "}
               <span className="inline-block">
-                <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="text-gray-950 hover:underline">www.oweru.com</a>
+                <a
+                  href="https://www.oweru.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-950 hover:underline"
+                >
+                  www.oweru.com
+                </a>
               </span>
             </div>
           </div>
         </div>
 
-        {/* ── Bottom accent strip ── */}
         <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`} />
 
-        {/* ── Share button ── */}
         <div className="share-button-container absolute top-3 right-3 z-10">
           <button
             onClick={() => setShowShareMenu(!showShareMenu)}
@@ -1291,12 +1308,24 @@ const HomePostCard = ({ post }) => {
                       </>
                     ) : (
                       <>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C89128" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
-                          <line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>
-                          <line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/>
-                          <line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/>
-                          <line x1="17" y1="7" x2="22" y2="7"/>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#C89128"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                          <line x1="7" y1="2" x2="7" y2="22" />
+                          <line x1="17" y1="2" x2="17" y2="22" />
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <line x1="2" y1="7" x2="7" y2="7" />
+                          <line x1="2" y1="17" x2="7" y2="17" />
+                          <line x1="17" y1="17" x2="22" y2="17" />
+                          <line x1="17" y1="7" x2="22" y2="7" />
                         </svg>
                         Download Branded Reel (video)
                       </>
@@ -1343,14 +1372,21 @@ const HomePostCard = ({ post }) => {
                 )}
 
                 <div className="border-t border-gray-100" />
+
                 <button
                   onClick={handleCopyLink}
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium"
                 >
                   {copied ? (
-                    <><Check size={16} className="text-green-500" />Copied!</>
+                    <>
+                      <Check size={16} className="text-green-500" />
+                      Copied!
+                    </>
                   ) : (
-                    <><Copy size={16} className="text-gray-400" />Copy Link</>
+                    <>
+                      <Copy size={16} className="text-gray-400" />
+                      Copy Link
+                    </>
                   )}
                 </button>
               </div>

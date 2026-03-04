@@ -89,12 +89,20 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       return;
     }
 
-    if (id === "home" && location.pathname !== "/") {
-      navigate("/");
+    if (id === "home") {
+      if (location.pathname !== "/") {
+        navigate("/");
+      } else {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
       setOpen(false);
       return;
     }
 
+    // For other sections, try to scroll to them if they exist
     const section = document.getElementById(id);
     if (section && navbarRef.current) {
       const offset = navbarRef.current.offsetHeight;
