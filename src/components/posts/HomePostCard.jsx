@@ -879,8 +879,8 @@ const HomePostCard = ({ post }) => {
 
       // ── 6. Overlay draw helper (called every frame) ───────────────────────
       const drawOverlay = () => {
-        // Semi-transparent dark scrim across full frame
-        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        // Category background across full frame
+        ctx.fillStyle = categoryHex;
         ctx.fillRect(0, 0, VW, VH);
 
         // ── Logo (top-left, white pill background) ──
