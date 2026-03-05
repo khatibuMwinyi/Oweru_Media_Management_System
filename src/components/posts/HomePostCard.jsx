@@ -568,121 +568,29 @@ const HomePostCard = ({ post }) => {
             )
           )}
 
-          {/* ════════════════════════════════════════════════════════
-              REEL — Professional luxury real-estate cinematic layout
-          ════════════════════════════════════════════════════════ */}
+          {/* Reel */}
           {post.post_type === "Reel" && (
             videos.length > 0 ? (
-              <div className={`relative w-full h-full overflow-hidden ${getCategoryBackground(post.category)}`}>
-
-                {/* Video player */}
+              <div className="relative w-full h-full overflow-hidden bg-black">
                 <video
                   ref={videoRef}
                   controls
                   preload="metadata"
                   playsInline
                   crossOrigin="anonymous"
-                  className="absolute inset-0 w-full h-full object-cover z-[1]"
+                  className="w-full h-full object-cover"
                   onError={() => setVideoError(true)}
                   onLoadStart={() => setVideoError(false)}
                 >
                   <source src={getMediaUrl(videos[0])} type={videos[0].mime_type || "video/mp4"}/>
                 </video>
 
-                {/* Video error */}
                 {videoError && (
                   <div className="absolute top-0 left-0 right-0 p-3 bg-red-50 border-b border-red-200 z-30">
                     <p className="text-red-700 font-semibold text-xs">Video failed to load</p>
                     <a href={getMediaUrl(videos[0])} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">Open directly →</a>
                   </div>
                 )}
-
-                {/* Cinematic bottom scrim — layered for depth */}
-                <div className="absolute inset-0 z-[5] pointer-events-none"
-                  style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.52) 68%, rgba(0,0,0,0.88) 100%)" }}
-                />
-
-                {/* ── Top bar: Logo + REEL badge ── */}
-                <div className="absolute top-0 left-0 right-0 z-[15] flex items-start justify-between px-3 pt-3 pointer-events-none">
-                  {/* Logo pill — crisp white, no opacity loss */}
-                  <div
-                    className="flex items-center bg-white rounded-full px-3 py-1.5"
-                    style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)" }}
-                  >
-                    <img src={oweruLogo} alt="Oweru" className="h-6 w-auto"/>
-                  </div>
-
-                  {/* REEL badge — red pill with live dot */}
-                  <div
-                    className="flex items-center gap-1.5 bg-red-600 text-white rounded-full px-2.5 py-1"
-                    style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", boxShadow: "0 2px 8px rgba(220,38,38,0.5)" }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse flex-shrink-0"/>
-                    REEL
-                  </div>
-                </div>
-
-                {/* ── Bottom content: category chip + title + description ── */}
-                <div className="absolute bottom-0 left-0 right-0 z-[15] px-3 pb-3 flex flex-col items-center gap-1.5 pointer-events-none">
-
-                  {/* Category + date chip */}
-                  <div
-                    className="inline-flex items-center text-white rounded-full px-3 py-1"
-                    style={{
-                      backgroundColor: `${categoryHex}E6`,
-                      fontSize: "9px", fontWeight: 600, letterSpacing: "0.1em",
-                      boxShadow: `0 2px 10px ${categoryHex}44`,
-                    }}
-                  >
-                    <span className="uppercase">{post.category.replace(/_/g, " ")}</span>
-                    <span className="mx-1.5 opacity-50">•</span>
-                    <span className="opacity-80">{new Date(post.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                  </div>
-
-                  {/* Title */}
-                  <h3
-                    className="text-white text-center font-bold leading-snug w-full"
-                    style={{
-                      fontSize: "clamp(15px, 4vw, 19px)",
-                      fontFamily: "Georgia, 'Times New Roman', serif",
-                      textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 1px 6px rgba(0,0,0,0.85)",
-                      letterSpacing: "-0.01em",
-                    }}
-                  >
-                    {post.title}
-                  </h3>
-
-                  {/* Description — frosted glass */}
-                  <div
-                    className="w-full rounded-2xl px-3.5 py-2.5"
-                    style={{
-                      background: "rgba(0,0,0,0.48)",
-                      backdropFilter: "blur(14px)",
-                      WebkitBackdropFilter: "blur(14px)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    <p
-                      className="text-center leading-relaxed line-clamp-3"
-                      style={{
-                        fontSize: "clamp(10px, 2.7vw, 11.5px)",
-                        color: "rgba(255,255,255,0.82)",
-                        fontFamily: "Georgia, 'Times New Roman', serif",
-                        textShadow: "0 1px 8px rgba(0,0,0,0.7)",
-                      }}
-                    >
-                      {post.description}
-                    </p>
-                  </div>
-
-                  {/* Decorative rule with category color */}
-                  <div className="flex items-center gap-2 w-full px-3 mt-0.5">
-                    <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${categoryHex}70, transparent)` }}/>
-                    <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: `${categoryHex}90` }}/>
-                    <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${categoryHex}70, transparent)` }}/>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-800">
@@ -692,38 +600,40 @@ const HomePostCard = ({ post }) => {
           )}
         </div>
 
-        {/* ── Content section (non-Reel) — UNCHANGED ── */}
-        {post.post_type !== "Reel" && (
-          <div className={`flex flex-col ${getCategoryBackground(post.category)} rounded-b-lg`}>
-            <div className="px-4 pt-4 pb-3">
-              <h3 className="text-lg bg-gray-100 font-semibold w-50 text-gray-900 p-2 rounded-lg text-left">{post.title}</h3>
-              <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
-                {post.post_type} • {post.category} • {new Date(post.created_at).toLocaleDateString()}
-              </p>
-            </div>
-            <div className="px-4 py-4 h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-shrink-0">
-              <p className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}>{post.description}</p>
-            </div>
-            <div className="px-4 pb-3 flex justify-end">
-              <img src={oweruLogo} alt="Oweru logo" className="h-12 w-auto shadow-lg"/>
-            </div>
+        {/* ── Unified content section (all post types) ── */}
+        <div className={`flex flex-col flex-grow ${getCategoryBackground(post.category)} rounded-b-lg`}>
+          <div className="px-4 pt-4 pb-2">
+            <h3 className="text-base bg-gray-100 font-semibold text-gray-900 p-2.5 rounded-lg text-left line-clamp-2">{post.title}</h3>
+            <p className={`text-xs ${getCategoryTextColor(post.category)} mt-2 text-left`}>
+              {post.post_type} • {post.category.replace(/_/g, " ")} • {new Date(post.created_at).toLocaleDateString()}
+            </p>
           </div>
-        )}
-
-        {/* ── Contact footer — UNCHANGED ── */}
-        <div className="bg-white px-6 py-3 mt-2 rounded-b-lg">
-          <div className="text-sm text-center whitespace-nowrap text-gray-950">
-            <a href="mailto:info@oweru.com" className="hover:underline">info@oweru.com</a>{" "}&nbsp;
-            <a href="tel:+255711890764" className="hover:underline">+255 711 890 764</a>{" "}&nbsp;
-            <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="hover:underline">www.oweru.com</a>
+          <div className="px-4 py-3 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <p className={`${getCategoryTextColor(post.category)} text-left whitespace-pre-wrap text-sm leading-relaxed`}>{post.description}</p>
+          </div>
+          <div className="px-4 pb-3 flex justify-end">
+            <img src={oweruLogo} alt="Oweru logo" className="h-10 w-auto shadow-lg"/>
           </div>
         </div>
 
-        {/* ── Bottom accent strip — UNCHANGED ── */}
-        <div className={`${getCategoryBackground(post.category)} h-10 rounded-b-lg`}/>
+        {/* ── Contact footer ── */}
+        <div className="bg-white px-4 py-2.5 text-center">
+          <div className="text-xs text-gray-950 space-y-0.5">
+            <div className="flex justify-center gap-2 flex-wrap text-center">
+              <a href="mailto:info@oweru.com" className="hover:underline">info@oweru.com</a>
+              <span>•</span>
+              <a href="tel:+255711890764" className="hover:underline">+255 711 890 764</a>
+              <span>•</span>
+              <a href="https://www.oweru.com" target="_blank" rel="noopener noreferrer" className="hover:underline">www.oweru.com</a>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bottom accent strip ── */}
+        <div className={`${getCategoryBackground(post.category)} h-1.5 rounded-b-lg`}/>
 
         {/* ── Share button ── */}
-        <div className="share-button-container absolute top-3 right-3 z-20">
+        <div className="absolute top-4 right-4 z-20">
           <button
             onClick={() => setShowShareMenu(!showShareMenu)}
             disabled={downloading}
