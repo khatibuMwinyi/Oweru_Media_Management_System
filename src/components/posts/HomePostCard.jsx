@@ -394,7 +394,7 @@ const HomePostCard = ({ post }) => {
         ctx.fillRect(0, 0, VW, VH);
 
         // Category color bottom section
-        const bottomHeight = Math.round(VH * 0.38);
+        const bottomHeight = Math.round(VH * 0.42);
         ctx.fillStyle = categoryHex;
         ctx.fillRect(0, VH - bottomHeight, VW, bottomHeight);
 
@@ -440,26 +440,38 @@ const HomePostCard = ({ post }) => {
 
         const descText = post.description || "";
         const descMaxWidth = titleMaxWidth;
-        const descLines = wrapTextLines(ctx, descText, descMaxWidth, 4);
+        const descLines = wrapTextLines(ctx, descText, descMaxWidth, 3);
         const descLineHeight = Math.round(18 * baseFs);
 
         descLines.forEach((line, i) => {
           const y = descStartY + i * descLineHeight;
-          if (y < VH - Math.round(70 * baseFs)) {
+          if (y < VH - Math.round(120 * baseFs)) {
             ctx.fillText(line, VW / 2, y);
           }
         });
 
-        // Logo at bottom
+        // Logo positioned in the middle-bottom area
         if (logoImg && logoImg.naturalWidth > 0) {
-          const logoHeight = Math.round(35 * baseFs);
+          const logoHeight = Math.round(40 * baseFs);
           const logoWidth = (logoImg.naturalWidth / logoImg.naturalHeight) * logoHeight;
           const logoX = (VW - logoWidth) / 2;
-          const logoY = VH - Math.round(50 * baseFs) - logoHeight;
+          const logoY = VH - Math.round(95 * baseFs) - logoHeight;
           
           ctx.shadowColor = "transparent";
           ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
         }
+
+        // Contact information at the very bottom
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.font = `400 ${Math.round(10 * baseFs)}px Georgia,serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+
+        const contactInfoY = VH - Math.round(20 * baseFs);
+        const contacts = ["info@oweru.com", "+255 711 890 764", "www.oweru.com"];
+        ctx.fillText(contacts.join("  •  "), VW / 2, contactInfoY);
 
         ctx.shadowColor = "transparent";
         ctx.shadowBlur = 0;
