@@ -1,7 +1,6 @@
 import { useState, useRef, memo } from "react";
 import { Copy, Check, Share2, Download, X } from "lucide-react";
 import oweruLogo from "../../assets/oweru_logo.png";
-import html2canvas from "html2canvas";
 import {
   getMediaUrl,
   filterValidMedia,
@@ -26,7 +25,7 @@ const HomePostCard = ({ post }) => {
   const images = filterValidMedia(post.media, "image");
   const videos = filterValidMedia(post.media, "video");
 
-  // ─── Category styles (UNCHANGED) ───────────────────────────────────────────
+  // ─── Category styles ────────────────────────────────────────────────────────
   const getCategoryBackground = (c) => {
     switch (c) {
       case "rentals": case "lands_and_plots":                        return "bg-[#C89128]";
@@ -209,7 +208,6 @@ const HomePostCard = ({ post }) => {
       ctx.save(); roundRect(ctx,0,0,W,H,R); ctx.clip();
 
       let cy = 0;
-      // Media
       ctx.fillStyle = "#111"; ctx.fillRect(0,cy,W,MH);
       if (img) {
         const bw = img.naturalWidth||1, bh = img.naturalHeight||1;
@@ -221,24 +219,20 @@ const HomePostCard = ({ post }) => {
         const scrim = ctx.createLinearGradient(0,cy,0,cy+MH);
         scrim.addColorStop(0,"rgba(0,0,0,0)"); scrim.addColorStop(.5,"rgba(0,0,0,.25)"); scrim.addColorStop(1,"rgba(0,0,0,.88)");
         ctx.fillStyle = scrim; ctx.fillRect(0,cy,W,MH);
-        // Logo pill
         if (logo) {
           const lH=30*S, lW=(logo.naturalWidth/logo.naturalHeight)*lH, lp=7*S;
           ctx.fillStyle="rgba(255,255,255,.95)"; roundRect(ctx,PAD-lp,cy+PAD-lp*.5,lW+lp*2,lH+lp,36*S); ctx.fill();
           ctx.drawImage(logo,PAD,cy+PAD,lW,lH);
         }
-        // REEL badge
         const bfs=9*S; ctx.font=`700 ${bfs}px Georgia,serif`;
         const bl="REEL", bw2=ctx.measureText(bl).width+18*S, bh2=bfs+12*S, bx2=W-PAD-bw2, by2=cy+PAD;
         ctx.fillStyle="#DC2626"; roundRect(ctx,bx2,by2,bw2,bh2,bh2/2); ctx.fill();
         ctx.fillStyle="#FFF"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(bl,bx2+bw2/2,by2+bh2/2);
-        // Title
         const tfs=19*S; ctx.font=`700 ${tfs}px Georgia,serif`;
         ctx.fillStyle="#FFF"; ctx.textAlign="center"; ctx.textBaseline="bottom";
         ctx.shadowColor="rgba(0,0,0,.95)"; ctx.shadowBlur=12*S; ctx.shadowOffsetY=2*S;
         const tl=wrapTextLines(ctx,post.title||"",W-PAD*4,2), tlh=tfs*1.3, tbot=cy+MH-24*S;
         [...tl].reverse().forEach((l,i)=>ctx.fillText(l,W/2,tbot-i*tlh));
-        // Category chip
         ctx.shadowColor="transparent"; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
         const cfs=9*S; ctx.font=`600 ${cfs}px Georgia,serif`;
         const cl=post.category.replace(/_/g," ").toUpperCase(), cw2=ctx.measureText(cl).width+18*S, ch2=cfs+10*S;
@@ -248,7 +242,6 @@ const HomePostCard = ({ post }) => {
       }
       cy += MH;
 
-      // Content section
       ctx.fillStyle = categoryHex; ctx.fillRect(0,cy,W,CH);
       const tfs2=17*S; ctx.font=`600 ${tfs2}px Georgia,serif`;
       const ttxt=post.title||"Untitled", tw=Math.min(ctx.measureText(ttxt).width+14*S,W-PAD*2), th=tfs2+14*S;
@@ -269,7 +262,6 @@ const HomePostCard = ({ post }) => {
       }
       cy += CH;
 
-      // Footer
       ctx.fillStyle="#FFF"; ctx.fillRect(0,cy,W,FH);
       ctx.fillStyle="#111"; ctx.font=`400 ${11*S}px Georgia,serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
       const fm=cy+FH/2, fw=W/3;
@@ -308,23 +300,46 @@ const HomePostCard = ({ post }) => {
     finally { setDownloading(false); }
   };
 
-  // ─── Download: Branded Video with Full Content Visible ─
+  // ─── Download: Branded Reel Video (real-time overlay, audio preserved) ───────
+  //
+  // Strategy:
+  //   1. Fetch the raw video blob (with progress).
+  //   2. Create a hidden <video> element that plays the blob URL.
+  //   3. Create an overlay <canvas> the same size as the card (600 × 700 px at 2×).
+  //      The canvas has two layers drawn every animation frame:
+  //        a) the current video frame (covers the top 256 px media zone)
+  //        b) the branded content panel + footer + accent strip
+  //      This exactly mirrors what the post card looks like in the UI.
+  //   4. Capture the canvas stream + the original audio track via MediaRecorder.
+  //   5. When video ends, stop recorder and trigger download.
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleDownloadVideo = async () => {
+    if (!videos.length) { alert("No video available."); return; }
+
     setDownloading(true);
-    setDownloadProgress(1);
+    setDownloadProgress(0);
     setShowShareMenu(false);
 
-    if (!videos.length) {
-      alert("No video available.");
-      setDownloading(false);
-      return;
-    }
+    // ── Constants matching the card layout (at 2× scale for crispness) ──
+    const S   = 2;          // pixel ratio
+    const W   = 600 * S;   // 1200 px
+    const H   = 700 * S;   // 1400 px
+    const MH  = 256 * S;   // media zone height
+    const FH  = 48  * S;   // footer height
+    const AH  = 40  * S;   // accent strip height
+    const CH  = H - MH - FH - AH; // content panel height
+    const PAD = 16  * S;
+    const R   =  8  * S;
+
+    let animFrameId  = null;
+    let hiddenVideo  = null;
+    let blobUrl      = null;
 
     try {
-      const videoUrl = getMediaUrl(videos[0]);
-      
-      // Fetch video with progress
-      const response = await fetch(videoUrl, { mode: "cors", credentials: "omit" });
+      // ── 1. Fetch video blob with progress ──────────────────────────────
+      setDownloadProgress(5);
+      const videoSrc = getMediaUrl(videos[0]);
+      const response = await fetch(videoSrc, { mode: "cors", credentials: "omit" });
       if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
 
       const contentLength = response.headers.get("content-length");
@@ -338,224 +353,272 @@ const HomePostCard = ({ post }) => {
         if (done) break;
         chunks.push(value);
         received += value.length;
-        if (total) setDownloadProgress(Math.min(Math.round((received / total) * 80), 80));
+        if (total) setDownloadProgress(5 + Math.min(Math.round((received / total) * 40), 40));
       }
 
-      setDownloadProgress(81);
+      setDownloadProgress(45);
+      const videoBlob = new Blob(chunks, { type: videos[0].mime_type || "video/mp4" });
+      blobUrl = URL.createObjectURL(videoBlob);
 
-      // Load video element
-      const blob = new Blob(chunks, { type: videos[0].mime_type || "video/mp4" });
-      const videoBlob = blob;
-      const videoElement = document.createElement("video");
-      videoElement.src = URL.createObjectURL(videoBlob);
-      videoElement.muted = true;
-      videoElement.crossOrigin = "anonymous";
-      videoElement.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;";
-      document.body.appendChild(videoElement);
+      // ── 2. Load logo ───────────────────────────────────────────────────
+      const logoImg = await loadImage(oweruLogo).catch(() => null);
+      setDownloadProgress(50);
 
-      // Wait for video metadata
+      // ── 3. Create hidden video element ─────────────────────────────────
+      hiddenVideo = document.createElement("video");
+      hiddenVideo.src = blobUrl;
+      hiddenVideo.muted = false;  // keep audio for capture
+      hiddenVideo.crossOrigin = "anonymous";
+      hiddenVideo.playsInline = true;
+      hiddenVideo.style.cssText = "position:fixed;left:-99999px;width:1px;height:1px;pointer-events:none;";
+      document.body.appendChild(hiddenVideo);
+
       await new Promise((res, rej) => {
-        const onMeta = () => {
-          videoElement.removeEventListener("loadedmetadata", onMeta);
-          res();
-        };
-        videoElement.addEventListener("loadedmetadata", onMeta);
-        videoElement.onerror = rej;
+        hiddenVideo.onloadedmetadata = res;
+        hiddenVideo.onerror = rej;
+        hiddenVideo.load();
       });
 
-      const VW = videoElement.videoWidth || 1080;
-      const VH = videoElement.videoHeight || 1920;
-      const duration = videoElement.duration;
-      const FPS = 24;
-      const totalFrames = Math.ceil(duration * FPS);
+      setDownloadProgress(55);
 
-      setDownloadProgress(82);
+      // ── 4. Create overlay canvas ───────────────────────────────────────
+      const canvas = document.createElement("canvas");
+      canvas.width  = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
 
-      // Pre-load logo
-      const logoImg = await new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = oweruLogo;
-      });
+      // Helper: draw one complete card frame onto ctx
+      const drawCardFrame = () => {
+        ctx.clearRect(0, 0, W, H);
 
-      setDownloadProgress(83);
-
-      // Create overlay drawing function
-      const drawOverlay = (ctx, frameNum = 0) => {
-        // Cinematic scrim gradient
-        const scrim = ctx.createLinearGradient(0, VH * 0.15, 0, VH);
-        scrim.addColorStop(0, "rgba(0,0,0,0)");
-        scrim.addColorStop(0.25, "rgba(0,0,0,0.2)");
-        scrim.addColorStop(0.65, "rgba(0,0,0,0.5)");
-        scrim.addColorStop(1, "rgba(0,0,0,0.85)");
-        ctx.fillStyle = scrim;
-        ctx.fillRect(0, 0, VW, VH);
-
-        // Category color bottom section
-        const bottomHeight = Math.round(VH * 0.42);
-        ctx.fillStyle = categoryHex;
-        ctx.fillRect(0, VH - bottomHeight, VW, bottomHeight);
-
-        const PAD = Math.round(VW * 0.08);
-        const baseFs = Math.round(VW / 390);
-
-        // Category badge
-        const badgeY = VH - bottomHeight + Math.round(30 * baseFs);
-        ctx.fillStyle = "rgba(255,255,255,0.15)";
-        ctx.fillRect(PAD, badgeY - 22, Math.round(200 * baseFs), 44);
-
+        // ── Background card shape ──
         ctx.fillStyle = "#FFF";
-        ctx.font = `600 ${Math.round(12 * baseFs)}px Georgia,serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        const catText = `${post.category?.replace(/_/g, " ")?.toUpperCase()} • ${new Date(post.created_at).toLocaleDateString()}`;
-        ctx.fillText(catText, Math.round(PAD + 10 * baseFs), badgeY);
+        roundRect(ctx, 0, 0, W, H, R);
+        ctx.fill();
 
-        // Title section
-        const titleY = badgeY + Math.round(45 * baseFs);
-        ctx.font = `bold ${Math.round(24 * baseFs)}px Georgia,serif`;
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#FFF";
-        ctx.shadowColor = "rgba(0,0,0,0.8)";
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 2;
+        ctx.save();
+        roundRect(ctx, 0, 0, W, H, R);
+        ctx.clip();
 
-        const titleText = post.title || "Untitled";
-        const titleMaxWidth = VW - Math.round(PAD * 2);
-        const titleLines = wrapTextLines(ctx, titleText, titleMaxWidth, 2);
-        const titleLineHeight = Math.round(30 * baseFs);
+        // ── Media zone: draw current video frame ──
+        let cy = 0;
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, cy, W, MH);
 
-        titleLines.forEach((line, i) => {
-          ctx.fillText(line, VW / 2, titleY + i * titleLineHeight);
-        });
-
-        // Description section
-        const descStartY = titleY + (titleLines.length * titleLineHeight) + Math.round(15 * baseFs);
-        ctx.font = `400 ${Math.round(12 * baseFs)}px Georgia,serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.92)";
-        ctx.shadowBlur = 6;
-
-        const descText = post.description || "";
-        const descMaxWidth = titleMaxWidth;
-        const descLines = wrapTextLines(ctx, descText, descMaxWidth, 3);
-        const descLineHeight = Math.round(18 * baseFs);
-
-        descLines.forEach((line, i) => {
-          const y = descStartY + i * descLineHeight;
-          if (y < VH - Math.round(120 * baseFs)) {
-            ctx.fillText(line, VW / 2, y);
-          }
-        });
-
-        // Logo positioned in the middle-bottom area
-        if (logoImg && logoImg.naturalWidth > 0) {
-          const logoHeight = Math.round(40 * baseFs);
-          const logoWidth = (logoImg.naturalWidth / logoImg.naturalHeight) * logoHeight;
-          const logoX = (VW - logoWidth) / 2;
-          const logoY = VH - Math.round(95 * baseFs) - logoHeight;
-          
-          ctx.shadowColor = "transparent";
-          ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+        if (hiddenVideo.readyState >= 2) {
+          try {
+            const vw = hiddenVideo.videoWidth  || W;
+            const vh = hiddenVideo.videoHeight || MH;
+            const scale = Math.max(W / vw, MH / vh);
+            const dw = vw * scale, dh = vh * scale;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, cy, W, MH);
+            ctx.clip();
+            ctx.drawImage(hiddenVideo, (W - dw) / 2, cy + (MH - dh) / 2, dw, dh);
+            ctx.restore();
+          } catch (_) {}
         }
 
-        // Contact information at the very bottom
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
-        ctx.font = `400 ${Math.round(10 * baseFs)}px Georgia,serif`;
+        // Cinematic scrim over video
+        const scrim = ctx.createLinearGradient(0, cy, 0, cy + MH);
+        scrim.addColorStop(0,   "rgba(0,0,0,0)");
+        scrim.addColorStop(0.4, "rgba(0,0,0,0.15)");
+        scrim.addColorStop(0.8, "rgba(0,0,0,0.5)");
+        scrim.addColorStop(1,   "rgba(0,0,0,0.75)");
+        ctx.fillStyle = scrim;
+        ctx.fillRect(0, cy, W, MH);
+
+        // Logo pill (top-left, matching card UI)
+        if (logoImg) {
+          const lH = 30 * S, lW = (logoImg.naturalWidth / logoImg.naturalHeight) * lH, lp = 7 * S;
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          roundRect(ctx, PAD - lp, cy + PAD - lp * 0.5, lW + lp * 2, lH + lp, 36 * S);
+          ctx.fill();
+          ctx.drawImage(logoImg, PAD, cy + PAD, lW, lH);
+        }
+
+        // REEL badge (top-right)
+        const bfs = 9 * S;
+        ctx.font = `700 ${bfs}px Georgia,serif`;
+        const bl = "REEL", bw2 = ctx.measureText(bl).width + 18 * S, bh2 = bfs + 12 * S;
+        const bx2 = W - PAD - bw2, by2 = cy + PAD;
+        ctx.fillStyle = "#DC2626";
+        roundRect(ctx, bx2, by2, bw2, bh2, bh2 / 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(bl, bx2 + bw2 / 2, by2 + bh2 / 2);
+
+        // Title overlaid on video (bottom of media zone)
+        const tfs = 19 * S;
+        ctx.font = `700 ${tfs}px Georgia,serif`;
+        ctx.fillStyle = "#FFF";
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = "transparent";
+        ctx.shadowColor = "rgba(0,0,0,0.95)";
+        ctx.shadowBlur  = 12 * S;
+        ctx.shadowOffsetY = 2 * S;
+        const tLines = wrapTextLines(ctx, post.title || "", W - PAD * 4, 2);
+        const tlh  = tfs * 1.3, tbot = cy + MH - 24 * S;
+        [...tLines].reverse().forEach((l, i) => ctx.fillText(l, W / 2, tbot - i * tlh));
 
-        const contactInfoY = VH - Math.round(20 * baseFs);
-        const contacts = ["info@oweru.com", "+255 711 890 764", "www.oweru.com"];
-        ctx.fillText(contacts.join("  •  "), VW / 2, contactInfoY);
+        // Category chip above title
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        const cfs = 9 * S;
+        ctx.font = `600 ${cfs}px Georgia,serif`;
+        const catLabel = post.category.replace(/_/g, " ").toUpperCase();
+        const cw2 = ctx.measureText(catLabel).width + 18 * S, ch2 = cfs + 10 * S;
+        const cx3 = (W - cw2) / 2, cy3 = tbot - tLines.length * tlh - ch2 - 8 * S;
+        ctx.fillStyle = `${categoryHex}E0`;
+        roundRect(ctx, cx3, cy3, cw2, ch2, ch2 / 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(catLabel, cx3 + cw2 / 2, cy3 + ch2 / 2);
 
+        cy += MH;
+
+        // ── Content panel (category-coloured, same as card) ──
+        ctx.fillStyle = categoryHex;
+        ctx.fillRect(0, cy, W, CH);
+
+        // Title pill
+        const tfs2 = 17 * S;
+        ctx.font = `600 ${tfs2}px Georgia,serif`;
+        const titleTxt = post.title || "Untitled";
+        const titleW = Math.min(ctx.measureText(titleTxt).width + 14 * S, W - PAD * 2);
+        const titleH2 = tfs2 + 14 * S;
+        ctx.fillStyle = "#F9FAFB";
+        roundRect(ctx, PAD, cy + PAD, titleW, titleH2, 5 * S);
+        ctx.fill();
+        ctx.fillStyle = "#111";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
         ctx.shadowColor = "transparent";
-        ctx.shadowBlur = 0;
+        ctx.fillText(titleTxt, PAD + 7 * S, cy + PAD + titleH2 / 2);
+
+        // Meta line
+        const metaY = cy + PAD + titleH2 + 7 * S;
+        ctx.fillStyle = categoryTextHex;
+        ctx.font = `400 ${10 * S}px Georgia,serif`;
+        ctx.textBaseline = "top";
+        ctx.fillText(
+          `${post.post_type} • ${post.category} • ${new Date(post.created_at).toLocaleDateString()}`,
+          PAD, metaY
+        );
+
+        // Description body
+        const descY = metaY + 14 * S + PAD;
+        ctx.font = `400 ${12 * S}px Georgia,serif`;
+        ctx.fillStyle = categoryTextHex;
+        const maxDescLines = Math.floor((CH - (descY - cy) - PAD * 3 - 50 * S) / (12 * S * 1.6));
+        const descLines = wrapTextLines(ctx, post.description || "", W - PAD * 2, Math.max(maxDescLines, 3));
+        descLines.forEach((l, i) => ctx.fillText(l, PAD, descY + i * 12 * S * 1.6));
+
+        // Logo (bottom-right of content panel)
+        if (logoImg) {
+          const lH2 = 42 * S, lW2 = (logoImg.naturalWidth / logoImg.naturalHeight) * lH2;
+          ctx.drawImage(logoImg, W - PAD - lW2, cy + CH - PAD - lH2, lW2, lH2);
+        }
+
+        cy += CH;
+
+        // ── Contact footer (white, same as card) ──
+        ctx.fillStyle = "#FFF";
+        ctx.fillRect(0, cy, W, FH);
+        ctx.fillStyle = "#111";
+        ctx.font = `400 ${11 * S}px Georgia,serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const fm = cy + FH / 2, fw = W / 3;
+        ["info@oweru.com", "+255 711 890 764", "www.oweru.com"].forEach((t, i) =>
+          ctx.fillText(t, fw * i + fw / 2, fm)
+        );
+
+        cy += FH;
+
+        // ── Accent strip ──
+        ctx.fillStyle = categoryHex;
+        ctx.fillRect(0, cy, W, AH);
+
+        ctx.restore();
       };
 
-      setDownloadProgress(85);
+      // ── 5. Set up MediaRecorder with audio ─────────────────────────────
+      const canvasStream = canvas.captureStream(30); // 30 fps
 
-      // Capture frames using seek method (more reliable)
-      const frames = [];
-      const timeStep = duration / totalFrames;
-
-      for (let f = 0; f < totalFrames; f++) {
-        // Seek to specific time
-        await new Promise((resolve) => {
-          const handleSeeked = () => {
-            videoElement.removeEventListener("seeked", handleSeeked);
-            resolve();
-          };
-          videoElement.addEventListener("seeked", handleSeeked, { once: true });
-          videoElement.currentTime = Math.min(f * timeStep, duration - 0.01);
-        });
-
-        // Draw frame with overlay
-        const canvas = document.createElement("canvas");
-        canvas.width = VW;
-        canvas.height = VH;
-        const ctx = canvas.getContext("2d");
-
-        ctx.drawImage(videoElement, 0, 0, VW, VH);
-        drawOverlay(ctx, f);
-
-        frames.push(await createImageBitmap(canvas));
-
-        if (f % Math.max(1, Math.floor(totalFrames / 10)) === 0) {
-          setDownloadProgress(85 + Math.round((f / totalFrames) * 10));
-        }
+      // Attempt to add the original video audio track
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const src      = audioCtx.createMediaElementSource(hiddenVideo);
+        const dest     = audioCtx.createMediaStreamDestination();
+        src.connect(dest);
+        src.connect(audioCtx.destination); // also play so user can hear
+        dest.stream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
+      } catch (audioErr) {
+        console.warn("Audio capture not available:", audioErr);
       }
-
-      setDownloadProgress(96);
-
-      // Encode frames to video
-      const recCanvas = document.createElement("canvas");
-      recCanvas.width = VW;
-      recCanvas.height = VH;
-      const recCtx = recCanvas.getContext("2d");
-      const stream = recCanvas.captureStream(FPS);
 
       const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
         .find(m => MediaRecorder.isTypeSupported(m)) || "video/webm";
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: mimeType,
-        videoBitsPerSecond: 3000000,
+      const recorder = new MediaRecorder(canvasStream, {
+        mimeType,
+        videoBitsPerSecond: 5_000_000,
       });
 
       const recordedChunks = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+
+      // ── 6. Animate canvas frame-by-frame while video plays ─────────────
+      const animate = () => {
+        drawCardFrame();
+        animFrameId = requestAnimationFrame(animate);
       };
 
-      recorder.start();
+      setDownloadProgress(60);
 
-      const frameDelay = 1000 / FPS;
-      for (let f = 0; f < frames.length; f++) {
-        recCtx.drawImage(frames[f], 0, 0);
-        await new Promise((r) => setTimeout(r, frameDelay));
-      }
+      // Start everything together
+      recorder.start(100); // collect chunks every 100 ms
+      animate();
 
-      recorder.stop();
-      await new Promise((r) => {
-        recorder.onstop = r;
+      await new Promise((res, rej) => {
+        hiddenVideo.onended = () => {
+          cancelAnimationFrame(animFrameId);
+          animFrameId = null;
+          drawCardFrame(); // draw final frame
+          recorder.stop();
+          res();
+        };
+        hiddenVideo.onerror = rej;
+
+        // Update progress while playing
+        hiddenVideo.ontimeupdate = () => {
+          const pct = hiddenVideo.duration
+            ? (hiddenVideo.currentTime / hiddenVideo.duration) * 35
+            : 0;
+          setDownloadProgress(60 + Math.round(pct));
+        };
+
+        hiddenVideo.play().catch(rej);
       });
+
+      setDownloadProgress(96);
+
+      await new Promise(r => { recorder.onstop = r; });
 
       setDownloadProgress(99);
 
-      // Download
+      // ── 7. Trigger download ────────────────────────────────────────────
       const finalBlob = new Blob(recordedChunks, { type: mimeType });
       const url = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
-
       link.download = `Oweru_${(post.title || "reel")
         .replace(/[^a-z0-9]/gi, "_")
         .substring(0, 40)}_${Date.now()}.webm`;
-
       link.href = url;
       document.body.appendChild(link);
       link.click();
@@ -563,19 +626,20 @@ const HomePostCard = ({ post }) => {
 
       setDownloadProgress(100);
       setTimeout(() => setDownloadProgress(0), 2000);
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
 
-      // Cleanup
-      frames.forEach((f) => f.close());
-      videoElement.pause();
-      try {
-        document.body.removeChild(videoElement);
-      } catch {}
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {
       console.error("Video download error:", err);
-      alert("Failed to create branded video. Please ensure the video is accessible.");
+      alert("Failed to create branded video: " + err.message);
       setDownloadProgress(0);
     } finally {
+      // Cleanup
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      if (hiddenVideo) {
+        hiddenVideo.pause();
+        try { document.body.removeChild(hiddenVideo); } catch {}
+      }
+      if (blobUrl) setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
       setDownloading(false);
     }
   };
@@ -674,7 +738,7 @@ const HomePostCard = ({ post }) => {
           )}
         </div>
 
-        {/* ── Unified content section (all post types) ── */}
+        {/* ── Unified content section ── */}
         <div className={`flex flex-col flex-grow ${getCategoryBackground(post.category)} rounded-b-lg`}>
           <div className="px-4 pt-4 pb-2">
             <h3 className="text-base bg-gray-100 font-semibold text-gray-900 p-2.5 rounded-lg text-left line-clamp-2">{post.title}</h3>
@@ -722,11 +786,12 @@ const HomePostCard = ({ post }) => {
 
           {/* Progress indicator */}
           {downloading && downloadProgress > 0 && (
-            <div className="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-30">
+            <div className="absolute top-12 right-0 w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-30">
               <p className="text-xs text-gray-600 mb-1.5 font-medium flex justify-between">
                 <span>
                   {downloadProgress < 50 ? "Downloading…"
-                  : downloadProgress < 95 ? "Processing…"
+                  : downloadProgress < 60 ? "Preparing…"
+                  : downloadProgress < 96 ? "Recording…"
                   : "Finalizing…"}
                 </span>
                 <span className="font-bold text-[#C89128]">{downloadProgress}%</span>
@@ -737,6 +802,9 @@ const HomePostCard = ({ post }) => {
                   style={{ width: `${downloadProgress}%`, backgroundColor: "#C89128" }}
                 />
               </div>
+              {downloadProgress >= 60 && downloadProgress < 96 && (
+                <p className="text-[10px] text-gray-400 mt-1.5">Playing video in real time…</p>
+              )}
             </div>
           )}
 
@@ -753,7 +821,7 @@ const HomePostCard = ({ post }) => {
                       <polyline points="7 10 12 15 17 10"/>
                       <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Download Video
+                    Download Branded Reel
                   </button>
                 )}
 
