@@ -308,7 +308,7 @@ const HomePostCard = ({ post }) => {
     finally { setDownloading(false); }
   };
 
-  // ─── Download: Branded Video with Category Colors & Details (FASTER) ─
+  // ─── Download: Branded Video with Full Content Visible ─
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setDownloadProgress(1);
@@ -338,169 +338,181 @@ const HomePostCard = ({ post }) => {
         if (done) break;
         chunks.push(value);
         received += value.length;
-        if (total) setDownloadProgress(Math.min(Math.round((received / total) * 90), 90));
+        if (total) setDownloadProgress(Math.min(Math.round((received / total) * 80), 80));
       }
 
-      setDownloadProgress(91);
+      setDownloadProgress(81);
 
-      // Load video to get dimensions for overlay
+      // Load video element
       const blob = new Blob(chunks, { type: videos[0].mime_type || "video/mp4" });
+      const videoBlob = blob;
       const videoElement = document.createElement("video");
-      videoElement.src = URL.createObjectURL(blob);
+      videoElement.src = URL.createObjectURL(videoBlob);
       videoElement.muted = true;
       videoElement.crossOrigin = "anonymous";
       videoElement.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;";
       document.body.appendChild(videoElement);
 
+      // Wait for video metadata
       await new Promise((res, rej) => {
-        videoElement.onloadedmetadata = res;
+        const onMeta = () => {
+          videoElement.removeEventListener("loadedmetadata", onMeta);
+          res();
+        };
+        videoElement.addEventListener("loadedmetadata", onMeta);
         videoElement.onerror = rej;
-        videoElement.load();
       });
 
       const VW = videoElement.videoWidth || 1080;
       const VH = videoElement.videoHeight || 1920;
       const duration = videoElement.duration;
+      const FPS = 24;
+      const totalFrames = Math.ceil(duration * FPS);
 
-      setDownloadProgress(92);
+      setDownloadProgress(82);
 
-      // Create overlay canvas function
-      const createOverlayFrame = () => {
+      // Pre-load logo
+      const logoImg = await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = oweruLogo;
+      });
+
+      setDownloadProgress(83);
+
+      // Create overlay drawing function
+      const drawOverlay = (ctx, frameNum = 0) => {
+        // Cinematic scrim gradient
+        const scrim = ctx.createLinearGradient(0, VH * 0.15, 0, VH);
+        scrim.addColorStop(0, "rgba(0,0,0,0)");
+        scrim.addColorStop(0.25, "rgba(0,0,0,0.2)");
+        scrim.addColorStop(0.65, "rgba(0,0,0,0.5)");
+        scrim.addColorStop(1, "rgba(0,0,0,0.85)");
+        ctx.fillStyle = scrim;
+        ctx.fillRect(0, 0, VW, VH);
+
+        // Category color bottom section
+        const bottomHeight = Math.round(VH * 0.38);
+        ctx.fillStyle = categoryHex;
+        ctx.fillRect(0, VH - bottomHeight, VW, bottomHeight);
+
+        const PAD = Math.round(VW * 0.08);
+        const baseFs = Math.round(VW / 390);
+
+        // Category badge
+        const badgeY = VH - bottomHeight + Math.round(30 * baseFs);
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        ctx.fillRect(PAD, badgeY - 22, Math.round(200 * baseFs), 44);
+
+        ctx.fillStyle = "#FFF";
+        ctx.font = `600 ${Math.round(12 * baseFs)}px Georgia,serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const catText = `${post.category?.replace(/_/g, " ")?.toUpperCase()} • ${new Date(post.created_at).toLocaleDateString()}`;
+        ctx.fillText(catText, Math.round(PAD + 10 * baseFs), badgeY);
+
+        // Title section
+        const titleY = badgeY + Math.round(45 * baseFs);
+        ctx.font = `bold ${Math.round(24 * baseFs)}px Georgia,serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#FFF";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+
+        const titleText = post.title || "Untitled";
+        const titleMaxWidth = VW - Math.round(PAD * 2);
+        const titleLines = wrapTextLines(ctx, titleText, titleMaxWidth, 2);
+        const titleLineHeight = Math.round(30 * baseFs);
+
+        titleLines.forEach((line, i) => {
+          ctx.fillText(line, VW / 2, titleY + i * titleLineHeight);
+        });
+
+        // Description section
+        const descStartY = titleY + (titleLines.length * titleLineHeight) + Math.round(15 * baseFs);
+        ctx.font = `400 ${Math.round(12 * baseFs)}px Georgia,serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.shadowBlur = 6;
+
+        const descText = post.description || "";
+        const descMaxWidth = titleMaxWidth;
+        const descLines = wrapTextLines(ctx, descText, descMaxWidth, 4);
+        const descLineHeight = Math.round(18 * baseFs);
+
+        descLines.forEach((line, i) => {
+          const y = descStartY + i * descLineHeight;
+          if (y < VH - Math.round(70 * baseFs)) {
+            ctx.fillText(line, VW / 2, y);
+          }
+        });
+
+        // Logo at bottom
+        if (logoImg && logoImg.naturalWidth > 0) {
+          const logoHeight = Math.round(35 * baseFs);
+          const logoWidth = (logoImg.naturalWidth / logoImg.naturalHeight) * logoHeight;
+          const logoX = (VW - logoWidth) / 2;
+          const logoY = VH - Math.round(50 * baseFs) - logoHeight;
+          
+          ctx.shadowColor = "transparent";
+          ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+        }
+
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+      };
+
+      setDownloadProgress(85);
+
+      // Capture frames using seek method (more reliable)
+      const frames = [];
+      const timeStep = duration / totalFrames;
+
+      for (let f = 0; f < totalFrames; f++) {
+        // Seek to specific time
+        await new Promise((resolve) => {
+          const handleSeeked = () => {
+            videoElement.removeEventListener("seeked", handleSeeked);
+            resolve();
+          };
+          videoElement.addEventListener("seeked", handleSeeked, { once: true });
+          videoElement.currentTime = Math.min(f * timeStep, duration - 0.01);
+        });
+
+        // Draw frame with overlay
         const canvas = document.createElement("canvas");
         canvas.width = VW;
         canvas.height = VH;
         const ctx = canvas.getContext("2d");
 
-        // Draw video frame
         ctx.drawImage(videoElement, 0, 0, VW, VH);
+        drawOverlay(ctx, f);
 
-        // Cinematic scrim (gradient overlay)
-        const scrim = ctx.createLinearGradient(0, VH * 0.15, 0, VH);
-        scrim.addColorStop(0, "rgba(0,0,0,0)");
-        scrim.addColorStop(0.3, "rgba(0,0,0,0.15)");
-        scrim.addColorStop(0.7, "rgba(0,0,0,0.6)");
-        scrim.addColorStop(1, "rgba(0,0,0,0.88)");
-        ctx.fillStyle = scrim;
-        ctx.fillRect(0, 0, VW, VH);
+        frames.push(await createImageBitmap(canvas));
 
-        // Bottom content area with category color
-        const bottomHeight = Math.round(VH * 0.35);
-        ctx.fillStyle = `${categoryHex}`;
-        ctx.fillRect(0, VH - bottomHeight, VW, bottomHeight);
-
-        // Category badge at top
-        const badgeY = VH - bottomHeight + Math.round(30 * VW / 390);
-        ctx.fillStyle = "rgba(255,255,255,0.2)";
-        ctx.fillRect(Math.round(40 * VW / 390), badgeY - 20, Math.round(150 * VW / 390), 40);
-
-        ctx.fillStyle = "#FFF";
-        ctx.font = `600 ${Math.round(14 * VW / 390)}px Georgia,serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        const catText = `${post.category?.replace(/_/g, " ")?.toUpperCase()} • ${new Date(post.created_at).toLocaleDateString()}`;
-        ctx.fillText(catText, Math.round(50 * VW / 390), badgeY);
-
-        // Title
-        const titleY = badgeY + Math.round(50 * VW / 390);
-        ctx.font = `bold ${Math.round(26 * VW / 390)}px Georgia,serif`;
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#FFF";
-        ctx.shadowColor = "rgba(0,0,0,0.7)";
-        ctx.shadowBlur = 8;
-        
-        const titleText = post.title || "Untitled";
-        const maxTitleWidth = VW - Math.round(80 * VW / 390);
-        const titleLines = wrapTextLines(ctx, titleText, maxTitleWidth, 2);
-        titleLines.forEach((line, i) => {
-          ctx.fillText(line, VW / 2, titleY + i * Math.round(32 * VW / 390));
-        });
-
-        // Description
-        const descY = titleY + titleLines.length * Math.round(32 * VW / 390) + Math.round(20 * VW / 390);
-        ctx.font = `400 ${Math.round(13 * VW / 390)}px Georgia,serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.shadowBlur = 4;
-        
-        const descText = post.description || "";
-        const descLines = wrapTextLines(ctx, descText, maxTitleWidth, 3);
-        descLines.forEach((line, i) => {
-          ctx.fillText(line, VW / 2, descY + i * Math.round(22 * VW / 390));
-        });
-
-        // Logo at bottom
-        const logoImg = new Image();
-        logoImg.crossOrigin = "anonymous";
-        logoImg.onload = () => {
-          const logoH = Math.round(40 * VW / 390);
-          const logoW = (logoImg.naturalWidth / logoImg.naturalHeight) * logoH;
-          ctx.drawImage(logoImg, Math.round((VW - logoW) / 2), VH - Math.round(50 * VW / 390) - logoH, logoW, logoH);
-        };
-        logoImg.src = oweruLogo;
-
-        ctx.shadowColor = "transparent";
-        return canvas;
-      };
-
-      setDownloadProgress(93);
-
-      // Simple approach: capture key frames and create video
-      const FPS = 24;
-      const frames = [];
-      const frameInterval = Math.max(1, Math.floor(duration / (duration * FPS)));
-
-      // Pre-capture frames while video plays
-      const captureFrames = async () => {
-        const playPromise = videoElement.play();
-        if (playPromise !== undefined) {
-          try {
-            await playPromise;
-          } catch (e) {
-            console.error("Play error:", e);
-          }
+        if (f % Math.max(1, Math.floor(totalFrames / 10)) === 0) {
+          setDownloadProgress(85 + Math.round((f / totalFrames) * 10));
         }
+      }
 
-        return new Promise((resolve) => {
-          let frameCount = 0;
-          const maxFrames = Math.ceil(duration * FPS);
-          
-          const captureInterval = setInterval(async () => {
-            if (videoElement.paused && videoElement.ended) {
-              clearInterval(captureInterval);
-              resolve();
-              return;
-            }
+      setDownloadProgress(96);
 
-            try {
-              const overlayCanvas = createOverlayFrame();
-              frames.push(await createImageBitmap(overlayCanvas));
-              frameCount++;
-              
-              if (frameCount % Math.max(1, Math.floor(FPS / 4)) === 0) {
-                setDownloadProgress(93 + Math.round((frameCount / maxFrames) * 5));
-              }
-            } catch (e) {
-              console.error("Frame capture error:", e);
-            }
-          }, 1000 / FPS);
-        });
-      };
-
-      await captureFrames();
-      setDownloadProgress(98);
-
-      // Encode frames to WebM using canvas + MediaRecorder
+      // Encode frames to video
       const recCanvas = document.createElement("canvas");
       recCanvas.width = VW;
       recCanvas.height = VH;
       const recCtx = recCanvas.getContext("2d");
       const stream = recCanvas.captureStream(FPS);
 
-      const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+      const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
         .find(m => MediaRecorder.isTypeSupported(m)) || "video/webm";
-      
-      const recorder = new MediaRecorder(stream, { 
-        mimeType: mime, 
-        videoBitsPerSecond: 2500000 
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: mimeType,
+        videoBitsPerSecond: 3000000,
       });
 
       const recordedChunks = [];
@@ -510,42 +522,47 @@ const HomePostCard = ({ post }) => {
 
       recorder.start();
 
-      const MS = 1000 / FPS;
+      const frameDelay = 1000 / FPS;
       for (let f = 0; f < frames.length; f++) {
         recCtx.drawImage(frames[f], 0, 0);
-        await new Promise(r => setTimeout(r, MS));
+        await new Promise((r) => setTimeout(r, frameDelay));
       }
 
       recorder.stop();
-      await new Promise(r => { recorder.onstop = r; });
+      await new Promise((r) => {
+        recorder.onstop = r;
+      });
 
       setDownloadProgress(99);
 
-      // Trigger download
-      const finalBlob = new Blob(recordedChunks, { type: mime });
+      // Download
+      const finalBlob = new Blob(recordedChunks, { type: mimeType });
       const url = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
-      
+
       link.download = `Oweru_${(post.title || "reel")
         .replace(/[^a-z0-9]/gi, "_")
-        .substring(0, 40)}_Branded_${Date.now()}.webm`;
-      
+        .substring(0, 40)}_${Date.now()}.webm`;
+
       link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
       setDownloadProgress(100);
-      setTimeout(() => setDownloadProgress(0), 1500);
+      setTimeout(() => setDownloadProgress(0), 2000);
 
       // Cleanup
-      frames.forEach(f => f.close());
+      frames.forEach((f) => f.close());
       videoElement.pause();
-      try { document.body.removeChild(videoElement); } catch {}
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      try {
+        document.body.removeChild(videoElement);
+      } catch {}
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {
       console.error("Video download error:", err);
-      alert("Failed to create branded video. Please try again.");
+      alert("Failed to create branded video. Please ensure the video is accessible.");
+      setDownloadProgress(0);
     } finally {
       setDownloading(false);
     }
