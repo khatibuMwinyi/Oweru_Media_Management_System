@@ -308,202 +308,84 @@ const HomePostCard = ({ post }) => {
     finally { setDownloading(false); }
   };
 
-  // ─── Download: Branded Reel — seek-and-capture (smooth, no real-time playback) ─
+  // ─── Download: Raw Video (FAST — direct download, no re-encoding) ─
   const handleDownloadVideo = async () => {
-    setDownloading(true); setDownloadProgress(1); setShowShareMenu(false);
-    if (!videos.length) { alert("No video available."); setDownloading(false); return; }
+    setDownloading(true);
+    setDownloadProgress(1);
+    setShowShareMenu(false);
+
+    if (!videos.length) {
+      alert("No video available.");
+      setDownloading(false);
+      return;
+    }
 
     try {
-      // 1. Fetch video blob for accurate seeking
-      let blobUrl;
-      try {
-        const dataUrl = await fetchMediaAsDataUrl(videos[0]);
-        const blob    = await (await fetch(dataUrl)).blob();
-        blobUrl = URL.createObjectURL(blob);
-      } catch { blobUrl = getMediaUrl(videos[0]); }
+      const videoUrl = getMediaUrl(videos[0]);
+      
+      // Fetch the video with progress tracking
+      const response = await fetch(videoUrl, {
+        mode: "cors",
+        credentials: "omit",
+      });
 
-      // 2. Load video, get metadata
-      const vid = document.createElement("video");
-      vid.src = blobUrl; vid.muted = true; vid.preload = "auto"; vid.crossOrigin = "anonymous";
-      vid.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;";
-      document.body.appendChild(vid);
-      await new Promise((res,rej) => { vid.onloadedmetadata=res; vid.onerror=rej; vid.load(); });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch video: ${response.status}`);
+      }
 
-      const duration   = vid.duration;
-      const FPS        = 30;
-      const INTERVAL   = 1 / FPS;
-      const totalFrames = Math.ceil(duration * FPS);
-      const VW = vid.videoWidth  || 1080;
-      const VH = vid.videoHeight || 1920;
+      const contentLength = response.headers.get("content-length");
+      const total = parseInt(contentLength, 10) || 0;
 
-      // 3. Prepare overlay assets & layout
-      const logo   = await loadImage(oweruLogo).catch(() => null);
-      const BASE   = VW / 390;
-      const PAD_V  = VW * 0.045;
+      const reader = response.body.getReader();
+      const chunks = [];
+      let received = 0;
 
-      const LOGO_H = VH * 0.05;
-      const LOGO_W = logo ? (logo.naturalWidth / logo.naturalHeight) * LOGO_H : LOGO_H * 3;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      const TITLE_FS = Math.round(22 * BASE);
-      const META_FS  = Math.round(10 * BASE);
-      const DESC_FS  = Math.round(13 * BASE);
-      const DESC_LH  = DESC_FS * 1.65;
-      const OW       = Math.min(VW * 0.84, 420 * BASE);
+        chunks.push(value);
+        received += value.length;
 
-      const offCtx = document.createElement("canvas").getContext("2d");
-      offCtx.font  = `700 ${TITLE_FS}px Georgia,serif`;
-      const titleLines = wrapTextLines(offCtx, post.title || "", OW, 2);
-      offCtx.font  = `400 ${DESC_FS}px Georgia,serif`;
-      const descLines  = wrapTextLines(offCtx, post.description || "", OW, 4);
-
-      const TITLE_LH  = TITLE_FS * 1.3;
-      const META_H    = META_FS + 12 * BASE;
-      const DESC_H    = descLines.length * DESC_LH + 28 * BASE;
-      const TITLE_H   = titleLines.length * TITLE_LH;
-      const GAP       = 16 * BASE;
-      const BLOCK_BOT = VH - PAD_V * 2.5;
-      const BLOCK_TOP = BLOCK_BOT - (META_H + GAP * 0.5 + TITLE_H + GAP + DESC_H);
-
-      // 4. Capture canvas + draw overlay function
-      const canvas = document.createElement("canvas");
-      canvas.width = VW; canvas.height = VH;
-      const ctx = canvas.getContext("2d");
-
-      const drawOverlay = () => {
-        // Cinematic scrim
-        const scrim = ctx.createLinearGradient(0, VH * 0.2, 0, VH);
-        scrim.addColorStop(0,    "rgba(0,0,0,0)");
-        scrim.addColorStop(0.3,  "rgba(0,0,0,0.1)");
-        scrim.addColorStop(0.65, "rgba(0,0,0,0.55)");
-        scrim.addColorStop(1,    "rgba(0,0,0,0.92)");
-        ctx.fillStyle = scrim; ctx.fillRect(0, 0, VW, VH);
-
-        // Logo pill
-        if (logo) {
-          const LP = VW * 0.014;
-          ctx.fillStyle = "rgba(255,255,255,0.95)";
-          roundRect(ctx, PAD_V-LP, PAD_V-LP*.6, LOGO_W+LP*2, LOGO_H+LP*1.2, 40*BASE); ctx.fill();
-          ctx.drawImage(logo, PAD_V, PAD_V, LOGO_W, LOGO_H);
+        if (total) {
+          const progress = Math.round((received / total) * 95);
+          setDownloadProgress(progress);
         }
-
-        // REEL badge
-        const BFS = Math.round(9*BASE); ctx.font = `700 ${BFS}px Georgia,serif`;
-        const BW = ctx.measureText("REEL").width + 18*BASE, BH = BFS + 14*BASE, BX = VW - PAD_V - BW;
-        ctx.fillStyle = "#DC2626"; roundRect(ctx, BX, PAD_V, BW, BH, BH/2); ctx.fill();
-        ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText("REEL", BX+BW/2, PAD_V+BH/2);
-
-        // Bottom block
-        let CY = BLOCK_TOP;
-
-        // Category meta chip
-        ctx.font = `600 ${META_FS}px Georgia,serif`;
-        const ML = post.category.replace(/_/g," ").toUpperCase() + "  •  "
-          + new Date(post.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
-        const MW = ctx.measureText(ML).width + 22*BASE, MH2 = META_FS + 12*BASE, MX = (VW-MW)/2;
-        ctx.fillStyle = `${categoryHex}E6`; roundRect(ctx, MX, CY, MW, MH2, MH2/2); ctx.fill();
-        ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
-        ctx.fillText(ML, VW/2, CY + MH2/2);
-        CY += MH2 + GAP*0.5;
-
-        // Title
-        ctx.font = `700 ${TITLE_FS}px Georgia,serif`;
-        ctx.fillStyle = "#FFF"; ctx.textAlign = "center"; ctx.textBaseline = "top";
-        ctx.shadowColor = "rgba(0,0,0,.92)"; ctx.shadowBlur = TITLE_FS*.4; ctx.shadowOffsetY = TITLE_FS*.05;
-        titleLines.forEach((l,i) => ctx.fillText(l, VW/2, CY + i*TITLE_LH));
-        CY += TITLE_H + GAP;
-
-        // Frosted description box
-        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-        const DBX = (VW-OW)/2 - 16*BASE, DBW = OW + 32*BASE;
-        ctx.fillStyle = "rgba(0,0,0,0.5)"; roundRect(ctx, DBX, CY, DBW, DESC_H, 14*BASE); ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.09)"; ctx.lineWidth = 1.5*BASE;
-        roundRect(ctx, DBX, CY, DBW, DESC_H, 14*BASE); ctx.stroke();
-        ctx.font = `400 ${DESC_FS}px Georgia,serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.textAlign = "center"; ctx.textBaseline = "top";
-        ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 4*BASE;
-        descLines.forEach((l,i) => ctx.fillText(l, VW/2, CY + 14*BASE + i*DESC_LH));
-
-        // Gold rule
-        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
-        const ry = VH - PAD_V * 0.9;
-        ctx.strokeStyle = `${categoryHex}88`; ctx.lineWidth = 1.5*BASE;
-        ctx.beginPath(); ctx.moveTo(PAD_V*2, ry); ctx.lineTo(VW-PAD_V*2, ry); ctx.stroke();
-      };
-
-      // 5. Seek-and-capture each frame (no live playback — avoids all stutter)
-      const frames = [];
-      setDownloadProgress(3);
-
-      for (let f = 0; f < totalFrames; f++) {
-        // Seek to target timestamp
-        await new Promise(res => {
-          const done = () => { vid.removeEventListener("seeked", done); res(); };
-          vid.addEventListener("seeked", done, { once: true });
-          vid.currentTime = Math.min(f * INTERVAL, duration - 0.001);
-        });
-
-        // Composite: video frame + overlay
-        ctx.drawImage(vid, 0, 0, VW, VH);
-        drawOverlay();
-
-        // Snapshot as ImageBitmap (fast, no encoding overhead)
-        frames.push(await createImageBitmap(canvas));
-
-        if (f % 8 === 0) setDownloadProgress(3 + Math.round((f / totalFrames) * 72));
       }
 
-      setDownloadProgress(76);
+      setDownloadProgress(96);
 
-      // 6. Playback captured frames into a recording canvas at exact FPS
-      //    This produces a clean, smooth video with no seeking artifacts
-      const recCanvas = document.createElement("canvas");
-      recCanvas.width = VW; recCanvas.height = VH;
-      const recCtx    = recCanvas.getContext("2d");
-      const stream    = recCanvas.captureStream(FPS);
+      // Determine mime type
+      const mimeType = videos[0].mime_type || "video/mp4";
+      const fileExt = mimeType === "video/mp4" ? "mp4" : 
+                      mimeType === "video/webm" ? "webm" : 
+                      mimeType.split("/")[1] || "mp4";
 
-      const mime = ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"]
-        .find(m => MediaRecorder.isTypeSupported(m)) || "video/webm";
-      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
-      const chunks   = [];
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      recorder.start();
-
-      const MS = 1000 / FPS;
-      for (let f = 0; f < frames.length; f++) {
-        recCtx.drawImage(frames[f], 0, 0);
-        await new Promise(r => setTimeout(r, MS));
-        if (f % 10 === 0) setDownloadProgress(76 + Math.round((f / frames.length) * 20));
-      }
-
-      recorder.stop();
-      await new Promise(r => { recorder.onstop = r; });
-
-      setDownloadProgress(98);
-
-      // Release bitmaps
-      frames.forEach(b => b.close());
-
-      // 7. Trigger download
-      const finalBlob = new Blob(chunks, { type: mime });
-      const url  = URL.createObjectURL(finalBlob);
+      // Create blob and download
+      const blob = new Blob(chunks, { type: mimeType });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.download = `Oweru_${(post.title||"reel").replace(/[^a-z0-9]/gi,"_").substring(0,30)}_Branded_${Date.now()}.webm`;
-      link.href = url; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 15000);
-
-      // Cleanup
-      vid.pause(); try { document.body.removeChild(vid); } catch {}
-      if (blobUrl.startsWith("blob:")) URL.revokeObjectURL(blobUrl);
+      
+      link.download = `Oweru_${(post.title || "reel")
+        .replace(/[^a-z0-9]/gi, "_")
+        .substring(0, 40)}_${Date.now()}.${fileExt}`;
+      
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
       setDownloadProgress(100);
       setTimeout(() => setDownloadProgress(0), 1500);
 
+      // Cleanup
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (err) {
-      console.error("Branded reel error:", err);
-      alert("Failed to generate branded reel. Please try again.");
-    } finally { setDownloading(false); }
+      console.error("Video download error:", err);
+      alert("Failed to download video. The video may be temporarily unavailable.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const isReelPost = post.post_type === "Reel" && videos.length > 0;
@@ -651,9 +533,9 @@ const HomePostCard = ({ post }) => {
             <div className="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-30">
               <p className="text-xs text-gray-600 mb-1.5 font-medium flex justify-between">
                 <span>
-                  {downloadProgress < 75 ? "Capturing frames…"
-                  : downloadProgress < 95 ? "Encoding video…"
-                  : "Finalising…"}
+                  {downloadProgress < 50 ? "Downloading…"
+                  : downloadProgress < 95 ? "Processing…"
+                  : "Finalizing…"}
                 </span>
                 <span className="font-bold text-[#C89128]">{downloadProgress}%</span>
               </p>
@@ -675,11 +557,11 @@ const HomePostCard = ({ post }) => {
                   <button onClick={handleDownloadVideo} disabled={downloading}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-900 transition-colors font-medium disabled:opacity-50 border-b border-gray-50">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C89128" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>
-                      <line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/>
-                      <line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Download Branded Reel
+                    Download Video
                   </button>
                 )}
 
