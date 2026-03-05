@@ -364,6 +364,15 @@ const HomePage = () => {
   }
 };
 
+  const categoryIdMap = {
+    rentals: "rentals",
+    "property-sales": "property_sales",
+    "construction-management": "construction_property_management",
+    "lands-plots": "lands_and_plots",
+    "property-services": "property_services",
+    investment: "investment",
+  };
+
   const categoryInfo = {
     rentals: { name: "Rentals", icon: Home },
     property_sales: { name: "Property Sales", icon: Building2 },
@@ -384,7 +393,10 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar onCategoryClick={(categoryId) => setSelectedCategory(categoryIdMap[categoryId] || categoryId)} />
+      <Navbar 
+        onCategoryClick={(categoryId) => setSelectedCategory(categoryIdMap[categoryId] || categoryId)}
+        selectedCategory={selectedCategory}
+      />
 
       {/* Hero - kept mostly same */}
       <section className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20">

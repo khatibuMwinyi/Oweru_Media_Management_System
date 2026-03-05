@@ -23,10 +23,6 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
     investment: "investment",
   };
 
-  const categoryToIdMap = Object.fromEntries(
-    Object.entries(categoryIdMap).map(([id, category]) => [category, id]),
-  );
-
   const menuItems = [
     { name: "Home", id: "home" },
     {
@@ -66,7 +62,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
     { name: "About", path: "/about", isRoute: true },
   ];
 
-  const scrollToSection = (id) => {
+  const handleCategoryClick = (id) => {
     const categoryIds = [
       "rentals",
       "property-sales",
@@ -76,15 +72,17 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       "investment",
     ];
 
-    if (categoryIds.includes(id) && onCategoryClick) {
-      if (location.pathname !== "/") {
-        navigate("/");
-        setTimeout(() => {
-          onCategoryClick(id);
-        }, 100);
-      } else {
+    if (categoryIds.includes(id)) {
+      // Call the parent's category handler
+      if (onCategoryClick) {
         onCategoryClick(id);
       }
+      
+      // Navigate to home if not already there
+      if (location.pathname !== "/") {
+        navigate("/");
+      }
+      
       setOpen(false);
       return;
     }
@@ -98,19 +96,9 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
           behavior: "smooth",
         });
       }
+      setActiveSection("home");
       setOpen(false);
       return;
-    }
-
-    // For other sections, try to scroll to them if they exist
-    const section = document.getElementById(id);
-    if (section && navbarRef.current) {
-      const offset = navbarRef.current.offsetHeight;
-      window.scrollTo({
-        top: section.offsetTop - offset,
-        behavior: "smooth",
-      });
-      setOpen(false);
     }
   };
 
@@ -118,27 +106,15 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
 
-      if (!navbarRef.current) return;
-      const offset = navbarRef.current.offsetHeight + 5;
-      let current = "home";
-
-      menuItems
-        .flatMap((item) =>
-          item.subItems ? item.subItems.map((s) => s.id) : item.id,
-        )
-        .forEach((id) => {
-          const section = document.getElementById(id);
-          if (section && window.scrollY + offset >= section.offsetTop) {
-            current = id;
-          }
-        });
-      setActiveSection(current);
+      if (location.pathname === "/") {
+        setActiveSection("home");
+      }
     };
 
     window.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [location.pathname]);
 
   return (
     <nav
@@ -152,7 +128,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
           {/* Logo Section */}
           <div
             className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => scrollToSection("home")}
+            onClick={() => handleCategoryClick("home")}
           >
             <img
               src={logo}
@@ -171,7 +147,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                 <div key={item.key} className="relative group">
                   <button
                     className={`flex items-center gap-1 px-4 py-2 rounded-lg text-gray-700 font-medium transition-all duration-200 hover:bg-gray-100 ${
-                      item.subItems.some((s) => s.id === activeSection)
+                      item.subItems.some((s) => s.category === selectedCategory)
                         ? "text-[#C89128] bg-amber-50"
                         : ""
                     }`}
@@ -187,7 +163,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                         return (
                           <button
                             key={sub.id}
-                            onClick={() => scrollToSection(sub.id)}
+                            onClick={() => handleCategoryClick(sub.id)}
                             className={`w-full text-left px-4 py-3 text-sm transition-colors duration-150 hover:bg-amber-50 flex items-center justify-between ${
                               isSelected
                                 ? "text-[#C89128] bg-amber-50 font-medium"
@@ -215,7 +191,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
               ) : (
                 <button
                   key={item.id}
-                  onClick={() => scrollToSection(item.id)}
+                  onClick={() => handleCategoryClick(item.id)}
                   className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-gray-100 ${
                     activeSection === item.id
                       ? "text-[#C89128] bg-amber-50"
@@ -233,10 +209,10 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
             {user ? (
               <>
                 <Link
-                  to={user.role === "admin" ? "/admin" : "/moderator"}
+                  to={user.role === "admin" ? "/admin/dashboard" : "/admin"}
                   className="px-4 py-2 rounded-lg text-gray-700 font-medium transition-all duration-200 hover:bg-gray-100"
                 >
-                  {user.role === "admin" ? "Dashboard" : "Moderator"}
+                  {user.role === "admin" ? "Dashboard" : "Panel"}
                 </Link>
                 <button
                   onClick={async () => {
@@ -305,7 +281,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
                     return (
                       <button
                         key={sub.id}
-                        onClick={() => scrollToSection(sub.id)}
+                        onClick={() => handleCategoryClick(sub.id)}
                         className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-colors duration-150 flex items-center justify-between ${
                           isSelected
                             ? "text-[#C89128] bg-amber-50 font-medium"
@@ -333,7 +309,7 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
             ) : (
               <button
                 key={item.id}
-                onClick={() => scrollToSection(item.id)}
+                onClick={() => handleCategoryClick(item.id)}
                 className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-150 ${
                   activeSection === item.id
                     ? "text-[#C89128] bg-amber-50"
@@ -350,11 +326,11 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
             {user ? (
               <>
                 <Link
-                  to={user.role === "admin" ? "/admin" : "/moderator"}
+                  to={user.role === "admin" ? "/admin/dashboard" : "/admin"}
                   onClick={() => setOpen(false)}
                   className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors duration-150"
                 >
-                  {user.role === "admin" ? "Dashboard" : "Moderator Dashboard"}
+                  {user.role === "admin" ? "Dashboard" : "Panel"}
                 </Link>
                 <button
                   onClick={async () => {
