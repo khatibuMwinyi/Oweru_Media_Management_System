@@ -308,7 +308,7 @@ const HomePostCard = ({ post }) => {
     finally { setDownloading(false); }
   };
 
-  // ─── Download: Raw Video (FAST — direct download, no re-encoding) ─
+  // ─── Download: Branded Video with Category Colors & Details (FASTER) ─
   const handleDownloadVideo = async () => {
     setDownloading(true);
     setDownloadProgress(1);
@@ -323,19 +323,12 @@ const HomePostCard = ({ post }) => {
     try {
       const videoUrl = getMediaUrl(videos[0]);
       
-      // Fetch the video with progress tracking
-      const response = await fetch(videoUrl, {
-        mode: "cors",
-        credentials: "omit",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch video: ${response.status}`);
-      }
+      // Fetch video with progress
+      const response = await fetch(videoUrl, { mode: "cors", credentials: "omit" });
+      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
 
       const contentLength = response.headers.get("content-length");
       const total = parseInt(contentLength, 10) || 0;
-
       const reader = response.body.getReader();
       const chunks = [];
       let received = 0;
@@ -343,32 +336,199 @@ const HomePostCard = ({ post }) => {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         chunks.push(value);
         received += value.length;
-
-        if (total) {
-          const progress = Math.round((received / total) * 95);
-          setDownloadProgress(progress);
-        }
+        if (total) setDownloadProgress(Math.min(Math.round((received / total) * 90), 90));
       }
 
-      setDownloadProgress(96);
+      setDownloadProgress(91);
 
-      // Determine mime type
-      const mimeType = videos[0].mime_type || "video/mp4";
-      const fileExt = mimeType === "video/mp4" ? "mp4" : 
-                      mimeType === "video/webm" ? "webm" : 
-                      mimeType.split("/")[1] || "mp4";
+      // Load video to get dimensions for overlay
+      const blob = new Blob(chunks, { type: videos[0].mime_type || "video/mp4" });
+      const videoElement = document.createElement("video");
+      videoElement.src = URL.createObjectURL(blob);
+      videoElement.muted = true;
+      videoElement.crossOrigin = "anonymous";
+      videoElement.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;";
+      document.body.appendChild(videoElement);
 
-      // Create blob and download
-      const blob = new Blob(chunks, { type: mimeType });
-      const url = URL.createObjectURL(blob);
+      await new Promise((res, rej) => {
+        videoElement.onloadedmetadata = res;
+        videoElement.onerror = rej;
+        videoElement.load();
+      });
+
+      const VW = videoElement.videoWidth || 1080;
+      const VH = videoElement.videoHeight || 1920;
+      const duration = videoElement.duration;
+
+      setDownloadProgress(92);
+
+      // Create overlay canvas function
+      const createOverlayFrame = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = VW;
+        canvas.height = VH;
+        const ctx = canvas.getContext("2d");
+
+        // Draw video frame
+        ctx.drawImage(videoElement, 0, 0, VW, VH);
+
+        // Cinematic scrim (gradient overlay)
+        const scrim = ctx.createLinearGradient(0, VH * 0.15, 0, VH);
+        scrim.addColorStop(0, "rgba(0,0,0,0)");
+        scrim.addColorStop(0.3, "rgba(0,0,0,0.15)");
+        scrim.addColorStop(0.7, "rgba(0,0,0,0.6)");
+        scrim.addColorStop(1, "rgba(0,0,0,0.88)");
+        ctx.fillStyle = scrim;
+        ctx.fillRect(0, 0, VW, VH);
+
+        // Bottom content area with category color
+        const bottomHeight = Math.round(VH * 0.35);
+        ctx.fillStyle = `${categoryHex}`;
+        ctx.fillRect(0, VH - bottomHeight, VW, bottomHeight);
+
+        // Category badge at top
+        const badgeY = VH - bottomHeight + Math.round(30 * VW / 390);
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.fillRect(Math.round(40 * VW / 390), badgeY - 20, Math.round(150 * VW / 390), 40);
+
+        ctx.fillStyle = "#FFF";
+        ctx.font = `600 ${Math.round(14 * VW / 390)}px Georgia,serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const catText = `${post.category?.replace(/_/g, " ")?.toUpperCase()} • ${new Date(post.created_at).toLocaleDateString()}`;
+        ctx.fillText(catText, Math.round(50 * VW / 390), badgeY);
+
+        // Title
+        const titleY = badgeY + Math.round(50 * VW / 390);
+        ctx.font = `bold ${Math.round(26 * VW / 390)}px Georgia,serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#FFF";
+        ctx.shadowColor = "rgba(0,0,0,0.7)";
+        ctx.shadowBlur = 8;
+        
+        const titleText = post.title || "Untitled";
+        const maxTitleWidth = VW - Math.round(80 * VW / 390);
+        const titleLines = wrapTextLines(ctx, titleText, maxTitleWidth, 2);
+        titleLines.forEach((line, i) => {
+          ctx.fillText(line, VW / 2, titleY + i * Math.round(32 * VW / 390));
+        });
+
+        // Description
+        const descY = titleY + titleLines.length * Math.round(32 * VW / 390) + Math.round(20 * VW / 390);
+        ctx.font = `400 ${Math.round(13 * VW / 390)}px Georgia,serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 4;
+        
+        const descText = post.description || "";
+        const descLines = wrapTextLines(ctx, descText, maxTitleWidth, 3);
+        descLines.forEach((line, i) => {
+          ctx.fillText(line, VW / 2, descY + i * Math.round(22 * VW / 390));
+        });
+
+        // Logo at bottom
+        const logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.onload = () => {
+          const logoH = Math.round(40 * VW / 390);
+          const logoW = (logoImg.naturalWidth / logoImg.naturalHeight) * logoH;
+          ctx.drawImage(logoImg, Math.round((VW - logoW) / 2), VH - Math.round(50 * VW / 390) - logoH, logoW, logoH);
+        };
+        logoImg.src = oweruLogo;
+
+        ctx.shadowColor = "transparent";
+        return canvas;
+      };
+
+      setDownloadProgress(93);
+
+      // Simple approach: capture key frames and create video
+      const FPS = 24;
+      const frames = [];
+      const frameInterval = Math.max(1, Math.floor(duration / (duration * FPS)));
+
+      // Pre-capture frames while video plays
+      const captureFrames = async () => {
+        const playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+          try {
+            await playPromise;
+          } catch (e) {
+            console.error("Play error:", e);
+          }
+        }
+
+        return new Promise((resolve) => {
+          let frameCount = 0;
+          const maxFrames = Math.ceil(duration * FPS);
+          
+          const captureInterval = setInterval(async () => {
+            if (videoElement.paused && videoElement.ended) {
+              clearInterval(captureInterval);
+              resolve();
+              return;
+            }
+
+            try {
+              const overlayCanvas = createOverlayFrame();
+              frames.push(await createImageBitmap(overlayCanvas));
+              frameCount++;
+              
+              if (frameCount % Math.max(1, Math.floor(FPS / 4)) === 0) {
+                setDownloadProgress(93 + Math.round((frameCount / maxFrames) * 5));
+              }
+            } catch (e) {
+              console.error("Frame capture error:", e);
+            }
+          }, 1000 / FPS);
+        });
+      };
+
+      await captureFrames();
+      setDownloadProgress(98);
+
+      // Encode frames to WebM using canvas + MediaRecorder
+      const recCanvas = document.createElement("canvas");
+      recCanvas.width = VW;
+      recCanvas.height = VH;
+      const recCtx = recCanvas.getContext("2d");
+      const stream = recCanvas.captureStream(FPS);
+
+      const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+        .find(m => MediaRecorder.isTypeSupported(m)) || "video/webm";
+      
+      const recorder = new MediaRecorder(stream, { 
+        mimeType: mime, 
+        videoBitsPerSecond: 2500000 
+      });
+
+      const recordedChunks = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      recorder.start();
+
+      const MS = 1000 / FPS;
+      for (let f = 0; f < frames.length; f++) {
+        recCtx.drawImage(frames[f], 0, 0);
+        await new Promise(r => setTimeout(r, MS));
+      }
+
+      recorder.stop();
+      await new Promise(r => { recorder.onstop = r; });
+
+      setDownloadProgress(99);
+
+      // Trigger download
+      const finalBlob = new Blob(recordedChunks, { type: mime });
+      const url = URL.createObjectURL(finalBlob);
       const link = document.createElement("a");
       
       link.download = `Oweru_${(post.title || "reel")
         .replace(/[^a-z0-9]/gi, "_")
-        .substring(0, 40)}_${Date.now()}.${fileExt}`;
+        .substring(0, 40)}_Branded_${Date.now()}.webm`;
       
       link.href = url;
       document.body.appendChild(link);
@@ -379,10 +539,13 @@ const HomePostCard = ({ post }) => {
       setTimeout(() => setDownloadProgress(0), 1500);
 
       // Cleanup
+      frames.forEach(f => f.close());
+      videoElement.pause();
+      try { document.body.removeChild(videoElement); } catch {}
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (err) {
       console.error("Video download error:", err);
-      alert("Failed to download video. The video may be temporarily unavailable.");
+      alert("Failed to create branded video. Please try again.");
     } finally {
       setDownloading(false);
     }
