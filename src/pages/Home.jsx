@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE_URL } from "../config/api";
 import Navbar from "../components/Navbar";
 import HomePostCard from "../components/posts/HomePostCard";
+import { usePostData } from "../contexts/PostContext";
 import {
   Filter,
   FileText,
@@ -22,50 +22,13 @@ import {
 import logo from "../assets/oweru_logo.png";
 
 const HomePage = () => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { posts, loading, error, refreshPosts } = usePostData();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPostType, setSelectedPostType] = useState("all");
   const [postsToShow, setPostsToShow] = useState(12);
   const [viewMode, setViewMode] = useState("grid");
   const [downloadingAll, setDownloadingAll] = useState(false);
-
-  useEffect(() => {
-    const fetchApprovedPosts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_BASE_URL}/posts/approved`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const postsArray = data.data || data || [];
-        setPosts(Array.isArray(postsArray) ? postsArray : []);
-      } catch (err) {
-        let errorMessage = "Failed to load posts. ";
-        if (err.message.includes("500")) errorMessage += "Server error.";
-        else if (err.message.includes("404")) errorMessage += "API not found.";
-        else if (err.name === "TypeError") errorMessage += "Cannot reach server.";
-        else errorMessage += err.message;
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchApprovedPosts();
-  }, []);
 
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
@@ -547,7 +510,7 @@ const HomePage = () => {
               <p className="font-medium">Error loading content</p>
               <p className="text-sm mt-1">{error}</p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={refreshPosts}
                 className="mt-3 text-sm text-red-700 hover:text-red-900 underline"
               >
                 Try again

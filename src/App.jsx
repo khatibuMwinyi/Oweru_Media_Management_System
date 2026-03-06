@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { PostProvider } from "./contexts/PostContext";
 import RequireAuth from "./components/adminPage/RequireAuth";
 import RequireRole from "./components/adminPage/RequireRole";
 import AdminLayout from "./components/adminPage/AdminLayout";
@@ -20,7 +21,8 @@ import PostDetail from "./pages/PostDetail";
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <PostProvider>
+        <Router>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -122,6 +124,7 @@ function App() {
           </Route>
         </Routes>
       </Router>
+      </PostProvider>
     </AuthProvider>
   );
 }
