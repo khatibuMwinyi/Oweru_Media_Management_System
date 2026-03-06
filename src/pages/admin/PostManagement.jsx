@@ -57,6 +57,8 @@ const PostManagement = () => {
       // Use the authenticated postService which includes authorization header
       response = await postService.getAll(params);
       
+      console.log("Fetched posts response:", response.data);
+      
       if (response.data.data) {
         setPosts(response.data.data);
         setPagination({
@@ -66,11 +68,13 @@ const PostManagement = () => {
           total: response.data.total,
         });
       } else {
-        setPosts(Array.isArray(response.data) ? response.data : []);
+        const postsArray = Array.isArray(response.data) ? response.data : [];
+        setPosts(postsArray);
         setPagination(null);
       }
     } catch (err) {
       console.error("Failed to fetch posts:", err);
+      console.error("Error response:", err.response?.data);
       setError(err.message || "Failed to load posts");
       setPosts([]);
     } finally {
@@ -107,19 +111,60 @@ const PostManagement = () => {
     setActionLoading((prev) => ({ ...prev, [postId]: true }));
 
     try {
-      await postService.delete(postId);
+      console.log(`Attempting to delete post ${postId}`);
+      const deleteResponse = await postService.delete(postId);
+      console.log("Delete response:", deleteResponse);
+      
       setToast({
         type: "success",
         message: "Post deleted successfully.",
       });
+      
       setConfirmModal({ isOpen: false, postId: null });
       window.dispatchEvent(new CustomEvent("postDeleted"));
-      // Refetch the posts list to ensure consistency
-      await fetchPosts();
+      
+      // Wait a bit for backend to process, then refetch from page 1
+      setTimeout(async () => {
+        console.log("Starting refetch after delete...");
+        setLoading(true);
+        setPosts([]); // Clear posts immediately
+        try {
+          await new Promise(resolve => setTimeout(resolve, 300)); // Small delay
+          const params = { page: 1 };
+          
+          if (filterStatus !== "all") {
+            params.status = filterStatus;
+          }
+          if (filterCategory !== "all") {
+            params.category = filterCategory;
+          }
+
+          console.log("Fetching with params:", params);
+          const response = await postService.getAll(params);
+          console.log("Refetch response:", response.data);
+          
+          if (response.data.data) {
+            setPosts(response.data.data);
+            setPagination({
+              current_page: response.data.current_page,
+              last_page: response.data.last_page,
+              per_page: response.data.per_page,
+              total: response.data.total,
+            });
+          }
+          setLoading(false);
+        } catch (refetchErr) {
+          console.error("Refetch error:", refetchErr);
+          setLoading(false);
+        }
+      }, 500);
     } catch (err) {
       console.error("Failed to delete post:", err);
+      console.error("Error status:", err.response?.status);
+      console.error("Error data:", err.response?.data);
+      
       const errorMsg =
-        err.response?.data?.message || "Failed to delete post. Please try again.";
+        err.response?.data?.message || err.message || "Failed to delete post. Please try again.";
       setToast({
         type: "error",
         message: errorMsg,
