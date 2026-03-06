@@ -3,6 +3,8 @@ import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
 import PostCard from "../../components/posts/PostCard";
 import EditPostModal from "../../components/posts/EditPostModal";
+import ConfirmationModal from "../../components/posts/ConfirmationModal";            
+import Toast from "../../components/posts/Toast";
 import { Edit, Trash2 } from "lucide-react";
 const PostManagement = () => {
   const [posts, setPosts] = useState([]);
@@ -11,8 +13,20 @@ const PostManagement = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");    
   const [pagination, setPagination] = useState(null);
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    postId: null,
+  });
+  
+  // Toast notification state
+  const [toast, setToast] = useState(null);
+  
+  // Delete/Edit loading state
+  const [actionLoading, setActionLoading] = useState({});
   const categories = [
     { value: "all", label: "All Categories" },
     { value: "rentals", label: "Rentals" },
@@ -83,15 +97,39 @@ const PostManagement = () => {
     setSelectedPost(post);
     setShowEditModal(true);
   };
-  const handleDelete = async (postId) => {
+
+  const handleDeleteClick = (postId) => {
+    setConfirmModal({ isOpen: true, postId });
+  };
+
+  const handleConfirmDelete = async () => {
+    const { postId } = confirmModal;
+    setActionLoading((prev) => ({ ...prev, [postId]: true }));
+
     try {
       await postService.delete(postId);
       setPosts((prev) => prev.filter((post) => post.id !== postId));
+      setToast({
+        type: "success",
+        message: "Post deleted successfully.",
+      });
+      setConfirmModal({ isOpen: false, postId: null });
       window.dispatchEvent(new CustomEvent("postDeleted"));
     } catch (err) {
       console.error("Failed to delete post:", err);
-      alert("Failed to delete post. Please try again.");
+      const errorMsg =
+        err.response?.data?.message || "Failed to delete post. Please try again.";
+      setToast({
+        type: "error",
+        message: errorMsg,
+      });
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [postId]: false }));
     }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmModal({ isOpen: false, postId: null });
   };
   const handlePageChange = (page) => {
     fetchPosts(page);
@@ -193,16 +231,17 @@ const PostManagement = () => {
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to delete this post?")) {
-                              handleDelete(post.id);
-                            }
-                          }}
-                          className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors shadow-sm"
+                          onClick={() => handleDeleteClick(post.id)}
+                          disabled={actionLoading[post.id]}
+                          className="p-2 text-white bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-md transition-colors shadow-sm disabled:cursor-not-allowed"
                           title="Delete post"
                           aria-label="Delete post"
                         >
-                          <Trash2 size={16} />
+                          {actionLoading[post.id] ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -240,6 +279,43 @@ const PostManagement = () => {
               setShowEditModal(false);
               setSelectedPost(null);
             }}
+            onSuccess={() => {
+              setShowEditModal(false);
+              setSelectedPost(null);
+              setToast({
+                type: "success",
+                message: "Post updated successfully.",
+              });
+              fetchPosts();
+            }}
+            onError={(errorMsg) => {
+              setToast({
+                type: "error",
+                message: errorMsg || "Failed to update post. Please try again.",
+              });
+            }}
+          />
+        )}
+
+        {/* Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          title="Delete Post?"
+          message="This action cannot be undone. The post will be permanently deleted."
+          confirmText="Delete"
+          cancelText="Cancel"
+          isDangerous={true}
+          isLoading={actionLoading[confirmModal.postId]}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => setToast(null)}
           />
         )}
       </div>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { postService, mediaService } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import ConfirmationModal from "./ConfirmationModal";
+import Toast from "./Toast";
 
-const EditPostModal = ({ post, onClose }) => {
+const EditPostModal = ({ post, onClose, onSuccess, onError }) => {
   const { user } = useAuth();
   const [title, setTitle] = useState(post.title || "");
   const [description, setDescription] = useState(post.description || "");
@@ -12,6 +14,9 @@ const EditPostModal = ({ post, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [mediaToRemove, setMediaToRemove] = useState(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     setTitle(post.title || "");
@@ -21,16 +26,32 @@ const EditPostModal = ({ post, onClose }) => {
     setNewVideo(null);
   }, [post]);
 
-  const handleRemoveMedia = async (mediaId) => {
-    if (!window.confirm("Remove this media from the post?")) return;
+  const handleRemoveMediaClick = (mediaId) => {
+    setMediaToRemove(mediaId);
+  };
+
+  const handleConfirmRemoveMedia = async () => {
+    const mediaId = mediaToRemove;
+    setRemoveLoading(true);
 
     try {
       await mediaService.delete(mediaId);
       setExistingMedia((prev) => prev.filter((m) => m.id !== mediaId));
+      setToast({
+        type: "success",
+        message: "Media removed successfully.",
+      });
       window.dispatchEvent(new CustomEvent("postUpdated"));
     } catch (err) {
       console.error("Failed to delete media:", err);
-      alert("Failed to delete media. Please try again.");
+      const errorMsg = err.response?.data?.message || "Failed to remove media. Please try again.";
+      setToast({
+        type: "error",
+        message: errorMsg,
+      });
+    } finally {
+      setRemoveLoading(false);
+      setMediaToRemove(null);
     }
   };
 
@@ -66,11 +87,19 @@ const EditPostModal = ({ post, onClose }) => {
       setSuccess(true);
       window.dispatchEvent(new CustomEvent("postUpdated"));
       
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update post");
+      const errorMsg = err.response?.data?.message || "Failed to update post";
+      setError(errorMsg);
+      if (onError) {
+        onError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -143,10 +172,11 @@ const EditPostModal = ({ post, onClose }) => {
                       )}
                       <button
                         type="button"
-                        onClick={() => handleRemoveMedia(media.id)}
-                        className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50"
+                        onClick={() => handleRemoveMediaClick(media.id)}
+                        disabled={removeLoading}
+                        className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Remove
+                        {removeLoading && mediaToRemove === media.id ? "Removing..." : "Remove"}
                       </button>
                     </div>
                   ))}
@@ -248,6 +278,28 @@ const EditPostModal = ({ post, onClose }) => {
           </form>
         </div>
       </div>
+
+      {/* Media Removal Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={mediaToRemove !== null}
+        title="Remove Media?"
+        message="This media will be removed from the post."
+        confirmText="Remove"
+        cancelText="Cancel"
+        isDangerous={true}
+        isLoading={removeLoading}
+        onConfirm={handleConfirmRemoveMedia}
+        onCancel={() => setMediaToRemove(null)}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
