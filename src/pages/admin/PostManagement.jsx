@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { postService } from "../../services/api";
 import PostCard from "../../components/posts/PostCard";
 import EditPostModal from "../../components/posts/EditPostModal";
@@ -16,17 +16,18 @@ const PostManagement = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [pagination, setPagination] = useState(null);
 
-  // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     postId: null,
   });
 
-  // Toast notification state
   const [toast, setToast] = useState(null);
-
-  // Delete/Edit loading state
   const [actionLoading, setActionLoading] = useState({});
+
+  // Refs to always hold the latest values — prevents stale closures in callbacks
+  const currentPageRef = useRef(1);
+  const filterCategoryRef = useRef("all");
+  const filterStatusRef = useRef("all");
 
   const categories = [
     { value: "all", label: "All Categories" },
@@ -38,19 +39,25 @@ const PostManagement = () => {
     { value: "construction_property_management", label: "Construction & Property Management" },
   ];
 
+  // Keep refs in sync with state
+  useEffect(() => { filterCategoryRef.current = filterCategory; }, [filterCategory]);
+  useEffect(() => { filterStatusRef.current = filterStatus; }, [filterStatus]);
+  useEffect(() => {
+    if (pagination?.current_page) currentPageRef.current = pagination.current_page;
+  }, [pagination]);
+
+  // fetchPosts reads from refs so it is never stale regardless of when it's called
   const fetchPosts = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
+
+    const category = filterCategoryRef.current;
+    const status = filterStatusRef.current;
+
     try {
       const params = { page };
-
-      if (filterStatus !== "all") {
-        params.status = filterStatus;
-      }
-
-      if (filterCategory !== "all") {
-        params.category = filterCategory;
-      }
+      if (status !== "all") params.status = status;
+      if (category !== "all") params.category = category;
 
       const response = await postService.getAll(params);
 
@@ -64,32 +71,30 @@ const PostManagement = () => {
           per_page: response.data.per_page,
           total: response.data.total,
         });
+        currentPageRef.current = response.data.current_page;
       } else {
-        const postsArray = Array.isArray(response.data) ? response.data : [];
-        setPosts(postsArray);
+        setPosts(Array.isArray(response.data) ? response.data : []);
         setPagination(null);
       }
     } catch (err) {
       console.error("Failed to fetch posts:", err);
-      console.error("Error response:", err.response?.data);
       setError(err.message || "Failed to load posts");
       setPosts([]);
     } finally {
       setLoading(false);
     }
-  }, [filterCategory, filterStatus]);
+  }, []); // empty deps — intentional, reads live values via refs
 
-  // Fetch posts when filters change
+  // Re-fetch from page 1 whenever filters change
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    currentPageRef.current = 1;
+    fetchPosts(1);
+  }, [filterCategory, filterStatus, fetchPosts]);
 
-  // Only listen for external events (postCreated, postUpdated)
-  // postDeleted is handled directly in handleConfirmDelete — no listener needed
+  // Listen for external events from other components (postCreated, postUpdated)
+  // postDeleted is handled directly below — no listener needed to avoid double fetch
   useEffect(() => {
-    const handlePostChange = () => {
-      fetchPosts();
-    };
+    const handlePostChange = () => fetchPosts(currentPageRef.current);
     window.addEventListener("postCreated", handlePostChange);
     window.addEventListener("postUpdated", handlePostChange);
     return () => {
@@ -109,9 +114,8 @@ const PostManagement = () => {
 
   const handleConfirmDelete = async () => {
     const { postId } = confirmModal;
-    setActionLoading((prev) => ({ ...prev, [postId]: true }));
 
-    // Close modal immediately for better UX
+    setActionLoading((prev) => ({ ...prev, [postId]: true }));
     setConfirmModal({ isOpen: false, postId: null });
 
     try {
@@ -119,31 +123,24 @@ const PostManagement = () => {
       await postService.delete(postId);
       console.log(`Post ${postId} deleted successfully`);
 
-      // Optimistically remove from UI instantly
+      // Optimistically remove from UI immediately
       setPosts((prev) => prev.filter((p) => p.id !== postId));
 
-      setToast({
-        type: "success",
-        message: "Post deleted successfully.",
-      });
+      setToast({ type: "success", message: "Post deleted successfully." });
 
-      // Single refresh to sync pagination/counts with server
-      await fetchPosts(pagination?.current_page || 1);
+      // Single server re-sync using ref (never stale)
+      await fetchPosts(currentPageRef.current);
+
     } catch (err) {
       console.error("Failed to delete post:", err);
-
       const errorMsg =
         err.response?.data?.message ||
         err.message ||
         "Failed to delete post. Please try again.";
+      setToast({ type: "error", message: errorMsg });
 
-      setToast({
-        type: "error",
-        message: errorMsg,
-      });
-
-      // Re-fetch to restore accurate state since optimistic removal may be wrong
-      await fetchPosts(pagination?.current_page || 1);
+      // Restore accurate state from server
+      await fetchPosts(currentPageRef.current);
     } finally {
       setActionLoading((prev) => ({ ...prev, [postId]: false }));
     }
@@ -169,6 +166,7 @@ const PostManagement = () => {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
+
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Post Management</h1>
         </div>
@@ -212,7 +210,7 @@ const PostManagement = () => {
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             <p>Error: {error}</p>
             <button
-              onClick={() => fetchPosts()}
+              onClick={() => fetchPosts(currentPageRef.current)}
               className="mt-2 text-sm underline hover:no-underline"
             >
               Try again
@@ -234,6 +232,7 @@ const PostManagement = () => {
                   {/* Bottom Action Bar */}
                   <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-2 rounded-b-lg">
                     <div className="flex items-center justify-between gap-3">
+
                       {/* Status Badge */}
                       <span
                         className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${
@@ -311,11 +310,8 @@ const PostManagement = () => {
             onSuccess={() => {
               setShowEditModal(false);
               setSelectedPost(null);
-              setToast({
-                type: "success",
-                message: "Post updated successfully.",
-              });
-              fetchPosts(pagination?.current_page || 1);
+              setToast({ type: "success", message: "Post updated successfully." });
+              fetchPosts(currentPageRef.current);
             }}
             onError={(errorMsg) => {
               setToast({
@@ -345,6 +341,7 @@ const PostManagement = () => {
             onClose={() => setToast(null)}
           />
         )}
+
       </div>
     </div>
   );
