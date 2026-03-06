@@ -92,7 +92,7 @@ const PostManagement = () => {
       window.removeEventListener("postDeleted", handlePostChange);
       window.removeEventListener("postUpdated", handlePostChange);
     }; 
-  }, [filterCategory]);
+  }, []);
   const handleEdit = (post) => {
     setSelectedPost(post);
     setShowEditModal(true);
@@ -108,13 +108,14 @@ const PostManagement = () => {
 
     try {
       await postService.delete(postId);
-      setPosts((prev) => prev.filter((post) => post.id !== postId));
       setToast({
         type: "success",
         message: "Post deleted successfully.",
       });
       setConfirmModal({ isOpen: false, postId: null });
       window.dispatchEvent(new CustomEvent("postDeleted"));
+      // Refetch the posts list to ensure consistency
+      await fetchPosts();
     } catch (err) {
       console.error("Failed to delete post:", err);
       const errorMsg =

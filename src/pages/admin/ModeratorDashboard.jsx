@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
 import { invalidateApprovedPostsCache } from "../../contexts/PostContext";
 import PostCard from "../../components/posts/PostCard";
@@ -24,31 +23,27 @@ const ModeratorDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      // Use the public pending posts endpoint instead of the protected one
-      const response = await fetch(`${API_BASE_URL}/posts/pending`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
+      // Use the authenticated endpoint with status filter for pending posts
+      const response = await postService.getAll({ status: 'pending' });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const postsData = data.data || data || [];
-      setPosts(postsData);
+      const postsData = response.data.data || response.data || [];
+      setPosts(Array.isArray(postsData) ? postsData : []);
     } catch (err) {
       console.error("Fetch pending failed:", err);
-      const errorMessage = err.status === 500 
-        ? "Server error. Please check Laravel logs."
-        : err.status === 404
-        ? "API endpoint not found."
-        : err.name === "TypeError" && err.message.includes("fetch")
-        ? "Cannot connect to API server. Please check your connection."
-        : err.message || "Unable to load pending posts. Please try again.";
+      let errorMessage = "Unable to load pending posts. ";
+      if (err.response?.status === 500) {
+        errorMessage += "Server error. Please check the connection.";
+      } else if (err.response?.status === 401) {
+        errorMessage += "Authentication failed. Please log in again.";
+      } else if (err.response?.status === 403) {
+        errorMessage += "You don't have permission to view pending posts.";
+      } else if (err.response?.status === 404) {
+        errorMessage += "API endpoint not found.";
+      } else if (err.name === "TypeError") {
+        errorMessage += "Cannot connect to API server.";
+      } else {
+        errorMessage += err.message || "Please try again.";
+      }
       setError(errorMessage);
     } finally {
       setLoading(false);
