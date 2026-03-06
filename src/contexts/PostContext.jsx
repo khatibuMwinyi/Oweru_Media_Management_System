@@ -7,6 +7,11 @@ const PostContext = createContext(null);
 const CACHE_KEY = "oweru_approved_posts_cache";
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
+// Function to invalidate cache from outside the context
+export const invalidateApprovedPostsCache = () => {
+  localStorage.removeItem(CACHE_KEY);
+};
+
 export const usePostData = () => {
   const context = useContext(PostContext);
   if (!context) {
@@ -129,6 +134,13 @@ export const PostProvider = ({ children }) => {
     setLoading(true);
   }, []);
 
+  const invalidateCache = useCallback(() => {
+    localStorage.removeItem(CACHE_KEY);
+    setLastFetchTime(null);
+    // Trigger a fresh fetch
+    fetchPosts(true);
+  }, [fetchPosts]);
+
   return (
     <PostContext.Provider
       value={{
@@ -137,6 +149,7 @@ export const PostProvider = ({ children }) => {
         error,
         refreshPosts,
         clearCache,
+        invalidateCache,
       }}
     >
       {children}

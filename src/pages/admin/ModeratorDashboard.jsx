@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../config/api";
 import { postService } from "../../services/api";
+import { invalidateApprovedPostsCache } from "../../contexts/PostContext";
 import PostCard from "../../components/posts/PostCard";
 
 const ModeratorDashboard = () => {
@@ -64,6 +65,7 @@ const ModeratorDashboard = () => {
 
     try {
       await postService.approve(postId);
+      invalidateApprovedPostsCache(); // Clear homepage cache
       showNotification("Post approved and published successfully.", "success");
       fetchPending();
     } catch (err) {
@@ -88,6 +90,7 @@ const ModeratorDashboard = () => {
 
     try {
       await postService.reject(postId, note);
+      invalidateApprovedPostsCache(); // Clear homepage cache
       showNotification("Post has been rejected successfully.", "success");
       
       // Clean up
