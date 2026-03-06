@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../../config/api";
+import { useState, useEffect, useCallback } from "react";
 import { postService } from "../../services/api";
 import PostCard from "../../components/posts/PostCard";
 import EditPostModal from "../../components/posts/EditPostModal";
-import ConfirmationModal from "../../components/posts/ConfirmationModal";            
+import ConfirmationModal from "../../components/posts/ConfirmationModal";
 import Toast from "../../components/posts/Toast";
 import { Edit, Trash2 } from "lucide-react";
+
 const PostManagement = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,20 +13,21 @@ const PostManagement = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");    
+  const [filterStatus, setFilterStatus] = useState("all");
   const [pagination, setPagination] = useState(null);
-  
+
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     postId: null,
   });
-  
+
   // Toast notification state
   const [toast, setToast] = useState(null);
-  
+
   // Delete/Edit loading state
   const [actionLoading, setActionLoading] = useState({});
+
   const categories = [
     { value: "all", label: "All Categories" },
     { value: "rentals", label: "Rentals" },
@@ -36,29 +37,25 @@ const PostManagement = () => {
     { value: "investment", label: "Investment" },
     { value: "construction_property_management", label: "Construction & Property Management" },
   ];
-  const fetchPosts = async (page = 1) => {
+
+  const fetchPosts = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
-      // Use authenticated endpoint to fetch all posts with status filtering
-      let response;
       const params = { page };
-      
-      // Add status filter if not "all"
+
       if (filterStatus !== "all") {
         params.status = filterStatus;
       }
-      
-      // Add category filter if not "all"
+
       if (filterCategory !== "all") {
         params.category = filterCategory;
       }
 
-      // Use the authenticated postService which includes authorization header
-      response = await postService.getAll(params);
-      
+      const response = await postService.getAll(params);
+
       console.log("Fetched posts response:", response.data);
-      
+
       if (response.data.data) {
         setPosts(response.data.data);
         setPagination({
@@ -80,23 +77,27 @@ const PostManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterCategory, filterStatus]);
+
+  // Fetch posts when filters change
   useEffect(() => {
     fetchPosts();
-  }, [filterCategory, filterStatus]);
+  }, [fetchPosts]);
+
+  // Only listen for external events (postCreated, postUpdated)
+  // postDeleted is handled directly in handleConfirmDelete — no listener needed
   useEffect(() => {
     const handlePostChange = () => {
       fetchPosts();
     };
     window.addEventListener("postCreated", handlePostChange);
-    window.addEventListener("postDeleted", handlePostChange);
     window.addEventListener("postUpdated", handlePostChange);
     return () => {
       window.removeEventListener("postCreated", handlePostChange);
-      window.removeEventListener("postDeleted", handlePostChange);
       window.removeEventListener("postUpdated", handlePostChange);
-    }; 
-  }, []);
+    };
+  }, [fetchPosts]);
+
   const handleEdit = (post) => {
     setSelectedPost(post);
     setShowEditModal(true);
@@ -110,33 +111,39 @@ const PostManagement = () => {
     const { postId } = confirmModal;
     setActionLoading((prev) => ({ ...prev, [postId]: true }));
 
+    // Close modal immediately for better UX
+    setConfirmModal({ isOpen: false, postId: null });
+
     try {
       console.log(`Deleting post ${postId}`);
       await postService.delete(postId);
       console.log(`Post ${postId} deleted successfully`);
-      
+
+      // Optimistically remove from UI instantly
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+
       setToast({
         type: "success",
         message: "Post deleted successfully.",
       });
-      
-      setConfirmModal({ isOpen: false, postId: null });
-      window.dispatchEvent(new CustomEvent("postDeleted"));
-      
-      // Refetch posts to get fresh data
-      setTimeout(async () => {
-        setLoading(true);
-        await fetchPosts(1);
-      }, 300);
+
+      // Single refresh to sync pagination/counts with server
+      await fetchPosts(pagination?.current_page || 1);
     } catch (err) {
       console.error("Failed to delete post:", err);
-      
+
       const errorMsg =
-        err.response?.data?.message || err.message || "Failed to delete post. Please try again.";
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to delete post. Please try again.";
+
       setToast({
         type: "error",
         message: errorMsg,
       });
+
+      // Re-fetch to restore accurate state since optimistic removal may be wrong
+      await fetchPosts(pagination?.current_page || 1);
     } finally {
       setActionLoading((prev) => ({ ...prev, [postId]: false }));
     }
@@ -145,10 +152,12 @@ const PostManagement = () => {
   const handleCancelDelete = () => {
     setConfirmModal({ isOpen: false, postId: null });
   };
+
   const handlePageChange = (page) => {
     fetchPosts(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -156,13 +165,15 @@ const PostManagement = () => {
       </div>
     );
   }
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Post Management</h1>
         </div>
-        {/* Filter */}
+
+        {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -196,6 +207,7 @@ const PostManagement = () => {
             </select>
           </div>
         </div>
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             <p>Error: {error}</p>
@@ -207,6 +219,7 @@ const PostManagement = () => {
             </button>
           </div>
         )}
+
         {posts.length === 0 ? (
           <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow">
             <p>No posts found.</p>
@@ -216,10 +229,9 @@ const PostManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {posts.map((post) => (
                 <div key={post.id} className="flex flex-col">
-                  {/* Post Card - Now displays with its footer */}
                   <PostCard post={post} onDelete={null} onEdit={null} />
-                  
-                  {/* Bottom Action Bar - Status, Edit, Delete */}
+
+                  {/* Bottom Action Bar */}
                   <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-2 rounded-b-lg">
                     <div className="flex items-center justify-between gap-3">
                       {/* Status Badge */}
@@ -234,6 +246,7 @@ const PostManagement = () => {
                       >
                         {post.status || "pending"}
                       </span>
+
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-shrink-0">
                         <button
@@ -263,6 +276,7 @@ const PostManagement = () => {
                 </div>
               ))}
             </div>
+
             {pagination && pagination.last_page > 1 && (
               <div className="flex justify-center items-center gap-2 mt-8">
                 <button
@@ -286,6 +300,7 @@ const PostManagement = () => {
             )}
           </>
         )}
+
         {showEditModal && selectedPost && (
           <EditPostModal
             post={selectedPost}
@@ -300,7 +315,7 @@ const PostManagement = () => {
                 type: "success",
                 message: "Post updated successfully.",
               });
-              fetchPosts();
+              fetchPosts(pagination?.current_page || 1);
             }}
             onError={(errorMsg) => {
               setToast({
@@ -311,7 +326,6 @@ const PostManagement = () => {
           />
         )}
 
-        {/* Confirmation Modal */}
         <ConfirmationModal
           isOpen={confirmModal.isOpen}
           title="Delete Post?"
@@ -324,7 +338,6 @@ const PostManagement = () => {
           onCancel={handleCancelDelete}
         />
 
-        {/* Toast Notification */}
         {toast && (
           <Toast
             type={toast.type}
@@ -336,5 +349,5 @@ const PostManagement = () => {
     </div>
   );
 };
-export default PostManagement;
 
+export default PostManagement;
