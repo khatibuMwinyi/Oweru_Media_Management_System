@@ -73,19 +73,25 @@ export const PostProvider = ({ children }) => {
   }, []);
 
   const fetchPosts = useCallback(async (forceRefresh = false) => {
+    console.log('fetchPosts called, forceRefresh:', forceRefresh);
+    
     // Prevent duplicate concurrent requests
     if (isFetching && !forceRefresh) {
+      console.log('Already fetching, skipping...');
       return;
     }
 
     // Check if cache is still valid (unless forced refresh)
     if (!forceRefresh && lastFetchTime) {
       const cacheAge = Date.now() - lastFetchTime;
+      console.log('Cache age:', cacheAge, 'Cache duration:', CACHE_DURATION);
       if (cacheAge < CACHE_DURATION) {
+        console.log('Using cached data');
         return; // Use cached data
       }
     }
 
+    console.log('Fetching fresh data from API...');
     setIsFetching(true);
     setError(null);
 
@@ -103,9 +109,11 @@ export const PostProvider = ({ children }) => {
       }
 
       const data = await response.json();
+      console.log('API response data:', data);
       const postsArray = data.data || data || [];
       const validPosts = Array.isArray(postsArray) ? postsArray : [];
-
+      console.log('Setting posts:', validPosts.length, 'posts:', validPosts);
+      
       // Cache in localStorage
       localStorage.setItem(
         CACHE_KEY,
@@ -117,6 +125,7 @@ export const PostProvider = ({ children }) => {
 
       setPosts(validPosts);
       setLastFetchTime(Date.now());
+      console.log('Posts updated in state and cached');
     } catch (err) {
       let errorMessage = "Failed to load posts. ";
       if (err.message.includes("500")) errorMessage += "Server error.";
