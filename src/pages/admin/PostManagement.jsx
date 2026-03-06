@@ -4,7 +4,8 @@ import PostCard from "../../components/posts/PostCard";
 import EditPostModal from "../../components/posts/EditPostModal";
 import ConfirmationModal from "../../components/posts/ConfirmationModal";
 import Toast from "../../components/posts/Toast";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Check, X } from "lucide-react";
+import { invalidateApprovedPostsCache } from "../../contexts/PostContext";
 
 const PostManagement = () => {
   const [posts, setPosts] = useState([]);
@@ -120,15 +121,17 @@ const PostManagement = () => {
 
     try {
       console.log(`Deleting post ${postId}`);
-      await postService.delete(postId);
-      console.log(`Post ${postId} deleted successfully`);
+      
+      // Call the delete API which uses forceDelete() on backend
+      const response = await postService.delete(postId);
+      console.log(`Post ${postId} deleted successfully`, response);
 
-      // Optimistically remove from UI immediately
+      // Optimistically remove from UI immediately for better UX
       setPosts((prev) => prev.filter((p) => p.id !== postId));
 
-      setToast({ type: "success", message: "Post deleted successfully." });
+      setToast({ type: "success", message: "Post permanently deleted from database." });
 
-      // Single server re-sync using ref (never stale)
+      // Single server re-sync using ref (never stale) to ensure consistency
       await fetchPosts(currentPageRef.current);
 
     } catch (err) {
@@ -139,7 +142,7 @@ const PostManagement = () => {
         "Failed to delete post. Please try again.";
       setToast({ type: "error", message: errorMsg });
 
-      // Restore accurate state from server
+      // Restore accurate state from server if deletion failed
       await fetchPosts(currentPageRef.current);
     } finally {
       setActionLoading((prev) => ({ ...prev, [postId]: false }));
@@ -153,6 +156,79 @@ const PostManagement = () => {
   const handlePageChange = (page) => {
     fetchPosts(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleApprove = async (postId) => {
+    setActionLoading((prev) => ({ ...prev, [postId]: true }));
+    
+    try {
+      console.log(`Approving post ${postId}`);
+      const response = await postService.approve(postId);
+      console.log(`Post ${postId} approved successfully`, response);
+
+      // Update the post status in local state
+      setPosts((prev) => 
+        prev.map((p) => 
+          p.id === postId ? { ...p, status: "approved" } : p
+        )
+      );
+
+      // Invalidate homepage cache to show the newly approved post
+      invalidateApprovedPostsCache();
+
+      setToast({ type: "success", message: "Post approved and added to homepage." });
+
+      // Re-sync with server
+      await fetchPosts(currentPageRef.current);
+
+    } catch (err) {
+      console.error("Failed to approve post:", err);
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to approve post. Please try again.";
+      setToast({ type: "error", message: errorMsg });
+      
+      // Restore accurate state from server
+      await fetchPosts(currentPageRef.current);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleReject = async (postId) => {
+    setActionLoading((prev) => ({ ...prev, [postId]: true }));
+    
+    try {
+      console.log(`Rejecting post ${postId}`);
+      const response = await postService.reject(postId);
+      console.log(`Post ${postId} rejected successfully`, response);
+
+      // Update the post status in local state
+      setPosts((prev) => 
+        prev.map((p) => 
+          p.id === postId ? { ...p, status: "rejected" } : p
+        )
+      );
+
+      setToast({ type: "success", message: "Post rejected successfully." });
+
+      // Re-sync with server
+      await fetchPosts(currentPageRef.current);
+
+    } catch (err) {
+      console.error("Failed to reject post:", err);
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to reject post. Please try again.";
+      setToast({ type: "error", message: errorMsg });
+      
+      // Restore accurate state from server
+      await fetchPosts(currentPageRef.current);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [postId]: false }));
+    }
   };
 
   if (loading) {
@@ -227,7 +303,7 @@ const PostManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {posts.map((post) => (
                 <div key={post.id} className="flex flex-col">
-                  <PostCard post={post} onDelete={null} onEdit={null} />
+                  <PostCard post={post} onDelete={handleDeleteClick} onEdit={handleEdit} />
 
                   {/* Bottom Action Bar */}
                   <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 mt-2 rounded-b-lg">
@@ -248,6 +324,38 @@ const PostManagement = () => {
 
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-shrink-0">
+                        {/* Approve/Reject buttons for pending posts */}
+                        {post.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(post.id)}
+                              disabled={actionLoading[post.id]}
+                              className="p-2 text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 rounded-md transition-colors shadow-sm disabled:cursor-not-allowed"
+                              title="Approve post"
+                              aria-label="Approve post"
+                            >
+                              {actionLoading[post.id] ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+                              ) : (
+                                <Check size={16} />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleReject(post.id)}
+                              disabled={actionLoading[post.id]}
+                              className="p-2 text-white bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 rounded-md transition-colors shadow-sm disabled:cursor-not-allowed"
+                              title="Reject post"
+                              aria-label="Reject post"
+                            >
+                              {actionLoading[post.id] ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+                              ) : (
+                                <X size={16} />
+                              )}
+                            </button>
+                          </>
+                        )}
+                        
                         <button
                           onClick={() => handleEdit(post)}
                           className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors shadow-sm"

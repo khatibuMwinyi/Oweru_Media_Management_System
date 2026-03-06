@@ -7,9 +7,16 @@ const PostContext = createContext(null);
 const CACHE_KEY = "oweru_approved_posts_cache";
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-// Function to invalidate cache from outside the context
+// Global variable to store the refetch function
+let globalRefetchFunction = null;
+
+// Function to invalidate cache from outside the context and trigger refetch
 export const invalidateApprovedPostsCache = () => {
   localStorage.removeItem(CACHE_KEY);
+  // Trigger refetch if available
+  if (globalRefetchFunction) {
+    globalRefetchFunction();
+  }
 };
 
 export const usePostData = () => {
@@ -125,6 +132,14 @@ export const PostProvider = ({ children }) => {
     setLoading(true);
     await fetchPosts(true);
   }, [fetchPosts]);
+
+  // Store the refetch function globally so it can be called from outside
+  useEffect(() => {
+    globalRefetchFunction = refreshPosts;
+    return () => {
+      globalRefetchFunction = null;
+    };
+  }, [refreshPosts]);
 
   const clearCache = useCallback(() => {
     localStorage.removeItem(CACHE_KEY);
