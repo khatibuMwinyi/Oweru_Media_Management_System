@@ -30,16 +30,16 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       key: "official",
       subItems: [
         {
-          name: "Lands & Plots",
+          name: "Land & Plot Investments",
           id: "lands-plots",
           category: "lands_and_plots",
         },
         {
-          name: "Property Services",
+          name: "Land Documentation & Compliance",
           id: "property-services",
           category: "property_services",
         },
-        { name: "Investment", id: "investment", category: "investment" },
+        { name: "Corporate & Investments Services", id: "investment", category: "investment" },
       ],
     },
     {
@@ -48,12 +48,12 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       subItems: [
         { name: "Homes for Sale and Rent", id: "rentals", category: "rentals" },
         {
-          name: "Property Sales",
+          name: "Construction & Turnkey Projects",
           id: "property-sales",
           category: "property_sales",
         },
         {
-          name: "Construction & Turnkey Projects",
+          name: "Property Management Services",
           id: "construction-management",
           category: "construction_property_management",
         },

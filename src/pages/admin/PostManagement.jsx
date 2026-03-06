@@ -102,6 +102,10 @@ const PostManagement = () => {
     setShowEditModal(true);
   };
 
+  const handleDeleteClick = (postId) => {
+    setConfirmModal({ isOpen: true, postId });
+  };
+
   const handleConfirmDelete = async () => {
     const { postId } = confirmModal;
     setActionLoading((prev) => ({ ...prev, [postId]: true }));
