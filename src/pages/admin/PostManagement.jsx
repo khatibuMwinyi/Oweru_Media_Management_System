@@ -120,16 +120,25 @@ const PostManagement = () => {
 
     try {
       console.log(`Deleting post ${postId}`);
-      await postService.delete(postId);
-      console.log(`Post ${postId} deleted successfully`);
+      const response = await postService.delete(postId);
+      console.log(`Post ${postId} deleted successfully`, response.data);
 
       // Optimistically remove from UI immediately
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      setPosts((prev) => {
+        console.log('Current posts before deletion:', prev.length);
+        console.log('Deleting post ID:', postId, 'from posts:', prev.map(p => ({ id: p.id, title: p.title })));
+        const filtered = prev.filter((p) => p.id !== postId);
+        console.log('Posts after deletion:', filtered.length);
+        return filtered;
+      });
 
       setToast({ type: "success", message: "Post deleted successfully." });
 
-      // Single server re-sync using ref (never stale)
-      await fetchPosts(currentPageRef.current);
+      // Re-sync with server to ensure consistency, but with a delay to see if deletion persists
+      setTimeout(async () => {
+        console.log('Re-syncing with server after deletion...');
+        await fetchPosts(currentPageRef.current);
+      }, 1000);
 
     } catch (err) {
       console.error("Failed to delete post:", err);

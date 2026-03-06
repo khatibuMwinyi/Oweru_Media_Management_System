@@ -12,10 +12,14 @@ let globalRefetchFunction = null;
 
 // Function to invalidate cache from outside the context and trigger refetch
 export const invalidateApprovedPostsCache = () => {
+  console.log('Invalidating approved posts cache...');
   localStorage.removeItem(CACHE_KEY);
   // Trigger refetch if available
   if (globalRefetchFunction) {
+    console.log('Triggering global refetch function...');
     globalRefetchFunction();
+  } else {
+    console.log('No global refetch function available');
   }
 };
 
@@ -129,6 +133,7 @@ export const PostProvider = ({ children }) => {
   }, [isFetching, lastFetchTime]);
 
   const refreshPosts = useCallback(async () => {
+    console.log('refreshPosts called - forcing refresh');
     setLoading(true);
     await fetchPosts(true);
   }, [fetchPosts]);

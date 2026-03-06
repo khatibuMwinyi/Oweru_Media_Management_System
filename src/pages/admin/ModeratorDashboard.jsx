@@ -59,8 +59,14 @@ const ModeratorDashboard = () => {
     setActionLoading((prev) => ({ ...prev, [postId]: true }));
 
     try {
-      await postService.approve(postId);
+      console.log(`Approving post ${postId}`);
+      const response = await postService.approve(postId);
+      console.log(`Post ${postId} approved successfully`, response.data);
+      
+      console.log('Invalidating homepage cache...');
       invalidateApprovedPostsCache(); // Clear homepage cache
+      console.log('Cache invalidated, showing notification');
+      
       showNotification("Post approved and published successfully.", "success");
       fetchPending();
     } catch (err) {
