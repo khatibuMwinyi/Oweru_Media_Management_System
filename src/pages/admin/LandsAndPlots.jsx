@@ -6,7 +6,7 @@ const LandsAndPlots = () => {
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <header className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Lands &amp; Plots
+            Land &amp; Plot Investments
           </h1>
           <p className="text-sm text-gray-600">
             Create engaging posts to promote land and plot opportunities.

@@ -6,7 +6,7 @@ const Rentals = () => {
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <header className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Rentals
+            Homes for Sale and Rent
           </h1>
           <p className="text-sm text-gray-600">
             Design social media posts for rental properties in static, carousel, and reel formats.

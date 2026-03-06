@@ -6,10 +6,10 @@ const PropertySales = () => {
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <header className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Property Sales
+            Construction & Turnkey Projects
           </h1>
           <p className="text-sm text-gray-600">
-            Create high quality social media posts for property sales across different formats.
+            Create high quality social media posts for construction and turnkey projects across different formats.
           </p>
         </header>
 

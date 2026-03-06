@@ -173,13 +173,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </NavLink>
           )}
 
-          {/* Moderator Dashboard */}
-          {user?.role === "moderator" && (
-            <NavLink to="/admin/moderator" icon={LayoutDashboard}>
-              Moderator Dashboard
-            </NavLink>
-          )}
-
+         
           {/* Admin Dropdowns */}
           {user?.role === "admin" && (
             <>
@@ -201,16 +195,16 @@ const Sidebar = ({ isOpen, onClose }) => {
                   }`}
                 >
                   <SubLink to="/admin/rentals" icon={Home}>
-                    Rentals
+                    Homes for Sale & Rent
                   </SubLink>
                   <SubLink to="/admin/property-sales" icon={ShoppingBag}>
-                    Property Sales
+                    Construction & Turnkey Projects
                   </SubLink>
                   <SubLink
                     to="/admin/construction-property-management"
                     icon={Hammer}
                   >
-                    Construction & Property Management
+                Property Management Services 
                   </SubLink>
                 </div>
               </div>
@@ -233,13 +227,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                   }`}
                 >
                   <SubLink to="/admin/lands-and-plots" icon={MapPin}>
-                    Lands and Plots
+                    Land & Plot Investments
                   </SubLink>
                   <SubLink to="/admin/property-services" icon={Landmark}>
-                    Land & Property Administration Services
+                    Land Documentation & Compliance
                   </SubLink>
                   <SubLink to="/admin/investment" icon={TrendingUp}>
-                    Investment
+                    Corporate & Investment Services
                   </SubLink>
                 </div>
               </div>

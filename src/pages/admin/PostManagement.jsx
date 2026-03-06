@@ -31,7 +31,7 @@ const PostManagement = () => {
     { value: "all", label: "All Categories" },
     { value: "rentals", label: "Rentals" },
     { value: "property_sales", label: "Property Sales" },
-    { value: "lands_and_plots", label: "Lands and Plots" },
+    { value: "lands_and_plots", label: "Land & Plot Investments" },
     { value: "property_services", label: "Property Services" },
     { value: "investment", label: "Investment" },
     { value: "construction_property_management", label: "Construction & Property Management" },
@@ -102,18 +102,14 @@ const PostManagement = () => {
     setShowEditModal(true);
   };
 
-  const handleDeleteClick = (postId) => {
-    setConfirmModal({ isOpen: true, postId });
-  };
-
   const handleConfirmDelete = async () => {
     const { postId } = confirmModal;
     setActionLoading((prev) => ({ ...prev, [postId]: true }));
 
     try {
-      console.log(`Attempting to delete post ${postId}`);
-      const deleteResponse = await postService.delete(postId);
-      console.log("Delete response:", deleteResponse);
+      console.log(`Deleting post ${postId}`);
+      await postService.delete(postId);
+      console.log(`Post ${postId} deleted successfully`);
       
       setToast({
         type: "success",
@@ -123,45 +119,13 @@ const PostManagement = () => {
       setConfirmModal({ isOpen: false, postId: null });
       window.dispatchEvent(new CustomEvent("postDeleted"));
       
-      // Wait a bit for backend to process, then refetch from page 1
+      // Refetch posts to get fresh data
       setTimeout(async () => {
-        console.log("Starting refetch after delete...");
         setLoading(true);
-        setPosts([]); // Clear posts immediately
-        try {
-          await new Promise(resolve => setTimeout(resolve, 300)); // Small delay
-          const params = { page: 1 };
-          
-          if (filterStatus !== "all") {
-            params.status = filterStatus;
-          }
-          if (filterCategory !== "all") {
-            params.category = filterCategory;
-          }
-
-          console.log("Fetching with params:", params);
-          const response = await postService.getAll(params);
-          console.log("Refetch response:", response.data);
-          
-          if (response.data.data) {
-            setPosts(response.data.data);
-            setPagination({
-              current_page: response.data.current_page,
-              last_page: response.data.last_page,
-              per_page: response.data.per_page,
-              total: response.data.total,
-            });
-          }
-          setLoading(false);
-        } catch (refetchErr) {
-          console.error("Refetch error:", refetchErr);
-          setLoading(false);
-        }
-      }, 500);
+        await fetchPosts(1);
+      }, 300);
     } catch (err) {
       console.error("Failed to delete post:", err);
-      console.error("Error status:", err.response?.status);
-      console.error("Error data:", err.response?.data);
       
       const errorMsg =
         err.response?.data?.message || err.message || "Failed to delete post. Please try again.";

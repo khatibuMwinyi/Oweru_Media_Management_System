@@ -6,7 +6,7 @@ const PropertyServices = () => {
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <header className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Land & property administration services
+            Land Documentation &amp; Compliance Services
           </h1>
           <p className="text-sm text-gray-600">
             Build content for property consultancy, maintenance, and related services.

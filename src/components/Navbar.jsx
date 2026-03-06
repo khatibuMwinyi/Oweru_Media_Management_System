@@ -46,14 +46,14 @@ const Navbar = ({ onCategoryClick, selectedCategory }) => {
       name: "Oweru Housing",
       key: "housing",
       subItems: [
-        { name: "Rentals", id: "rentals", category: "rentals" },
+        { name: "Homes for Sale and Rent", id: "rentals", category: "rentals" },
         {
           name: "Property Sales",
           id: "property-sales",
           category: "property_sales",
         },
         {
-          name: "Construction & Property Management",
+          name: "Construction & Turnkey Projects",
           id: "construction-management",
           category: "construction_property_management",
         },
